@@ -1,0 +1,70 @@
+# ---------- OS / Editor ----------
+.DS_Store
+*.swp
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ---------- Logs ----------
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
+firebase-debug.*.log*
+
+# ---------- Firebase / env ----------
+.firebase/
+.runtimeconfig.json
+.env
+.env.*
+!.env*.example
+
+# ---------- Secrets / data dumps (do NOT commit) ----------
+**/grammgold-firebase.json
+**/serviceAccount*.json
+functions/all_users.json
+functions/all_withdraws.json
+functions/orders_deposit_*.json
+functions/*.xlsx
+
+# ---------- Node ----------
+node_modules/
+.npm
+.eslintcache
+*.tgz
+.node_repl_history
+
+# ---------- Angular admin (under admin/) ----------
+admin/.angular/
+admin/.npm-cache/
+admin/dist/
+admin/out-tsc/
+admin/coverage/
+
+# ---------- Flutter / Dart (under app/) ----------
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.pub-cache/
+app/.pub/
+app/build/
+app/**/doc/api/
+app/**/ios/Flutter/.last_build_id
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+app/android/.gradle/
+app/android/app/build/
+app/android/app/.cxx/
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json

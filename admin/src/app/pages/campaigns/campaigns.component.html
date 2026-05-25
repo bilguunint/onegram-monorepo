@@ -1,0 +1,144 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 font-size-18">Сугалаат аян</h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" *ngIf="isLoading">
+    <div class="col-12 text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Уншиж байна...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" *ngIf="!isLoading">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover table-centered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Нэр</th>
+                  <th>Төлөв</th>
+                  <th>Эхлэх огноо</th>
+                  <th>Дуусах огноо</th>
+                  <th>Грамм/Сугалаа</th>
+                  <th>Оролцогч</th>
+                  <th>Сугалаа</th>
+                  <th>Шинэчлэгдсэн</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="campaigns.length === 0">
+                  <td colspan="9" class="text-center text-muted py-4">Сугалаат аян олдсонгүй.</td>
+                </tr>
+                <tr *ngFor="let campaign of campaigns; let i = index"
+                    style="cursor: pointer;"
+                    (click)="openDetail(detailModal, campaign)">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ campaign.name }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getStatusBadge(campaign.status)">
+                      {{ getStatusLabel(campaign.status) }}
+                    </span>
+                  </td>
+                  <td>{{ formatDate(campaign.start_date) }}</td>
+                  <td>{{ formatDate(campaign.end_date) }}</td>
+                  <td>{{ campaign.grams_per_ticktes }} гр</td>
+                  <td>{{ campaign.total_participants }}</td>
+                  <td>{{ campaign.total_tickets }}</td>
+                  <td>{{ formatDate(campaign.updated_at) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<ng-template #detailModal>
+  <div class="modal-header">
+    <h5 class="modal-title">{{ selectedCampaign?.name }}</h5>
+    <button type="button" class="btn-close" (click)="modalRef?.hide()"></button>
+  </div>
+  <div class="modal-body" *ngIf="selectedCampaign">
+    <div class="mb-3">
+      <span class="badge" [ngClass]="getStatusBadge(selectedCampaign.status)">
+        {{ getStatusLabel(selectedCampaign.status) }}
+      </span>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-sm-6">
+        <p class="text-muted mb-1 font-size-12">Эхлэх огноо</p>
+        <p class="mb-0">{{ formatDate(selectedCampaign.start_date) }}</p>
+      </div>
+      <div class="col-sm-6">
+        <p class="text-muted mb-1 font-size-12">Дуусах огноо</p>
+        <p class="mb-0">{{ formatDate(selectedCampaign.end_date) }}</p>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-sm-4">
+        <p class="text-muted mb-1 font-size-12">Грамм/Сугалаа</p>
+        <p class="mb-0">{{ selectedCampaign.grams_per_ticktes }} гр</p>
+      </div>
+      <div class="col-sm-4">
+        <p class="text-muted mb-1 font-size-12">Нийт оролцогч</p>
+        <p class="mb-0">{{ selectedCampaign.total_participants }}</p>
+      </div>
+      <div class="col-sm-4">
+        <p class="text-muted mb-1 font-size-12">Нийт Сугалаа</p>
+        <p class="mb-0">{{ selectedCampaign.total_tickets }}</p>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <p class="text-muted mb-1 font-size-12">Тайлбар</p>
+      <p class="mb-0" style="white-space: pre-line;">{{ selectedCampaign.description }}</p>
+    </div>
+
+    <hr>
+
+    <h6 class="mb-3">Олгосон сугалаанууд ({{ tickets.length }})</h6>
+
+    <div *ngIf="ticketsLoading" class="text-center py-3">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <span class="ms-2 text-muted">Уншиж байна...</span>
+    </div>
+
+    <div *ngIf="!ticketsLoading && tickets.length === 0" class="text-center py-3">
+      <p class="text-muted mb-0">Сугалаа олдсонгүй.</p>
+    </div>
+
+    <div *ngIf="!ticketsLoading && tickets.length > 0" class="table-responsive" style="max-height: 300px;">
+      <table class="table table-sm table-bordered mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 50px;">#</th>
+            <th>Сугалааын код</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ticket of tickets; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td><code>{{ ticket.ticket_code }}</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modalRef?.hide()">Хаах</button>
+  </div>
+</ng-template>

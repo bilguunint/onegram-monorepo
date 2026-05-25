@@ -1,0 +1,17 @@
+{
+  "hosting": {
+    "site": "admin-omm",
+    "public": "dist/skote",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

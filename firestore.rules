@@ -1,0 +1,265 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // users collection - FCM token update зөвшөөрөх
+    match /users/{userId} {
+      // Read: Зөвхөн өөрийнхөө болон admin унших
+      allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+
+      // Notifications subcollection
+      match /notifications/{notificationId} {
+        // User can only read their own notifications
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // User can update their own notifications (for marking as read)
+        allow update: if request.auth != null && request.auth.uid == userId;
+
+        // Only allow updating the 'read' field
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      }
+
+      // Notifications subcollection
+      match /lottery_tickets/{ticketId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // User can update their own notifications (for marking as read)
+        allow update: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Create: Шинэ хэрэглэгч үүсгэх
+      allow create: if isSignedIn()
+        && request.auth.uid == userId;
+
+      // Update: FCM token болон profile мэдээлэл шинэчлэх
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && (
+          // FCM token болон updated_at зөвхөн шинэчлэх
+          (
+            request.resource.data.keys().hasOnly(['fcm_token', 'updated_at']) ||
+            request.resource.data.keys().hasOnly(['fcm_token']) ||
+            request.resource.data.keys().hasOnly(['updated_at'])
+          ) ||
+          // Profile мэдээлэл шинэчлэх (balance хөндөхгүй)
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['balance'])
+          )
+        );
+
+      // Write (set with merge): FCM token хадгалах
+      allow write: if isSignedIn()
+        && request.auth.uid == userId
+        && (
+          // FCM token болон updated_at зөвхөн
+          request.resource.data.keys().hasOnly(['fcm_token', 'updated_at']) ||
+          request.resource.data.keys().hasOnly(['fcm_token']) ||
+          // Эсвэл бүх profile data (balance-г хөндөхгүй)
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['balance'])
+        );
+
+      // Delete: Хэзээ ч устгахгүй
+      allow delete: if false;
+    }
+
+    match /investments/{userId} {
+      // Only allow read for the user's own investment data
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /ai_conversations/{conversationId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /ai_reports/{reportId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Products: admin full access, signed-in users read-only.
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Product purchases: admin can read/update all; user reads/creates their own.
+    match /product_purchases/{purchaseId} {
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.user_id == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /investments/{investmentId} {
+      // Read access for authenticated users
+      allow read: if request.auth != null;
+
+      // Write access only for admins
+      allow write: if request.auth != null && isAdmin(request.auth.uid);
+
+      // Allow admins to update only endDate field
+      allow update: if request.auth != null &&
+                   isAdmin(request.auth.uid) &&
+                   onlyUpdatingEndDate();
+    }
+
+    // Helper function to check if only endDate is being updated
+    function onlyUpdatingEndDate() {
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return affectedKeys.hasOnly(['endDate']);
+    }
+
+    // news collection (нийтэд нээлттэй унших)
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if false; // Зөвхөн Cloud Functions-ээр
+    }
+
+    // admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow write: if false;
+    }
+
+    // rates (нийтэд нээлттэй)
+    match /rates/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /gold_balance_distribution/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // latest_rates (нийтэд нээлттэй унших)
+    match /latest_rates/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // marketing_campaigns (нийтэд нээлттэй унших)
+    match /marketing_campaigns/{docId} {
+      allow read: if true;
+      allow write: if false;
+      // tickets subcollection - зөвхөн admin уншина
+      match /tickets/{ticketId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // metal_rates (нийтэд нээлттэй)
+    match /metal_rates/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // gift_orders (холбогдох хэрэглэгчид л харах)
+    match /gift_orders/{giftOrderId} {
+      allow read: if isSignedIn() && (
+        resource.data.sender.uid == request.auth.uid ||
+        resource.data.receiver.uid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create, update, delete: if false;
+    }
+
+    // Gift orders collection rules
+    match /gift_orders/{giftId} {
+      // Allow read for authenticated users where they are sender or receiver
+      allow read: if request.auth != null &&
+        (resource.data.sender.uid == request.auth.uid ||
+         resource.data.receiver_id == request.auth.uid);
+    }
+
+    match /ledger_transactions/{transactionId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // analytics (нийтэд нээлттэй)
+    match /analytics/{docId=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // analytics_daily (нийтэд нээлттэй)
+    match /analytics_daily/{docId=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // orders (зөвхөн тухайн хэрэглэгч эсвэл админ)
+    match /orders/{orderId} {
+      allow read: if (isSignedIn() && resource.data.user_id == request.auth.uid) || isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /custom-notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // versions collection
+    match /versions/{docId} {
+      // Нийтэд уншуулах (read зөвшөөрөгдсөн)
+      allow read: if true;
+
+      // Зөвхөн админ write хийхийг зөвшөөрөх (жишээ нь custom claim)
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // order_admin_logs (зөвхөн админ)
+    match /order_admin_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // withdraws (татан авах хүсэлт - зөвхөн админ)
+    match /withdraws/{requestId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // withdraws (татан авах хүсэлт - зөвхөн админ)
+    match /withdraw_analytics/{requestId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // withdraw_requests (хэрэглэгчийн татан авах хүсэлт)
+    match /withdraw_requests/{requestId} {
+      allow read: if (isSignedIn() && resource.data.user_id == request.auth.uid) || isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // notifications (хэрэглэгчийн мэдэгдэл)
+    match /notifications/{notificationId} {
+      allow read: if (isSignedIn() && resource.data.user_id == request.auth.uid) || isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /investments/{docId=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // бусад бүх collection хориглох
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

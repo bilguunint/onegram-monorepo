@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "grammgold"
+  },
+  "targets": {
+    "grammgold": {
+      "hosting": {
+        "admin-omm-next": [
+          "admin-omm-next"
+        ]
+      }
+    }
+  }
+}

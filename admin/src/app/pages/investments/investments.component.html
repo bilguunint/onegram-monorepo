@@ -1,0 +1,260 @@
+<!-- Start page title -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0 font-size-18">Хөрөнгө оруулалт</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Хөрөнгө оруулалт</a></li>
+                    <li class="breadcrumb-item active">Жагсаалт</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end page title -->
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body border-bottom">
+                <div class="d-flex align-items-center">
+                    <h5 class="mb-0 card-title flex-grow-1">Хөрөнгө оруулалтын жагсаалт</h5>
+                    <div class="flex-shrink-0 d-flex gap-1">
+                        <a href="javascript:void(0);" class="btn btn-primary"
+                            style="background-color: #1D6F42; border-color: #1D6F42;" (click)="exportToExcel()" *ngIf="adminRole === 'admin' || adminRole === 'accountant'">
+                            <i class="mdi mdi-file-excel"></i>Excel Export
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light" (click)="refreshInvestments()">
+                            <i class="mdi mdi-refresh"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Search and filters -->
+                <div class="row mb-3">
+                    <div class="col-lg-3">
+                        <div class="form-group">
+                            <label class="form-label">Хайх</label>
+                            <input type="text" class="form-control"
+                                placeholder="Нэр, утас, и-мэйл, ID..." [(ngModel)]="searchTerm"
+                                (keyup)="searchInvestments()" name="searchTerm">
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Баталгаажуулсан админ</label>
+                            <select class="form-select" (change)="selectAdminFilter($event)"
+                                name="adminFilter" [(ngModel)]="adminFilter">
+                                <option value="">Бүгд</option>
+                                <option *ngFor="let admin of getUniqueAdmins()" [value]="admin">{{ admin }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Үүсгэсэн огноо</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" [(ngModel)]="dateFilter"
+                                    (change)="filterByCreationDate()" name="dateFilter">
+                                <button class="btn btn-outline-secondary" type="button" (click)="clearDateFilter()"
+                                    [disabled]="!dateFilter">
+                                    <i class="mdi mdi-close"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Дуусах огноо</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" [(ngModel)]="endDateFilter"
+                                    (change)="filterByEndDate()" name="endDateFilter">
+                                <button class="btn btn-outline-secondary" type="button" (click)="clearEndDateFilter()"
+                                    [disabled]="!endDateFilter">
+                                    <i class="mdi mdi-close"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats info -->
+                <div class="row mb-3">
+                    <div class="col-lg-6">
+                        <p class="text-muted mb-2">
+                            <i class="mdi mdi-information-outline me-1"></i>
+                            Нийт: {{ totalItems }} хөрөнгө оруулалт
+                            <span *ngIf="searchTerm || adminFilter || dateFilter || endDateFilter">(шүүлтийн дүн)</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div *ngIf="isLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Ачааллаж байна...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Хөрөнгө оруулалтын мэдээлэл ачааллаж байна...</p>
+                </div>
+
+                <!-- Investments table -->
+                <div *ngIf="!isLoading" class="table-responsive">
+                    <table class="table table-bordered dt-responsive nowrap w-100">
+                        <thead class="table-light">
+                            <tr>
+                                <th (click)="sortInvestments('user_name')" style="cursor: pointer;">
+                                    Хэрэглэгч
+                                    <i [class]="getSortIcon('user_name')"></i>
+                                </th>
+                                <th (click)="sortInvestments('balance')" style="cursor: pointer;">
+                                    Нийт хөрөнгө оруулалт
+                                    <i [class]="getSortIcon('balance')"></i>
+                                </th>
+                                <th>Төлөв</th>
+                                <th>Хугацаа</th>
+                                <th (click)="sortInvestments('verifiedAdmin')" style="cursor: pointer;">
+                                    Баталгаажуулсан админ
+                                    <i [class]="getSortIcon('verifiedAdmin')"></i>
+                                </th>
+                                <th (click)="sortInvestments('createdAt')" style="cursor: pointer;">
+                                    Үүсгэсэн огноо
+                                    <i [class]="getSortIcon('createdAt')"></i>
+                                </th>
+                                <th (click)="sortInvestments('endDate')" style="cursor: pointer;">
+                                    Дуусах огноо
+                                    <i [class]="getSortIcon('endDate')"></i>
+                                </th>
+                                <th *ngIf="adminRole === 'admin'">Үйлдэл</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let investment of investments; trackBy: trackByInvestment">
+                                <td>
+                                    <div>
+                                        <h6 class="mb-1">{{ getUserName(investment) }}</h6>
+                                        <small class="text-muted" *ngIf="investment.user?.phone">{{ investment.user.phone }}</small>
+                                        <br *ngIf="investment.user?.phone && investment.user?.email">
+                                        <small class="text-muted" *ngIf="investment.user?.email">{{ investment.user.email }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong class="text-primary">{{ investment.balance | number:'1.0-0' }}гр</strong>
+                                </td>
+                                <td>
+                                    <span [class]="getStatusBadgeClass(investment)">
+                                        {{ getInvestmentStatus(investment) }}
+                                    </span>
+                                    <!-- Show contract file link if closed -->
+                                    <div *ngIf="isClosed(investment) && investment.attachedFile" class="mt-1">
+                                        <a [href]="investment.attachedFile" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="mdi mdi-file-document-outline"></i> Гэрээ
+                                        </a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <!-- Show remaining days for active investments -->
+                                    <div *ngIf="!isClosed(investment)">
+                                        <span *ngIf="getDaysRemaining(investment) > 0" class="badge bg-info">
+                                            {{ getDaysRemaining(investment) }} хоног
+                                        </span>
+                                        <span *ngIf="getDaysRemaining(investment) <= 0" class="badge bg-secondary">
+                                            Дууссан
+                                        </span>
+                                    </div>
+                                    <!-- Show closed info for closed investments -->
+                                    <div *ngIf="isClosed(investment)">
+                                        <small class="text-muted d-block">
+                                            <strong>Хаасан огноо:</strong><br>
+                                            {{ formatClosedDate(investment.closedDate) }}
+                                        </small>
+                                        <small class="text-muted d-block mt-1" *ngIf="investment.closedBy">
+                                            <strong>Хаасан админ:</strong><br>
+                                            {{ investment.closedBy }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span class="fw-medium">{{ investment.verifiedAdmin || 'Тодорхойгүй' }}</span>
+                                        <br>
+                                        <small class="text-muted">ID: {{ investment.verifiedId || 'Байхгүй' }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>{{ formatTimestamp(investment.createdAt) }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ formatTimestamp(investment.endDate) }}</small>
+                                </td>
+                                <td *ngIf="adminRole === 'admin'">
+                                    <ul class="list-unstyled hstack gap-1 mb-0">
+                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Дэлгэрэнгүй">
+                                            <a href="javascript:void(0);" class="btn btn-sm btn-soft-primary" (click)="showInvestmentDetail(investment)">
+                                                <i class="mdi mdi-calendar"></i>
+                                            </a>
+                                        </li>
+                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Хөрөнгө оруулалт хаах">
+                                            <a href="javascript:void(0);" class="btn btn-sm btn-soft-danger" (click)="closeInvestment(investment)" [class.disabled]="isClosed(investment)">
+                                                <i class="mdi mdi-file-document-edit-outline"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr *ngIf="investments.length === 0">
+                                <td [attr.colspan]="adminRole === 'admin' ? 8 : 7" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="mdi mdi-information-outline me-1"></i>
+                                        <span *ngIf="!searchTerm && !adminFilter && !dateFilter && !endDateFilter">
+                                            Хөрөнгө оруулалт байхгүй байна.
+                                        </span>
+                                        <span *ngIf="searchTerm || adminFilter || dateFilter || endDateFilter">
+                                            Шүүлтийн нөхцөлд тохирох хөрөнгө оруулалт олдсонгүй.
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div *ngIf="!isLoading && filteredInvestments.length > 0" class="row">
+                    <div class="col-sm-12 col-md-5">
+                        <div class="dataTables_info">
+                            {{ startItem }}-ээс {{ endItem }} хүртэл, нийт {{ totalItems }}
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-7">
+                        <div class="dataTables_paginate">
+                            <nav aria-label="pagination">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item" [class.disabled]="currentPage === 1">
+                                        <button class="page-link" (click)="previousPage()"
+                                            [disabled]="currentPage === 1">
+                                            <i class="mdi mdi-chevron-left"></i>
+                                        </button>
+                                    </li>
+                                    <li *ngFor="let page of getPageNumbers()" class="page-item"
+                                        [class.active]="page === currentPage">
+                                        <button class="page-link" (click)="goToPage(page)">
+                                            {{ page }}
+                                        </button>
+                                    </li>
+                                    <li class="page-item" [class.disabled]="currentPage === totalPages">
+                                        <button class="page-link" (click)="nextPage()"
+                                            [disabled]="currentPage === totalPages">
+                                            <i class="mdi mdi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,304 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0 font-size-18">Биетээр авах статистик</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">Эхлэл</a></li>
+            <li class="breadcrumb-item active">Биетээр авах статистик</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Month Selector -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <h4 class="card-title mb-0">Сарын статистик</h4>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group mb-0">
+                <label for="monthSelect" class="form-label">Сар сонгох:</label>
+                <select 
+                  id="monthSelect" 
+                  class="form-select" 
+                  [(ngModel)]="selectedMonth" 
+                  (change)="onMonthChange()">
+                  <option *ngFor="let month of availableMonths" [value]="month">
+                    {{ formatMonthDisplay(month) }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          
+          <div *ngIf="isLoading" class="text-center">
+            <div class="spinner-border text-primary m-5" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+
+          <div *ngIf="!isLoading && analyticsData">
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+              <div class="col-md-3">
+                <div class="card mini-stats-wid">
+                  <div class="card-body">
+                    <div class="d-flex">
+                      <div class="flex-grow-1">
+                        <p class="text-muted fw-medium">Нийт хүсэлт</p>
+                        <h4 class="mb-0">{{ analyticsData.total_withdraws || 0 }}</h4>
+                      </div>
+                      <div class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
+                        <span class="avatar-title rounded-circle bg-primary">
+                          <i class="bx bx-file font-size-24"></i>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card mini-stats-wid">
+                  <div class="card-body">
+                    <div class="d-flex">
+                      <div class="flex-grow-1">
+                        <p class="text-muted fw-medium">Нийт алт (г)</p>
+                        <h4 class="mb-0">{{ analyticsData.gold?.total_grams || 0 | number:'1.2-2' }}</h4>
+                      </div>
+                      <div class="avatar-sm rounded-circle bg-warning align-self-center mini-stat-icon">
+                        <span class="avatar-title rounded-circle bg-warning">
+                          <i class="bx bx-wallet font-size-24"></i>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card mini-stats-wid">
+                  <div class="card-body">
+                    <div class="d-flex">
+                      <div class="flex-grow-1">
+                        <p class="text-muted fw-medium">Дундаж алт (г)</p>
+                        <h4 class="mb-0">{{ analyticsData.gold?.avg_quantity || 0 | number:'1.2-2' }}</h4>
+                      </div>
+                      <div class="avatar-sm rounded-circle bg-info align-self-center mini-stat-icon">
+                        <span class="avatar-title rounded-circle bg-info">
+                          <i class="bx bx-line-chart font-size-24"></i>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card mini-stats-wid">
+                  <div class="card-body">
+                    <div class="d-flex">
+                      <div class="flex-grow-1">
+                        <p class="text-muted fw-medium">Алт хүсэлт</p>
+                        <h4 class="mb-0">{{ analyticsData.gold?.withdraw_count || 0 }}</h4>
+                      </div>
+                      <div class="avatar-sm rounded-circle bg-success align-self-center mini-stat-icon">
+                        <span class="avatar-title rounded-circle bg-success">
+                          <i class="bx bx-check-circle font-size-24"></i>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pie Chart and Details -->
+            <div class="row">
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h4 class="card-title mb-4">Төрлөөр</h4>
+                    <apx-chart
+                      [series]="withdrawTypePieChart.series"
+                      [chart]="withdrawTypePieChart.chart"
+                      [labels]="withdrawTypePieChart.labels"
+                      [colors]="withdrawTypePieChart.colors"
+                      [legend]="withdrawTypePieChart.legend"
+                      [responsive]="withdrawTypePieChart.responsive"
+                    ></apx-chart>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h4 class="card-title mb-4">Дэлгэрэнгүй мэдээлэл</h4>
+                    
+                    <div class="table-responsive">
+                      <table class="table table-nowrap table-sm mb-0">
+                        <tbody>
+                          <tr *ngIf="analyticsData.by_withdraw_type?.sold_to_us">
+                            <th scope="row" style="width: 40%;">Манайд зарсан:</th>
+                            <td>
+                              <div><strong>Тоо:</strong> {{ analyticsData.by_withdraw_type.sold_to_us.count }} ({{ analyticsData.by_withdraw_type.sold_to_us.percentage }}%)</div>
+                              <div><strong>Алт:</strong> {{ analyticsData.by_withdraw_type.sold_to_us.total_grams_gold | number:'1.2-2' }} г</div>
+                              <div><strong>Үнэ:</strong> {{ analyticsData.by_withdraw_type.sold_to_us.total_price_mnt | number:'1.0-0' }} ₮</div>
+                              <div><strong>Дундаж ханш:</strong> {{ analyticsData.by_withdraw_type.sold_to_us.avg_gold_rate | number:'1.0-0' }} ₮</div>
+                            </td>
+                          </tr>
+                          <tr *ngIf="analyticsData.by_withdraw_type?.taken_physically">
+                            <th scope="row">Биетээр авсан:</th>
+                            <td>
+                              <div><strong>Тоо:</strong> {{ analyticsData.by_withdraw_type.taken_physically.count }} ({{ analyticsData.by_withdraw_type.taken_physically.percentage }}%)</div>
+                              <div><strong>Алт:</strong> {{ analyticsData.by_withdraw_type.taken_physically.total_grams_gold | number:'1.2-2' }} г</div>
+                              <div><strong>Мөнгө:</strong> {{ analyticsData.by_withdraw_type.taken_physically.total_grams_silver | number:'1.2-2' }} г</div>
+                            </td>
+                          </tr>
+                          <tr *ngIf="analyticsData.by_withdraw_type?.unspecified">
+                            <th scope="row">Тодорхойгүй:</th>
+                            <td>
+                              <div><strong>Тоо:</strong> {{ analyticsData.by_withdraw_type.unspecified.count }} ({{ analyticsData.by_withdraw_type.unspecified.percentage }}%)</div>
+                              <div><strong>Алт:</strong> {{ analyticsData.by_withdraw_type.unspecified.total_grams_gold | number:'1.2-2' }} г</div>
+                              <div><strong>Мөнгө:</strong> {{ analyticsData.by_withdraw_type.unspecified.total_grams_silver | number:'1.2-2' }} г</div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daily Breakdown -->
+            <div class="row" *ngIf="analyticsData.daily_breakdown && analyticsData.daily_breakdown.length > 0">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <h4 class="card-title mb-4">Өдрөөр задаргаа</h4>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-sm mb-0">
+                        <thead>
+                          <tr>
+                            <th>Огноо</th>
+                            <th class="text-center">Манайд зарсан</th>
+                            <th class="text-center">Биетээр авсан</th>
+                            <th class="text-center">Нийт хүсэлт</th>
+                            <th class="text-end">Алт (г)</th>
+                            <th class="text-end">Мөнгө (г)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let day of analyticsData.daily_breakdown">
+                            <td>{{ day.date | date:'yyyy-MM-dd' }}</td>
+                            <td class="text-center">{{ day.sold_to_us_count || 0 }}</td>
+                            <td class="text-center">{{ day.taken_physically_count || 0 }}</td>
+                            <td class="text-center"><strong>{{ day.total_withdraws || 0 }}</strong></td>
+                            <td class="text-end">{{ day.total_grams_gold || 0 | number:'1.2-2' }}</td>
+                            <td class="text-end">{{ day.total_grams_silver || 0 | number:'1.2-2' }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Users -->
+            <div class="row">
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h4 class="card-title mb-4">Хамгийн их хүсэлт гаргасан (Top 10)</h4>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-striped mb-0">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Нэр</th>
+                            <th class="text-center">Хүсэлт</th>
+                            <th class="text-end">Тоо хэмжээ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let user of analyticsData.top_users_by_frequency">
+                            <td>{{ user.rank }}</td>
+                            <td>{{ user.name }}</td>
+                            <td class="text-center">{{ user.withdraw_count }}</td>
+                            <td class="text-end">{{ user.total_quantity | number:'1.2-2' }} г</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h4 class="card-title mb-4">Хамгийн их татсан (Top 10)</h4>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-striped mb-0">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Нэр</th>
+                            <th class="text-center">Хүсэлт</th>
+                            <th class="text-end">Тоо хэмжээ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let user of analyticsData.top_users_by_quantity">
+                            <td>{{ user.rank }}</td>
+                            <td>{{ user.name }}</td>
+                            <td class="text-center">{{ user.withdraw_count }}</td>
+                            <td class="text-end">{{ user.total_quantity | number:'1.2-2' }} г</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <p class="text-muted mb-0">
+                      <i class="bx bx-calendar me-1"></i>
+                      Тооцоолсон огноо: {{ analyticsData.calculated_at | date:'yyyy-MM-dd HH:mm:ss' }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!isLoading && !analyticsData" class="alert alert-warning" role="alert">
+            Сонгосон сарын статистик мэдээлэл олдсонгүй.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

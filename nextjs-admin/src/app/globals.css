@@ -1,0 +1,202 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-heading: var(--font-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1a1a2e;
+
+  --card: #ffffff;
+  --card-foreground: #1a1a2e;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a2e;
+
+  --primary: #f59e0b;
+  --primary-foreground: #ffffff;
+  --primary-50: #fffbeb;
+  --primary-100: #fef3c7;
+  --primary-200: #fde68a;
+  --primary-300: #fcd34d;
+  --primary-400: #fbbf24;
+  --primary-500: #f59e0b;
+  --primary-600: #d97706;
+  --primary-700: #b45309;
+
+  --secondary: #f3f4f6;
+  --secondary-foreground: #1a1a2e;
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
+  --accent: #fffbeb;
+  --accent-foreground: #b45309;
+  --destructive: #dc2626;
+
+  --border: #f0e3c0;
+  --border-light: #f0e3c0;
+  --input: #f9fafb;
+  --ring: #fbbf24;
+
+  --sidebar: #fffbf0;
+  --sidebar-foreground: #1a1a2e;
+  --sidebar-hover: #fef3c7;
+  --sidebar-active: #fde68a;
+  --sidebar-primary: #f59e0b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fef3c7;
+  --sidebar-accent-foreground: #b45309;
+  --sidebar-border: #f0e3c0;
+  --sidebar-ring: #fbbf24;
+
+  --chart-1: #f59e0b;
+  --chart-2: #fbbf24;
+  --chart-3: #fcd34d;
+  --chart-4: #d97706;
+  --chart-5: #b45309;
+
+  --radius: 0.625rem;
+}
+
+/* Accent palettes are applied dynamically by <AccentProvider /> via inline styles
+   on <html>. A pre-hydration script in src/app/layout.tsx applies the saved
+   accent before first paint so there's no FOUC. The :root values above are the
+   default-accent fallback used during SSR. */
+
+.dark {
+  --background: #0f0f1a;
+  --foreground: #e4e4ef;
+
+  --card: #181830;
+  --card-foreground: #e4e4ef;
+  --popover: #181830;
+  --popover-foreground: #e4e4ef;
+
+  --primary: #f59e0b;
+  --primary-foreground: #ffffff;
+
+  --secondary: #1e1e35;
+  --secondary-foreground: #e4e4ef;
+  --muted: #1e1e35;
+  --muted-foreground: #9b9bb5;
+  --accent: #272745;
+  --accent-foreground: #fcd34d;
+  --destructive: #ef4444;
+
+  --border: #2a2a45;
+  --border-light: #2a2a45;
+  --input: #1e1e35;
+  --ring: #fbbf24;
+
+  --sidebar: #141422;
+  --sidebar-foreground: #e4e4ef;
+  --sidebar-hover: #1e1e35;
+  --sidebar-active: #272745;
+  --sidebar-primary: #f59e0b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e1e35;
+  --sidebar-accent-foreground: #fcd34d;
+  --sidebar-border: #2a2a45;
+  --sidebar-ring: #fbbf24;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+}
+
+/* Subtle scrollbar */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-primary-200);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary-300);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(110, 231, 183, 0.25);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(110, 231, 183, 0.4);
+    background-clip: padding-box;
+  }
+}

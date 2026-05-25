@@ -1,0 +1,231 @@
+<!-- Start page title -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0 font-size-18">Бэлгийн захиалгууд</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Бэлгийн захиалгууд</a></li>
+                    <li class="breadcrumb-item active">Жагсаалт</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end page title -->
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body border-bottom">
+                <div class="d-flex align-items-center">
+                    <h5 class="mb-0 card-title flex-grow-1">Бэлгийн захиалгын жагсаалт</h5>
+                    <div class="flex-shrink-0 d-flex gap-1">
+                        <a href="javascript:void(0);" class="btn btn-primary"
+                            style="background-color: #1D6F42; border-color: #1D6F42;" (click)="exportToExcel()">
+                            <i class="mdi mdi-file-excel"></i>Excel Export
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light" (click)="refreshGiftOrders()">
+                            <i class="mdi mdi-refresh"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Search and filters -->
+                <div class="row mb-3">
+                    <div class="col-lg-4">
+                        <div class="form-group">
+                            <label class="form-label">Хайх</label>
+                            <input type="text" class="form-control"
+                                placeholder="Илгээгч/хүлээн авагчийн нэр, утас, мэндчилгээ..." [(ngModel)]="searchTerm"
+                                (keyup)="searchGiftOrders()" name="searchTerm">
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Төлөв</label>
+                            <select class="form-select" (change)="selectStatusFilter($event)"
+                                name="statusFilter" [(ngModel)]="statusFilter">
+                                <option value="">Бүгд</option>
+                                <option value="pending">Хүлээгдэж буй</option>
+                                <option value="received">Хүлээн авсан</option>
+                                <option value="cancelled">Цуцалсан</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Металл төрөл</label>
+                            <select class="form-select" (change)="selectMetalFilter($event)" name="metalFilter"
+                                [(ngModel)]="metalFilter">
+                                <option value="">Бүгд</option>
+                                <option value="gold">Алт</option>
+                                <option value="silver">Мөнгө</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Огнооны шүүлт</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" [(ngModel)]="dateFilter"
+                                    (change)="filterByDate()" name="dateFilter">
+                                <button class="btn btn-outline-secondary" type="button" (click)="clearDateFilter()"
+                                    [disabled]="!dateFilter">
+                                    <i class="mdi mdi-close"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats info -->
+                <div class="row mb-3">
+                    <div class="col-lg-6">
+                        <p class="text-muted mb-2">
+                            <i class="mdi mdi-information-outline me-1"></i>
+                            Нийт: {{ totalItems }} бэлгийн захиалга
+                            <span *ngIf="searchTerm || statusFilter || metalFilter || dateFilter">(шүүлтийн дүн)</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div *ngIf="isLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Ачааллаж байна...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Бэлгийн захиалгуудын мэдээлэл ачааллаж байна...</p>
+                </div>
+
+                <!-- Gift orders table -->
+                <div *ngIf="!isLoading" class="table-responsive">
+                    <table class="table table-bordered dt-responsive nowrap w-100">
+                        <thead class="table-light">
+                            <tr>
+                                <th (click)="sortOrders('sender_name')" style="cursor: pointer;">
+                                    Илгээгч
+                                    <i [class]="getSortIcon('sender_name')"></i>
+                                </th>
+                                <th (click)="sortOrders('receiver_name')" style="cursor: pointer;">
+                                    Хүлээн авагч
+                                    <i [class]="getSortIcon('receiver_name')"></i>
+                                </th>
+                                <th>Металл төрөл</th>
+                                <th (click)="sortOrders('quantity')" style="cursor: pointer;">
+                                    Тоо хэмжээ
+                                    <i [class]="getSortIcon('quantity')"></i>
+                                </th>
+                                <th>Мэндчилгээ</th>
+                                <th (click)="sortOrders('status')" style="cursor: pointer;">
+                                    Төлөв
+                                    <i [class]="getSortIcon('status')"></i>
+                                </th>
+                                <th (click)="sortOrders('created_at')" style="cursor: pointer;">
+                                    Үүсгэсэн огноо
+                                    <i [class]="getSortIcon('created_at')"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let order of giftOrders; trackBy: trackByGiftOrder">
+                                <td>
+                                    <div>
+                                        <h6 class="mb-1">{{ getSenderName(order) }}</h6>
+                                        <small class="text-muted" *ngIf="order.sender?.phone">{{ order.sender.phone }}</small>
+                                        <br *ngIf="order.sender?.phone && order.sender?.email">
+                                        <small class="text-muted" *ngIf="order.sender?.email">{{ order.sender.email }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <h6 class="mb-1">{{ getReceiverName(order) }}</h6>
+                                        <small class="text-muted" *ngIf="order.receiver?.phone">{{ order.receiver.phone }}</small>
+                                        <br *ngIf="order.receiver?.phone && order.receiver?.email">
+                                        <small class="text-muted" *ngIf="order.receiver?.email">{{ order.receiver.email }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning" *ngIf="order.metal_id === 1">Алт</span>
+                                    <span class="badge bg-light text-dark" *ngIf="order.metal_id === 3">Мөнгө</span>
+                                    <span class="badge bg-secondary" *ngIf="order.metal_id !== 1 && order.metal_id !== 3">Тодорхойгүй</span>
+                                </td>
+                                <td>
+                                    <strong>{{ order.quantity | number:'1.0-0' }} гр</strong>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 200px;" [title]="order.greeting">
+                                        {{ order.greeting || 'Мэндчилгээ байхгүй' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span [class]="getStatusBadgeClass(order.status)">
+                                        {{ getStatusText(order.status) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ formatTimestamp(order.created_at) }}</small>
+                                    <div *ngIf="order.cancelled_at" class="mt-1">
+                                        <small class="text-danger">Цуцалсан: {{ formatTimestamp(order.cancelled_at) }}</small>
+                                    </div>
+                                    <div *ngIf="order.received_at" class="mt-1">
+                                        <small class="text-success">Хүлээн авсан: {{ formatTimestamp(order.received_at) }}</small>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr *ngIf="giftOrders.length === 0">
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="mdi mdi-information-outline me-1"></i>
+                                        <span *ngIf="!searchTerm && !statusFilter && !metalFilter && !dateFilter">
+                                            Бэлгийн захиалга байхгүй байна.
+                                        </span>
+                                        <span *ngIf="searchTerm || statusFilter || metalFilter || dateFilter">
+                                            Шүүлтийн нөхцөлд тохирох бэлгийн захиалга олдсонгүй.
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div *ngIf="!isLoading && filteredGiftOrders.length > 0" class="row">
+                    <div class="col-sm-12 col-md-5">
+                        <div class="dataTables_info">
+                            {{ startItem }}-ээс {{ endItem }} хүртэл, нийт {{ totalItems }}
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-7">
+                        <div class="dataTables_paginate">
+                            <nav aria-label="pagination">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item" [class.disabled]="currentPage === 1">
+                                        <button class="page-link" (click)="previousPage()"
+                                            [disabled]="currentPage === 1">
+                                            <i class="mdi mdi-chevron-left"></i>
+                                        </button>
+                                    </li>
+                                    <li *ngFor="let page of getPageNumbers()" class="page-item"
+                                        [class.active]="page === currentPage">
+                                        <button class="page-link" (click)="goToPage(page)">
+                                            {{ page }}
+                                        </button>
+                                    </li>
+                                    <li class="page-item" [class.disabled]="currentPage === totalPages">
+                                        <button class="page-link" (click)="nextPage()"
+                                            [disabled]="currentPage === totalPages">
+                                            <i class="mdi mdi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

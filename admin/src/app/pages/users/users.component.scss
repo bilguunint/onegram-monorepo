@@ -1,0 +1,130 @@
+// Users component styles
+
+.avatar-xs {
+  height: 2rem;
+  width: 2rem;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.table-responsive {
+  border-radius: 0.375rem;
+}
+
+.btn-group .btn {
+  border-radius: 0.25rem;
+}
+
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+// Status badges
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+// Action buttons
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+// Sortable headers
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  
+  &:hover {
+    background-color: #f8f9fa;
+  }
+  
+  i {
+    margin-left: 0.5rem;
+    opacity: 0.6;
+    font-size: 0.875rem;
+  }
+  
+  &:hover i {
+    opacity: 1;
+  }
+}
+
+// Pagination styles
+.dataTables_info {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  color: #74788d;
+  font-size: 0.875rem;
+}
+
+.dataTables_paginate {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.pagination {
+  margin-bottom: 0;
+  
+  .page-item {
+    &.disabled .page-link {
+      color: #6c757d;
+      background-color: #fff;
+      border-color: #dee2e6;
+      cursor: not-allowed;
+    }
+    
+    &.active .page-link {
+      z-index: 3;
+      color: #fff;
+      background-color: #556ee6;
+      border-color: #556ee6;
+    }
+    
+    .page-link {
+      position: relative;
+      display: block;
+      padding: 0.375rem 0.75rem;
+      margin-left: -1px;
+      line-height: 1.25;
+      color: #556ee6;
+      text-decoration: none;
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      cursor: pointer;
+      
+      &:hover {
+        z-index: 2;
+        color: #495dc3;
+        text-decoration: none;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+      }
+      
+      &:focus {
+        z-index: 3;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(85, 110, 230, 0.25);
+      }
+    }
+  }
+  
+  .page-item:first-child .page-link {
+    margin-left: 0;
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+  }
+  
+  .page-item:last-child .page-link {
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+  }
+}

@@ -1,0 +1,251 @@
+<div class="container-fluid">
+  <app-page-title title="AI Ажилтан" [breadcrumbItems]="breadCrumbItems"></app-page-title>
+
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-3" *ngIf="showHistory">
+      <div class="card sidebar-card">
+        <div class="card-body p-0">
+          <!-- Sidebar Tabs -->
+          <div class="sidebar-tabs">
+            <button class="sidebar-tab" [class.active]="activeTab === 'conversations'" (click)="switchTab('conversations')">
+              <i class="bx bx-chat me-1"></i> Яриа
+            </button>
+            <button class="sidebar-tab" [class.active]="activeTab === 'reports'" (click)="switchTab('reports')">
+              <i class="bx bx-file me-1"></i> Тайлан
+            </button>
+          </div>
+
+          <!-- Conversations Tab -->
+          <div class="sidebar-content" *ngIf="activeTab === 'conversations'">
+            <div class="d-flex justify-content-between align-items-center p-3 pb-2">
+              <span class="text-muted font-size-12">{{ conversations.length }} яриа</span>
+              <button class="btn btn-primary btn-sm" (click)="newConversation()">
+                <i class="bx bx-plus me-1"></i> Шинэ
+              </button>
+            </div>
+
+            @if (loadingHistory) {
+              <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              </div>
+            }
+
+            <ngx-simplebar style="height: calc(100vh - 320px);">
+              <ul class="list-unstyled mb-0 px-2">
+                @for (conv of conversations; track conv.id) {
+                  <li class="conversation-item p-2 rounded mb-1"
+                      [class.active]="currentConversationId === conv.id"
+                      (click)="loadConversation(conv)">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div class="flex-grow-1 overflow-hidden me-2">
+                        <h6 class="text-truncate font-size-13 mb-1">{{ conv.title }}</h6>
+                        <p class="text-muted font-size-11 mb-0">
+                          <i class="bx bx-message-detail me-1"></i>{{ conv.messageCount }} мессеж
+                          <span class="ms-2" *ngIf="conv.updatedAt">· {{ formatDate(conv.updatedAt) }}</span>
+                        </p>
+                      </div>
+                      <button class="btn btn-link btn-sm text-danger p-0 delete-btn" (click)="deleteConversation($event, conv)"
+                        title="Устгах">
+                        <i class="bx bx-trash font-size-14"></i>
+                      </button>
+                    </div>
+                  </li>
+                }
+                @if (conversations.length === 0) {
+                  <li class="text-center text-muted py-4">
+                    <i class="bx bx-chat font-size-24 d-block mb-2"></i>
+                    Яриа байхгүй байна
+                  </li>
+                }
+              </ul>
+            </ngx-simplebar>
+          </div>
+
+          <!-- Reports Tab -->
+          <div class="sidebar-content" *ngIf="activeTab === 'reports'">
+            <div class="p-3 pb-2">
+              <span class="text-muted font-size-12">{{ reports.length }} тайлан</span>
+            </div>
+            <ngx-simplebar style="height: calc(100vh - 320px);">
+              <ul class="list-unstyled mb-0 px-2">
+                @for (report of reports; track report.id) {
+                  <li class="report-item p-2 rounded mb-1" (click)="downloadReport(report)">
+                    <div class="d-flex align-items-start">
+                      <div class="report-icon me-2">
+                        <i class="bx font-size-20" [class.bx-file-blank]="report.type === 'pdf'" [class.bxs-file-doc]="report.type === 'word'"
+                          [class.text-danger]="report.type === 'pdf'" [class.text-primary]="report.type === 'word'"></i>
+                      </div>
+                      <div class="flex-grow-1 overflow-hidden me-2">
+                        <h6 class="text-truncate font-size-13 mb-1">{{ report.title }}</h6>
+                        <p class="text-muted font-size-11 mb-0">
+                          {{ report.type | uppercase }} · {{ formatFileSize(report.size) }}
+                          <span *ngIf="report.createdAt"> · {{ formatDate(report.createdAt) }}</span>
+                        </p>
+                      </div>
+                      <button class="btn btn-link btn-sm text-danger p-0 delete-btn" (click)="deleteReport($event, report)"
+                        title="Устгах">
+                        <i class="bx bx-trash font-size-14"></i>
+                      </button>
+                    </div>
+                  </li>
+                }
+                @if (reports.length === 0) {
+                  <li class="text-center text-muted py-4">
+                    <i class="bx bx-file font-size-24 d-block mb-2"></i>
+                    Тайлан байхгүй байна.<br>
+                    <span class="font-size-12">AI-аас тайлан үүсгэхийг хүснэ үү.</span>
+                  </li>
+                }
+              </ul>
+            </ngx-simplebar>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div [class]="showHistory ? 'col-lg-9' : 'col-lg-12'">
+      <div class="card chat-card">
+        <div class="card-body p-0">
+          <!-- Chat Header -->
+          <div class="chat-header p-3 border-bottom">
+            <div class="d-flex align-items-center">
+              <button class="btn btn-light btn-sm me-3" (click)="toggleHistory()"
+                [class.btn-soft-primary]="showHistory" title="Түүх харах">
+                <i class="bx bx-menu-alt-left font-size-16"></i>
+              </button>
+              <div class="flex-shrink-0 me-3">
+                <div class="avatar-sm">
+                  <span class="avatar-title rounded-circle bg-primary bg-gradient font-size-20">
+                    <i class="bx bx-bot"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <h5 class="font-size-15 mb-0">AI Бизнес Ажилтан</h5>
+                <p class="text-muted mb-0 font-size-12">
+                  <i class="mdi mdi-circle text-success align-middle me-1"></i> Идэвхтэй
+                  <span class="ms-1 badge bg-info-subtle text-info" *ngIf="currentConversationId">
+                    <i class="bx bx-save me-1"></i>Хадгалагдсан
+                  </span>
+                </p>
+              </div>
+              <button class="btn btn-soft-primary btn-sm" (click)="newConversation()">
+                <i class="bx bx-plus me-1"></i> Шинэ яриа
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Messages -->
+          <div class="chat-conversation">
+            <ngx-simplebar style="height: calc(100vh - 340px); min-height: 400px;" #chatScrollbar>
+              <ul class="list-unstyled mb-0 p-3">
+                @for (msg of messages; track $index) {
+                  <li [class]="msg.sender === 'user' ? 'right' : ''">
+                    <div class="conversation-list">
+                      <div class="d-flex">
+                        @if (msg.sender === 'ai') {
+                          <div class="flex-shrink-0 me-3">
+                            <div class="avatar-xs">
+                              <span class="avatar-title rounded-circle bg-primary bg-gradient">
+                                <i class="bx bx-bot"></i>
+                              </span>
+                            </div>
+                          </div>
+                        }
+                        <div class="flex-grow-1">
+                          <div class="ctext-wrap" [class.ai-message]="msg.sender === 'ai'">
+                            <div class="conversation-name">
+                              {{ msg.sender === 'ai' ? 'AI Ажилтан' : 'Та' }}
+                            </div>
+                            @if (msg.sender === 'ai') {
+                              <div class="mb-0 message-content" [innerHTML]="formatMessage(msg.message)"></div>
+                            } @else {
+                              <p class="mb-0 message-content">{{ msg.message }}</p>
+                            }
+                          </div>
+                          <p class="chat-time mb-0 mt-1">
+                            <i class="bx bx-time-five align-middle me-1"></i> {{ msg.time }}
+                            <span class="ms-2 badge bg-light text-muted" *ngIf="msg.model">{{ msg.model }}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                }
+
+                <!-- Quick Prompts (show only when messages are few) -->
+                @if (messages.length <= 1 && !isTyping) {
+                  <li>
+                    <div class="quick-prompts mt-3">
+                      <div class="row g-2">
+                        @for (qp of quickPrompts; track qp.label) {
+                          <div class="col-md-4 col-6">
+                            <button class="btn btn-outline-primary btn-sm w-100 text-start quick-prompt-btn"
+                              (click)="useQuickPrompt(qp.prompt)">
+                              <i class="bx {{ qp.icon }} me-1"></i> {{ qp.label }}
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </li>
+                }
+
+                @if (isTyping) {
+                  <li>
+                    <div class="conversation-list">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                          <div class="avatar-xs">
+                            <span class="avatar-title rounded-circle bg-primary bg-gradient">
+                              <i class="bx bx-bot"></i>
+                            </span>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="ctext-wrap ai-message">
+                            <div class="conversation-name">AI Ажилтан</div>
+                            <div class="typing-wrapper">
+                              <span class="typing-indicator">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                              </span>
+                              <span class="typing-text ms-2">Боловсруулж байна...</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </ngx-simplebar>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="chat-input p-3 border-top">
+            <form [formGroup]="chatForm" (ngSubmit)="sendMessage()">
+              <div class="d-flex align-items-end gap-2">
+                <div class="flex-grow-1">
+                  <textarea class="form-control chat-textarea" placeholder="Мессеж бичих... (Enter = илгээх, Shift+Enter = шинэ мөр)"
+                    formControlName="message" (keydown)="onKeydown($event)" autocomplete="off"
+                    [disabled]="isTyping" rows="1"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-rounded chat-send-btn" [disabled]="isTyping || chatForm.invalid">
+                  @if (isTyping) {
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                  } @else {
+                    <i class="mdi mdi-send font-size-18"></i>
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

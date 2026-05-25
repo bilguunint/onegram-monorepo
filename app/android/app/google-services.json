@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "585974340418",
+    "project_id": "grammgold",
+    "storage_bucket": "grammgold.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:585974340418:android:54e0411d24754fd94886db",
+        "android_client_info": {
+          "package_name": "mn.u999.onegrgold"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB--RyMmySDXQwVgH-SoIdjcjEIAFnRrhw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

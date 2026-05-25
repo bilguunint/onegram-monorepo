@@ -1,0 +1,506 @@
+<div class="container-fluid">
+    <!-- start page title -->
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-flex align-items-center justify-content-between">
+                <h4 class="mb-0 font-size-18">Dashboard</h4>
+                <div class="page-title-right d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-primary btn-sm me-3" (click)="refreshAnalyticsData()"
+                        [disabled]="isLoadingAnalytics">
+                        <i class="bx"
+                            [ngClass]="{'bx-refresh': !isLoadingAnalytics, 'bx-loader-alt bx-spin': isLoadingAnalytics}"></i>
+                        {{ isLoadingAnalytics ? 'Loading...' : 'Refresh Data' }}
+                    </button>
+                    <ol class="breadcrumb m-0">
+                        <ng-container>
+                            <li class="breadcrumb-item"><a href="javascript: void(0);">Dashboards</a>
+                            </li>
+                            <li class="breadcrumb-item active">Dashboard
+                            </li>
+                        </ng-container>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end page title -->
+
+    <div class="row">
+        <!-- Total Users -->
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-xs me-3">
+                            <span class="avatar-title rounded-circle bg-primary-subtle text-primary font-size-18">
+                                <i class="bx bx-user"></i>
+                            </span>
+                        </div>
+                        <h5 class="font-size-14 mb-0">Нийт хэрэглэгч</h5>
+                    </div>
+                    <div class="text-muted mt-4">
+                        <span class="badge badge-soft-primary font-size-12 me-2">{{ analyticsData.users_with_gold |
+                            number }} </span>/<h4>{{ analyticsData.total_users | number }}</h4>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Orders -->
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-xs me-3">
+                            <span class="avatar-title rounded-circle bg-success-subtle text-success font-size-18">
+                                <i class="bx bx-copy-alt"></i>
+                            </span>
+                        </div>
+                        <h5 class="font-size-14 mb-0">Нийт захиалга</h5>
+                    </div>
+                    <div class="text-muted mt-4">
+                        <span class="badge badge-soft-success font-size-12 me-2">{{ analyticsData.successful_orders |
+                            number }}</span>/<h4>{{ analyticsData.total_orders | number }}</h4>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Gold/Silver Sold -->
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-xs me-3">
+                            <span class="avatar-title rounded-circle bg-warning-subtle text-warning font-size-18">
+                                <i class="mdi mdi-gold"></i>
+                            </span>
+                        </div>
+                        <h5 class="font-size-14 mb-0">Нийт борлуулалт</h5>
+                    </div>
+                    <div class="text-muted mt-4">
+                        <h4>{{ analyticsData.total_gold_sold_all_time + analyticsData.total_silver_sold_all_time |
+                            number:'1.1-1' }} гр = {{ analyticsData.total_revenue_all_time | number:'1.0-0' }}₮</h4>
+                        <div class="d-flex">
+                            <span class="badge badge-soft-warning font-size-12 me-2">Алт: {{
+                                analyticsData.total_gold_sold_all_time | number:'1.1-1' }} гр </span>
+                            <span class="badge badge-soft-info font-size-12">Мөнгө: {{
+                                analyticsData.total_silver_sold_all_time | number:'1.1-1' }} гр </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Monthly Revenue -->
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-xs me-3">
+                            <span class="avatar-title rounded-circle bg-secondary-subtle text-secondary font-size-18">
+                                <i class="bx bx-calendar"></i>
+                            </span>
+                        </div>
+                        <h5 class="font-size-14 mb-0">Нийт биетээр олгосон</h5>
+                    </div>
+                    <div class="text-muted mt-4">
+                        <h4>{{ analyticsData.total_gold_withdraws_all_time +
+                            analyticsData.total_silver_withdraws_all_time | number:'1.1-1' }} гр</h4>
+                        <div class="d-flex">
+                            Нийт: <span class="badge badge-soft-warning font-size-12 me-2">Алт: {{
+                                analyticsData.total_gold_withdraws_all_time | number:'1.1-1' }} гр </span>
+                            <span class="badge badge-soft-info font-size-12">Мөнгө: {{
+                                analyticsData.total_silver_withdraws_all_time | number:'1.1-1' }} гр </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Total Revenue -->
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-xs me-3">
+                            <span class="avatar-title rounded-circle bg-info-subtle text-info font-size-18">
+                                <i class="bx bx-chart"></i>
+                            </span>
+                        </div>
+                        <h5 class="font-size-14 mb-0">Алтны ханш</h5>
+                    </div>
+                    <div class="row align-items-center mt-4">
+                        <div class="col-6">
+                            <h4>₮{{ goldRateData.rate | number:'1.2-2' }}</h4>
+                            <div class="d-flex align-items-center">
+                                <span [ngClass]="goldRateData.changes >= 0 ? 'text-success' : 'text-danger'">
+                                    {{ goldRateData.changes >= 0 ? '+' : '' }}{{ goldRateData.changes | number:'1.2-2' }}
+                                    ({{ ((goldRateData.changes / goldRateData.rate) * 100) | number:'1.2-2' }}%)
+                                </span>
+                                <i class="mdi ms-1"
+                                    [ngClass]="goldRateData.changes >= 0 ? 'mdi-arrow-up text-success' : 'mdi-arrow-down text-danger'"></i>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <apx-chart class="apex-charts" dir="ltr" [series]="goldPriceChart.series"
+                                [chart]="goldPriceChart.chart" [stroke]="goldPriceChart.stroke"
+                                [colors]="goldPriceChart.colors" [fill]="goldPriceChart.fill"></apx-chart>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-xs me-3">
+                            <span class="avatar-title rounded-circle bg-info-subtle text-info font-size-18">
+                                <i class="mdi mdi-cash"></i>
+                            </span>
+                        </div>
+                        <h5 class="font-size-14 mb-0">Нийт хөрөнгө оруулалт хэмжээ</h5>
+                    </div>
+                    <div class="text-muted mt-4">
+                        <h4>{{ analyticsData.total_investments | number:'1.0-0' }}гр</h4>
+                        <div class="d-flex">
+                            Нийт: <span class="badge badge-soft-secondary font-size-12">{{ totalInvestors |
+                                number:'1.0-0' }} хөрөнгө оруулагч</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="row">
+                @for (stat of statData; track $index) {
+                <div class="col-md-4">
+                    <app-stat [title]="stat.title" [value]="stat.value" [icon]="stat.icon"></app-stat>
+                </div>}
+            </div>
+
+            <!-- Earning Chart -->
+            <div class="card">
+                <div class="card-body">
+
+                    <div class="row">
+                        <h4 class="card-title mb-4">Шинэ хэрэглэгчид</h4>
+                        <!-- Time period buttons -->
+                        <div class="toolbar button-items text-center d-flex gap-2 justify-content-center mt-3">
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateUserCountPeriod('1m')"
+                                [class.active]="activeUserPeriod=='1m'">
+                                1 сар
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateUserCountPeriod('6m')"
+                                [class.active]="activeUserPeriod=='6m'">
+                                6 сар
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateUserCountPeriod('1y')"
+                                [class.active]="activeUserPeriod=='1y'">
+                                1 жил
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateUserCountPeriod('all')"
+                                [class.active]="activeUserPeriod=='all'">
+                                Бүгд
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <apx-chart class="apex-charts" dir="ltr" [series]="userCountChart.series"
+                                [chart]="userCountChart.chart" [colors]="userCountChart.colors"
+                                [stroke]="userCountChart.stroke" [dataLabels]="userCountChart.dataLabels"
+                                [xaxis]="userCountChart.xaxis" [yaxis]="userCountChart.yaxis">
+                            </apx-chart>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="row">
+                @for (stat of statData; track $index) {
+                <div class="col-md-4">
+                    <app-stat [title]="stat.title" [value]="stat.value" [icon]="stat.icon"></app-stat>
+                </div>}
+            </div>
+
+            <!-- Earning Chart -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <h4 class="card-title mb-4">Өдөр бүрийн борлуулалт</h4>
+                        <!-- Time period buttons -->
+                        <div class="toolbar button-items text-center d-flex gap-2 justify-content-center mt-3">
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateSalesPeriod('1m')"
+                                [class.active]="activeSalesPeriod=='1m'">
+                                1 сар
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateSalesPeriod('6m')"
+                                [class.active]="activeSalesPeriod=='6m'">
+                                6 сар
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateSalesPeriod('1y')"
+                                [class.active]="activeSalesPeriod=='1y'">
+                                1 жил
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" (click)="updateSalesPeriod('all')"
+                                [class.active]="activeSalesPeriod=='all'">
+                                Бүгд
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <apx-chart class="apex-charts" dir="ltr" [series]="dailySalesChart.series"
+                                [chart]="dailySalesChart.chart" [colors]="dailySalesChart.colors"
+                                [stroke]="dailySalesChart.stroke" [dataLabels]="dailySalesChart.dataLabels"
+                                [xaxis]="dailySalesChart.xaxis" [yaxis]="dailySalesChart.yaxis">
+                            </apx-chart>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+    <div class="col-xl-3">
+            <!-- Daily User Analytics Card -->
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Энэ сарын мэдээлэл</h4>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <p class="text-muted">Энэ сар ({{ monthlyData.current_month.month }})</p>
+                            <h3>₮{{ monthlyData.current_month.total_revenue | number:'1.0-0' }}</h3>
+                            <p class="text-muted">
+                                <span class="text-success me-2"
+                                    *ngIf="monthlyData.current_month.total_revenue > monthlyData.previous_month.total_revenue">
+                                    {{ ((monthlyData.current_month.total_revenue -
+                                    monthlyData.previous_month.total_revenue) / monthlyData.previous_month.total_revenue
+                                    * 100) | number:'1.1-1' }}%
+                                    <i class="mdi mdi-arrow-up"></i>
+                                </span>
+                                <span class="text-danger me-2"
+                                    *ngIf="monthlyData.current_month.total_revenue <= monthlyData.previous_month.total_revenue">
+                                    {{ ((monthlyData.current_month.total_revenue -
+                                    monthlyData.previous_month.total_revenue) / monthlyData.previous_month.total_revenue
+                                    * 100) | number:'1.1-1' }}%
+                                    <i class="mdi mdi-arrow-down"></i>
+                                </span>
+                                Өмнөх сараас
+                            </p>
+
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Нийт захиалга:</span>
+                                    <span>{{ monthlyData.current_month.total_orders }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Амжилттай захиалга:</span>
+                                    <span>{{ monthlyData.current_month.successful_orders }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Алтны хэмжээ:</span>
+                                    <span>{{ monthlyData.current_month.total_gold_sold | number:'1.0-1' }} гр</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Сар бүрийн мэдээлэл</h4>
+
+                    <div class="table-responsive">
+                        <table class="table table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="align-middle">Сар</th>
+                                    <th class="align-middle">Нийт орлого</th>
+                                    <th class="align-middle">Амжилттай захиалга</th>
+                                    <th class="align-middle">Алт борлуулалт</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let month of monthlyDataList; trackBy: trackByMonth">
+                                    <td>
+                                        <div class="fw-medium">{{ formatMonthName(month.month) }}</div>
+                                        <p class="text-muted mb-0">{{ month.month }}</p>
+                                    </td>
+                                    <td>
+                                        <div class="fw-medium text-success">
+                                            ₮{{ formatCurrency(month.total_revenue) }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success">
+                                            {{ month.successful_orders }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-medium text-warning">
+                                            {{ month.total_gold_sold | number:'1.0-1' }} гр
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr *ngIf="monthlyDataList.length === 0">
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="mdi mdi-information-outline me-2"></i>
+                                            Сар бүрийн мэдээлэл олдсонгүй
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- end table -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Gold Balance Distribution Card -->
+        <div class="col-xl-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h4 class="card-title mb-0">Хэрэглэгчдийн үлдэгдэл</h4>
+                        
+                    </div>
+                    <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+                        <table class="table table-sm table-nowrap mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>#</th>
+                                    <th class="align-middle">Алт (гр)</th>
+                                    <th class="align-middle text-end">Хэрэглэгч тоо</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of goldDistributionPreview; let i = index">
+                                    <td class="text-muted">{{ i + 1 }}</td>
+                                    <td>
+                                        <span class="badge badge-soft-warning font-size-11">
+                                            {{ item.gold | number:'1.1-1' }} гр
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-medium">{{ item.count | number }}</td>
+                                </tr>
+                                <tr *ngIf="goldBalanceDistribution.distribution.length === 0">
+                                    <td colspan="3" class="text-center py-3 text-muted">
+                                        <i class="mdi mdi-information-outline me-1"></i>Мэдээлэл олдсонгүй
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3" *ngIf="goldBalanceDistribution.distribution.length > 20">
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                            (click)="distributionModal.show()">
+                            Бүгдийг үзэх ({{ goldBalanceDistribution.distribution.length }})
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> <!-- container-fluid -->
+
+<!-- Distribution Modal -->
+<div bsModal #distributionModal="bs-modal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Алтны үлдэгдлийн тархалт</h5>
+                <button type="button" class="btn-close" aria-label="Close"
+                    (click)="distributionModal.hide()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex gap-3 mb-3 flex-wrap">
+                    <span class="badge badge-soft-warning font-size-12">
+                        Нийт алт: {{ goldBalanceDistribution.totalGoldInSystem | number:'1.1-1' }} гр
+                    </span>
+                    <span class="badge badge-soft-primary font-size-12">
+                        Нийт хэрэглэгч: {{ goldBalanceDistribution.totalUsers | number }}
+                    </span>
+                    <span class="badge badge-soft-success font-size-12">
+                        Алттай: {{ goldBalanceDistribution.usersWithGold | number }}
+                    </span>
+                    <span class="badge badge-soft-danger font-size-12">
+                        Алтгүй: {{ goldBalanceDistribution.usersWithoutGold | number }}
+                    </span>
+                </div>
+                <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
+                    <table class="table table-sm table-hover table-nowrap mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Алт (гр)</th>
+                                <th class="text-end">Хэрэглэгч тоо</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let item of goldBalanceDistribution.distribution; let i = index">
+                                <td class="text-muted">{{ i + 1 }}</td>
+                                <td>
+                                    <span class="badge badge-soft-warning font-size-12">
+                                        {{ item.gold | number:'1.1-1' }} гр
+                                    </span>
+                                </td>
+                                <td class="text-end fw-medium">{{ item.count | number }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm"
+                    (click)="distributionModal.hide()">Хаах</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div bsModal #center="bs-modal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom-0">
+                <button type="button" class="btn-close" aria-label="Close" (click)="center.hide()"> </button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-md mx-auto mb-4">
+                        <div class="avatar-title bg-light rounded-circle text-primary h1">
+                            <i class="mdi mdi-email-open"></i>
+                        </div>
+                    </div>
+                    <div class="row justify-content-center">
+                        <div class="col-xl-10">
+                            <h4 class="text-primary">Subscribe !</h4>
+                            <p class="text-muted font-size-14 mb-4">Subscribe our newletter and get notification to stay
+                                update.
+                            </p>
+
+                            <div class="input-group bg-light rounded">
+                                <input type="email" class="form-control bg-transparent border-0"
+                                    placeholder="Enter Email address" aria-label="Recipient's username"
+                                    aria-describedby="button-addon2">
+
+                                <button class="btn btn-primary" type="button" id="button-addon2">
+                                    <i class="bx bxs-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

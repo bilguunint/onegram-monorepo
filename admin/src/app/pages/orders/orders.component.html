@@ -1,0 +1,286 @@
+<!-- Start page title -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0 font-size-18">Захиалгууд</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Захиалгууд</a></li>
+                    <li class="breadcrumb-item active">Жагсаалт</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end page title -->
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body border-bottom">
+                <div class="d-flex align-items-center">
+                    <h5 class="mb-0 card-title flex-grow-1">Захиалгын жагсаалт</h5>
+                    <div class="flex-shrink-0 d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Date range quick filter -->
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm"
+                                [class.btn-primary]="dateRangeFilter === 'week'"
+                                [class.btn-outline-secondary]="dateRangeFilter !== 'week'"
+                                (click)="fetchOrdersByDateRange('week')">7 хоног</button>
+                            <button type="button" class="btn btn-sm"
+                                [class.btn-primary]="dateRangeFilter === 'month'"
+                                [class.btn-outline-secondary]="dateRangeFilter !== 'month'"
+                                (click)="fetchOrdersByDateRange('month')">Сар</button>
+                            <button type="button" class="btn btn-sm"
+                                [class.btn-primary]="dateRangeFilter === 'year'"
+                                [class.btn-outline-secondary]="dateRangeFilter !== 'year'"
+                                (click)="fetchOrdersByDateRange('year')">Жил</button>
+                            <button type="button" class="btn btn-sm"
+                                [class.btn-primary]="dateRangeFilter === 'all'"
+                                [class.btn-outline-secondary]="dateRangeFilter !== 'all'"
+                                (click)="fetchOrdersByDateRange('all')">Бүгд</button>
+                        </div>
+                        <a href="javascript:void(0);" class="btn btn-primary"
+                            *ngIf="adminRole !== 'manager'"
+                            style="background-color: #1D6F42; border-color: #1D6F42;" (click)="exportToExcel()"><i
+                                class="mdi mdi-file-excel"></i>Excel Export</a>
+                        <a href="javascript:void(0);" class="btn btn-light" (click)="refreshOrders()"><i
+                                class="mdi mdi-refresh"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Search and filters -->
+                <div class="row mb-3">
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Хайх</label>
+                            <input type="text" class="form-control"
+                                placeholder="Нэр, утас, ID эсвэл QPay дугаар хайх..." [(ngModel)]="searchTerm"
+                                (keyup)="searchOrders()" name="searchTerm">
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Төлбөрийн төлөв</label>
+                            <select class="form-select" (change)="selectPaymentStatusFilter($event)"
+                                name="paymentStatusFilter" [(ngModel)]="paymentStatusFilter">
+                                <option value="pending">Хүлээгдэж буй</option>
+                                <option value="success">Төлсөн</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Төлөв</label>
+                            <select class="form-select" (change)="selectAdminStatusFilter($event)"
+                                name="adminStatusFilter" [(ngModel)]="adminStatusFilter">
+                                <option value="">Бүгд</option>
+                                <option value="pending">Хүлээгдэж буй</option>
+                                <option value="success">Баталгаажсан</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="form-group">
+                            <label class="form-label">Бүтээгдэхүүн</label>
+                            <select class="form-select" (change)="selectProductFilter($event)" name="productFilter"
+                                [(ngModel)]="productFilter">
+                                <option value="">Бүгд</option>
+                                <option value="gold">Алт</option>
+                                <option value="silver">Мөнгө</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="form-group">
+                            <label class="form-label">Огноо - Эхлэх / Дуусах</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control me-1" [(ngModel)]="startDateFilter"
+                                    (change)="filterByDate()" name="startDateFilter">
+                                <input type="date" class="form-control" [(ngModel)]="endDateFilter"
+                                    (change)="filterByDate()" name="endDateFilter">
+                                <button class="btn btn-outline-secondary" type="button" (click)="clearDateFilter()"
+                                    [disabled]="!startDateFilter && !endDateFilter">
+                                    <i class="mdi mdi-close"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="row mb-3">
+                    <div class="col-lg-6">
+                            <p class="text-muted mb-2">
+                            <i class="mdi mdi-information-outline me-1"></i>
+                            Нийт: {{ totalItems }} захиалга
+                            <span
+                                *ngIf="searchTerm || paymentStatusFilter || adminStatusFilter || productFilter || startDateFilter || endDateFilter">(шүүлтийн
+                                дүн)</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div *ngIf="isLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Ачааллаж байна...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Захиалгуудын мэдээлэл ачааллаж байна...</p>
+                </div>
+
+                <!-- Orders table -->
+                <div *ngIf="!isLoading" class="table-responsive">
+                    <table class="table table-bordered dt-responsive nowrap w-100">
+                        <thead class="table-light">
+                            <tr>
+                                <th (click)="sortOrders('client_name')" style="cursor: pointer;">
+                                    Харилцагч
+                                    <i [class]="getSortIcon('client_name')"></i>
+                                </th>
+
+                                <th (click)="sortOrders('quantity')" style="cursor: pointer;">
+                                    Тоо хэмжээ
+                                    <i [class]="getSortIcon('quantity')"></i>
+                                </th>
+                                <th>Бүтээгдэхүүн төрөл</th>
+                                <th>Үнэ</th>
+                                <th (click)="sortOrders('amount')" style="cursor: pointer;">
+                                    Нийт дүн
+                                    <i [class]="getSortIcon('amount')"></i>
+                                </th>
+                                <th>
+                                    Төлбөрийн төлөв
+                                </th>
+                                <th (click)="sortOrders('admin_status')" style="cursor: pointer;">Админ төлөв <i
+                                        [class]="getSortIcon('admin_status')"></i></th>
+                                <th (click)="sortOrders('created_at')" style="cursor: pointer;">
+                                    Огноо
+                                    <i [class]="getSortIcon('created_at')"></i>
+                                </th>
+                                <th *ngIf="adminRole !== 'manager' && adminRole !== 'accountant'">Үйлдэл</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let order of orders; trackBy: trackByOrder">
+                                <td>
+                                    <div>
+                                        <h6 class="mb-1">{{ getClientName(order) }} <span *ngIf="order.is_extraOrder" class="text-danger">(Онцгой)</span></h6>
+                                        <small class="text-muted" *ngIf="order.client?.phone; else showEmail">{{
+                                            order.client.phone }}</small>
+                                        <ng-template #showEmail>
+                                            <small class="text-muted">{{ order.client?.email || 'И-мэйл байхгүй'
+                                                }}</small>
+                                        </ng-template>
+                                        <br>
+                                        <small class="text-muted" *ngIf="!order.is_extraOrder">QPAY: ORDER-{{ order.id }}</small>
+                                        <small class="text-muted">{{ order.description }}</small>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="badge bg-warning" *ngIf="order.metal_id === 1">Алт: {{ order.quantity }} гр</span>
+                                    <span class="badge bg-light" *ngIf="order.metal_id === 3">Мөнгө: {{ order.quantity |
+                                        number:'1.0-0' }} гр</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info" [innerHTML]="getProductTypeName(order.prod_type)">
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ order.price | number:'1.2-2' }}₮
+                                </td>
+                                <td>
+                                    <strong>{{ order.amount | number:'1.0-0' }}₮</strong>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                        [class]="order.payment_status === 'success' ? 'bg-success' : 'bg-warning'">
+                                        {{ order.payment_status === 'success' ? 'Төлсөн' : 'Төлөөгүй' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span [class]="getStatusBadgeClass(order.admin_status)">
+                                        {{ getStatusText(order.admin_status) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ formatTimestamp(order.created_at) }}</small>
+                                </td>
+                                <td *ngIf="adminRole !== 'manager' && adminRole !== 'accountant'">
+                                    <ul class="list-unstyled hstack gap-1 mb-0">
+                                        <!-- Show detail button for success status -->
+                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Дэлгэрэнгүй" 
+                                            *ngIf="order.admin_status === 'success'">
+                                            <a href="javascript:void(0);" class="btn btn-sm btn-soft-primary" (click)="openOrderDetailModal(order)">
+                                                <i class="mdi mdi-eye-outline"></i>
+                                            </a>
+                                        </li>
+                                        <!-- Show approve button for pending status -->
+                                        <li data-bs-toggle="tooltip" data-bs-placement="top" title="Баталгаажуулах"
+                                            *ngIf="order.admin_status === 'pending'">
+                                            <a href="javascript:void(0);" class="btn btn-sm btn-soft-success" (click)="verifyOrderHandler(order)">
+                                                <i class="mdi mdi-check"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                                <tr *ngIf="orders.length === 0">
+                                <td [attr.colspan]="(adminRole === 'manager' || adminRole === 'accountant') ? 8 : 9" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="mdi mdi-information-outline me-1"></i>
+                                        <span
+                                            *ngIf="!searchTerm && !paymentStatusFilter && !adminStatusFilter && !productFilter && !startDateFilter && !endDateFilter">
+                                            Захиалга байхгүй байна.
+                                        </span>
+                                        <span
+                                            *ngIf="searchTerm || paymentStatusFilter || adminStatusFilter || productFilter || startDateFilter || endDateFilter">
+                                            Шүүлтийн нөхцөлд тохирох захиалга олдсонгүй.
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div *ngIf="!isLoading && filteredOrders.length > 0" class="row">
+                    <div class="col-sm-12 col-md-5">
+                        <div class="dataTables_info">
+                            {{ startItem }}-ээс {{ endItem }} хүртэл, нийт {{ totalItems }}
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-7">
+                        <div class="dataTables_paginate">
+                            <nav aria-label="pagination">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item" [class.disabled]="currentPage === 1">
+                                        <button class="page-link" (click)="previousPage()"
+                                            [disabled]="currentPage === 1">
+                                            <i class="mdi mdi-chevron-left"></i>
+                                        </button>
+                                    </li>
+                                    <li *ngFor="let page of getPageNumbers()" class="page-item"
+                                        [class.active]="page === currentPage">
+                                        <button class="page-link" (click)="goToPage(page)">
+                                            {{ page }}
+                                        </button>
+                                    </li>
+                                    <li class="page-item" [class.disabled]="currentPage === totalPages">
+                                        <button class="page-link" (click)="nextPage()"
+                                            [disabled]="currentPage === totalPages">
+                                            <i class="mdi mdi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

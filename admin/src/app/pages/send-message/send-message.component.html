@@ -1,0 +1,161 @@
+<ng-template #content3 role="document" let-modal>
+    <div class="modal-header">
+        <h5 class="modal-title mt-0">Та {{numbers.length}} харилцагчид дараах мессежийг илгээхдээ итгэлтэй байна уу?</h5>
+        <button type="button" class="btn-close" aria-hidden="true" (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <div class="modal-body">
+        {{form.text.value}}
+    </div>
+    <div class="modal-footer">
+        <div class="text-end">
+            <button (click)="confirmSend()" type="button" class="btn me-2 btn-success" [disabled]="isLoading">
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+                Илгээх
+            </button>
+            <button (click)="dismissModal()" type="button" class="btn btn-primary" [disabled]="isLoading">
+                Буцах
+            </button>
+        </div>
+    </div>
+</ng-template>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                <h4 class="mb-sm-0 font-size-18">Мессеж илгээх</h4>
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="javascript: void(0);">Admin</a></li>
+                        <li class="breadcrumb-item"><a href="javascript: void(0);" routerLink="/messaging">Мессеж</a></li>
+                        <li class="breadcrumb-item active">Мессеж илгээх</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" [formGroup]="sendForm">
+        <div class="row">
+            <div class="col-8">
+                <div class="card card-body">
+                    <div class="border-bottom">
+                        <div class="d-flex mb-2">
+                            <h5 class="font-size-15 mb-1">Илгээмжийн гарчиг</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mb-2 mt-2">
+                            <label class="form-label">Гарчиг</label>
+                            <input class="form-control" placeholder="Гарчиг оруулна уу" type="text" name="name"
+                                formControlName="name" [ngClass]="{'is-invalid': submitted && form.name.errors}" />
+                            <div *ngIf="submitted && form.name.errors" class="invalid-feedback">
+                                <span *ngIf="form.name.errors.required">Гарчиг оруулна уу.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-body">
+                    <div class="border-bottom">
+                        <div class="d-flex mb-2">
+                            <h5 class="font-size-15 mb-1">Хэнд илгээх вэ?</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mt-2">
+                            <form (ngSubmit)="addPhone()" [formGroup]="phoneForm" class="row">
+                                <div class="col">
+                                    <div class="position-relative">
+                                        <div>
+                                            <div class="input-group mb-2">
+                                                <label class="input-group-text" for="inputGroupFile01">+976</label>
+                                                <input type="text" formControlName="phone" class="form-control"
+                                                    [ngClass]="{ 'is-invalid': addSubmitted && f.phone.errors }"
+                                                    id="phone" placeholder="99123456" />
+                                                <div *ngIf="addSubmitted && f.phone.errors" class="invalid-feedback">
+                                                    <div *ngIf="f.phone.errors.required">Утасны дугаар оруулна уу.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-light chat-send w-md"><i
+                                            class="me-2 mdi mdi-phone-plus"></i> <span
+                                            class="d-none d-sm-inline-block me-2">Дугаар нэмэх</span></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-body">
+                    <div class="border-bottom">
+                        <div class="d-flex mb-2">
+                            <h5 class="font-size-15 mb-1">Хэзээ илгээх вэ?</h5>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <label>Илгээх огноо</label>
+                            <input class="form-control" placeholder="Илгээх огноо сонгоно уу." type="date" name="date"
+                                formControlName="date" [ngClass]="{'is-invalid': submitted && form.date.errors}" />
+                            <div *ngIf="submitted && form.date.errors" class="invalid-feedback">
+                                <span *ngIf="form.date.errors.required">Илгээх огноо сонгоно уу.</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Цаг</label>
+                            <input class="form-control" placeholder="Илгээх цагаа сонгоно уу." type="time" name="hour"
+                                formControlName="hour" [ngClass]="{'is-invalid': submitted && form.hour.errors}" />
+                            <div *ngIf="submitted && form.hour.errors" class="invalid-feedback">
+                                <span *ngIf="form.hour.errors.required">Илгээх цагаа сонгоно уу.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-body">
+                    <div class="border-bottom">
+                        <div class="d-flex mb-2">
+                            <h5 class="font-size-15 mb-1">Юу илгээх вэ?</h5>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-2">
+                        <label class="form-label">Мессеж</label>
+                        <textarea [maxlength]="200" style="height: 100px;" type="text" formControlName="text" 
+                            [ngClass]="{'is-invalid': submitted && form.text.errors}" class="form-control"
+                            id="text" placeholder="Мессеж бичнэ үү."></textarea>
+                        <label class="form-label">{{form.text.value?.length || 0}}/200</label>
+                        <div *ngIf="submitted && form.text.errors" class="invalid-feedback d-block">
+                            <span *ngIf="form.text.errors.required">Мессеж бичнэ үү.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card text-wrap">
+                    <div class="card-body">
+                        <p class="text-wrap"> <span class="fw-bold">Гарчиг:</span> {{form.name.value || '-'}}</p>
+                        <p class="text-wrap"> <span class="fw-bold">Агуулга:</span> {{form.text.value || '-'}}</p>
+                        <p class="text-wrap"> <span class="fw-bold">Хэзээ:</span> {{form.date.value || '-'}} {{form.hour.value || '-'}}</p>
+                        <p class="text-wrap"> <span class="fw-bold">Утасны дугаар:</span> {{numbers.length}}</p>
+                        <div class="text-muted mb-4">
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                <div class="d-flex flex-wrap gap-2 widget-tag">
+                                    <div *ngFor="let number of numbers"><a href="javascript: void(0);"
+                                            (click)="removePhone(number)"
+                                            class="badge p-1 bg-light font-size-12">{{number}} <i
+                                                class="bx bx-x float-right label-icon"></i></a></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-wrap text-danger">Та илгээж буй мессежийн агуулга болон хүлээн авагчийн мэдээллийг сайтар шалгана уу.</p>
+                        <button type="submit" class="btn mb-4 d-block w-100 btn-primary" [disabled]="isLoading">
+                            <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+                            <i class="fa fa-paper-plane me-2" *ngIf="!isLoading"></i> Илгээх
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
