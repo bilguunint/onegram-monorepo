@@ -6,6 +6,10 @@ const axios = require("axios");
 const QPAY_USERNAME = "ONE_GRAM_GOLD";
 const QPAY_PASSWORD = "zElO7j40";
 
+function generatePickupCode() {
+  return Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+}
+
 // Fetch a fresh QPay access token.
 async function getQPayToken() {
   const resp = await axios.post(
@@ -157,6 +161,7 @@ exports.directPurchaseCallback = onRequest({
         status: "completed",
         started_at: now,
         completed_at: now,
+        pickup_code: generatePickupCode(),
         purchase_type: "direct",
         payments: [
           {

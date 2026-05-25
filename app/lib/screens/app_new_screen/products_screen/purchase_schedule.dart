@@ -1,88 +1,54 @@
 import 'package:onegrgold/models/product_purchase_model.dart';
 
-/// One row in a purchase's payment schedule.
+/// One row in a purchase's payment history.
+///
+/// Unlike the old monthly model, we no longer render a row for every
+/// scheduled future payment (with 180+ daily installments that would
+/// overwhelm the UI). Instead we materialise rows only for *paid* days
+/// from the `payments[]` array — the upcoming amount is shown separately
+/// as a single "Дараагийн төлбөр" CTA.
 class ScheduleRow {
-  /// 1-based month index.
-  final int monthNo;
+  /// 1-based day index.
+  final int dayNo;
 
-  /// When this month's payment should be (or was) made.
-  final DateTime dueDate;
+  /// When this day was actually paid.
+  final DateTime paidAt;
 
-  /// Monthly amount to be paid (or actually paid if [isPaid]).
+  /// Amount paid for this day.
   final int amount;
 
-  /// Whether the user has paid for this month.
-  final bool isPaid;
-
-  /// When this month was actually paid (taken from the `payments[]` array
-  /// if available). Null for unpaid months.
-  final DateTime? paidAt;
-
-  /// Whether the due date has passed AND the row is still unpaid.
-  final bool isOverdue;
-
   const ScheduleRow({
-    required this.monthNo,
-    required this.dueDate,
-    required this.amount,
-    required this.isPaid,
+    required this.dayNo,
     required this.paidAt,
-    required this.isOverdue,
+    required this.amount,
   });
 }
 
-/// Compute the schedule for an installment purchase. For direct purchases this
-/// returns a single row dated to the purchase start.
-List<ScheduleRow> buildSchedule(ProductPurchase p) {
+/// Build the list of paid-day history rows for a purchase, newest first.
+/// For [PurchaseType.direct] purchases this returns a single row covering
+/// the full payment.
+List<ScheduleRow> buildPaymentHistory(ProductPurchase p) {
   final start = p.startedAt ?? DateTime.now();
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-
-  // Lookup map of explicit payment records for richer paid_at data.
-  final payments = <int, PaymentRecord>{
-    for (final r in p.payments) r.monthNo: r,
-  };
 
   if (p.purchaseType == PurchaseType.direct) {
-    final rec = payments[1];
+    final rec = p.payments.isNotEmpty ? p.payments.first : null;
     return [
       ScheduleRow(
-        monthNo: 1,
-        dueDate: rec?.paidAt ?? start,
-        amount: p.totalPrice,
-        isPaid: true,
+        dayNo: 1,
         paidAt: rec?.paidAt ?? start,
-        isOverdue: false,
+        amount: p.totalPrice,
       ),
     ];
   }
 
-  final rows = <ScheduleRow>[];
-  for (var i = 1; i <= p.months; i++) {
-    // Month i due = start + i months (so the first installment lands a month
-    // after the commitment date).
-    final due = DateTime(start.year, start.month + i, start.day);
-    final isPaid = i <= p.paidMonths;
-    final rec = payments[i];
-    final isOverdue = !isPaid && due.isBefore(today);
-    rows.add(
-      ScheduleRow(
-        monthNo: i,
-        dueDate: due,
-        amount: p.monthlyPayment,
-        isPaid: isPaid,
-        paidAt: rec?.paidAt,
-        isOverdue: isOverdue,
-      ),
-    );
-  }
+  final rows = p.payments
+      .where((r) => r.paidAt != null)
+      .map((r) => ScheduleRow(
+            dayNo: r.dayNo,
+            paidAt: r.paidAt!,
+            amount: r.amount,
+          ))
+      .toList()
+    ..sort((a, b) => b.paidAt.compareTo(a.paidAt));
   return rows;
-}
-
-/// Return the index of the next pending row (or -1 if all paid).
-int nextPendingIndex(List<ScheduleRow> schedule) {
-  for (var i = 0; i < schedule.length; i++) {
-    if (!schedule[i].isPaid) return i;
-  }
-  return -1;
 }

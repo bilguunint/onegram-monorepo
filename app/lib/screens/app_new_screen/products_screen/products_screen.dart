@@ -5,6 +5,7 @@ import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/my_purchases_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_view.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_card_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_detail_screen.dart';
@@ -80,71 +81,99 @@ class _ProductsScreenState extends State<ProductsScreen> {
             return PurchaseDetailView(purchase: activePurchase);
           }
 
-          return StreamBuilder<List<Product>>(
-            stream: _repo.watchActiveProducts(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+          return StreamBuilder<ProductPurchase?>(
+            stream: _repo.watchMyPickupReadyPurchase(widget.uid),
+            builder: (context, pickupSnapshot) {
+              if (pickupSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CupertinoActivityIndicator());
               }
-
-              if (snapshot.hasError) {
-                final err = snapshot.error;
-                final stack = snapshot.stackTrace;
-                // Surface the full error (incl. Firestore index-creation URL)
-                // to the console so the developer can click it and provision
-                // the index. The UI shows the same message for visibility.
-                debugPrint(
-                    '[ProductsScreen] watchActiveProducts error: $err');
-                if (stack != null) {
-                  debugPrintStack(stackTrace: stack);
-                }
-                FlutterError.reportError(FlutterErrorDetails(
-                  exception: err ?? 'Unknown error',
-                  stack: stack,
-                  library: 'ProductsScreen',
-                  context: ErrorDescription('watchActiveProducts stream'),
-                ));
-                return _ErrorState(message: '$err');
+              final pickup = pickupSnapshot.data;
+              if (pickup != null) {
+                return PickupReadyView(purchase: pickup);
               }
-
-              final products = snapshot.data ?? const <Product>[];
-
-              if (products.isEmpty) {
-                return const _EmptyState();
-              }
-
-              return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12.0,
-                  crossAxisSpacing: 12.0,
-                  childAspectRatio: 0.72,
-                ),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return ProductCardWidget(
-                    product: product,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ProductDetailScreen(
-                            product: product,
-                            uid: widget.uid,
-                            userRepository: widget.userRepository,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+              return _ProductsGrid(
+                repo: _repo,
+                uid: widget.uid,
+                userRepository: widget.userRepository,
               );
             },
           );
         },
       ),
+    );
+  }
+}
+
+class _ProductsGrid extends StatelessWidget {
+  final ProductRepository repo;
+  final String uid;
+  final UserRepository userRepository;
+
+  const _ProductsGrid({
+    required this.repo,
+    required this.uid,
+    required this.userRepository,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Product>>(
+      stream: repo.watchActiveProducts(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CupertinoActivityIndicator());
+        }
+
+        if (snapshot.hasError) {
+          final err = snapshot.error;
+          final stack = snapshot.stackTrace;
+          debugPrint('[ProductsScreen] watchActiveProducts error: $err');
+          if (stack != null) {
+            debugPrintStack(stackTrace: stack);
+          }
+          FlutterError.reportError(FlutterErrorDetails(
+            exception: err ?? 'Unknown error',
+            stack: stack,
+            library: 'ProductsScreen',
+            context: ErrorDescription('watchActiveProducts stream'),
+          ));
+          return _ErrorState(message: '$err');
+        }
+
+        final products = snapshot.data ?? const <Product>[];
+
+        if (products.isEmpty) {
+          return const _EmptyState();
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12.0,
+            crossAxisSpacing: 12.0,
+            childAspectRatio: 0.72,
+          ),
+          itemCount: products.length,
+          itemBuilder: (context, index) {
+            final product = products[index];
+            return ProductCardWidget(
+              product: product,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ProductDetailScreen(
+                      product: product,
+                      uid: uid,
+                      userRepository: userRepository,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -31,7 +31,8 @@ class _InstallmentSetupSheetState extends State<InstallmentSetupSheet> {
     final p = widget.product;
     final minM = p.minMonths.clamp(1, 12);
     final maxM = p.maxMonths.clamp(1, 12);
-    final monthly = monthlyAmount(p.price, _months);
+    final totalDays = totalDaysFor(_months);
+    final daily = dailyAmount(p.price, _months);
 
     return SafeArea(
       child: Container(
@@ -92,16 +93,16 @@ class _InstallmentSetupSheetState extends State<InstallmentSetupSheet> {
                   ),
                   const SizedBox(height: 6),
                   _Row(
-                    label: 'Сонгосон сар',
-                    value: '$_months сар',
+                    label: 'Сонгосон хугацаа',
+                    value: '$_months сар ($totalDays өдөр)',
                   ),
                   const Divider(
                     height: 18,
                     color: Colors.white12,
                   ),
                   _Row(
-                    label: 'Сар бүрд',
-                    value: formatMNT(monthly),
+                    label: 'Өдөр бүр',
+                    value: formatMNT(daily),
                     emphasised: true,
                   ),
                 ],

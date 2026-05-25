@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/installment_payment_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_view.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_schedule.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -35,7 +36,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
   final ProductRepository _repo = ProductRepository();
   bool _requestingInvoice = false;
 
-  Future<void> _onPayMonthTap(ProductPurchase purchase) async {
+  Future<void> _onPayDayTap(ProductPurchase purchase) async {
     if (_requestingInvoice) return;
     setState(() => _requestingInvoice = true);
     try {
@@ -43,13 +44,21 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         purchaseId: purchase.id,
       );
       if (!mounted) return;
-      final nextMonth = purchase.paidMonths + 1;
+      final nextDay = purchase.paidDays + 1;
+      // Final day's invoice may be smaller (ceiling-rounding adjustment) —
+      // we display dailyPayment as an approximation; QPay invoice carries
+      // the exact amount.
+      final isLast = nextDay >= purchase.totalDays;
+      final shownAmount = isLast
+          ? (purchase.totalPrice - purchase.paidAmount)
+              .clamp(0, purchase.dailyPayment)
+          : purchase.dailyPayment;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => InstallmentPaymentScreen(
             purchaseId: purchase.id,
-            monthNo: nextMonth,
-            amount: purchase.monthlyPayment,
+            dayNo: nextDay,
+            amount: shownAmount,
             invoice: invoice,
             productName: purchase.productSnapshot.name,
           ),
@@ -68,115 +77,128 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
   @override
   Widget build(BuildContext context) {
     // Live subscription to the purchase doc — when QPay callback marks a
-    // month paid, the UI refreshes automatically (progress bar advances,
-    // next-pending row moves).
+    // day paid, the UI refreshes automatically.
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('product_purchases')
-            .doc(widget.purchase.id)
-            .snapshots(),
-        builder: (context, snapshot) {
-          ProductPurchase purchase = widget.purchase;
-          final data = snapshot.data?.data();
-          if (data != null) {
-            purchase = ProductPurchase.fromMap(widget.purchase.id, data);
-          }
-          final ps = purchase.productSnapshot;
-          final isInstallment =
-              purchase.purchaseType == PurchaseType.installment;
-          final schedule = buildSchedule(purchase);
-          final nextIdx = nextPendingIndex(schedule);
-          final showPayButton = isInstallment &&
-              purchase.status == ProductPurchaseStatus.active &&
-              nextIdx >= 0;
+      stream: FirebaseFirestore.instance
+          .collection('product_purchases')
+          .doc(widget.purchase.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        ProductPurchase purchase = widget.purchase;
+        final data = snapshot.data?.data();
+        if (data != null) {
+          purchase = ProductPurchase.fromMap(widget.purchase.id, data);
+        }
+        final isInstallment =
+            purchase.purchaseType == PurchaseType.installment;
+        final history = buildPaymentHistory(purchase);
+        final showPayButton = isInstallment &&
+            purchase.status == ProductPurchaseStatus.active &&
+            purchase.paidDays < purchase.totalDays;
+        final nextDay = purchase.paidDays + 1;
+        final isLastDay = nextDay >= purchase.totalDays;
+        final nextDayAmount = isLastDay
+            ? (purchase.totalPrice - purchase.paidAmount)
+                .clamp(0, purchase.dailyPayment)
+            : purchase.dailyPayment;
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              _HeaderCard(purchase: purchase),
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          children: [
+            _HeaderCard(purchase: purchase),
+            const SizedBox(height: 14),
+            _StatsRow(purchase: purchase),
+            if (isInstallment &&
+                purchase.status != ProductPurchaseStatus.cancelled) ...[
               const SizedBox(height: 14),
-              _StatsRow(purchase: purchase),
-              if (isInstallment &&
-                  purchase.status != ProductPurchaseStatus.cancelled) ...[
-                const SizedBox(height: 14),
-                _ProgressCard(purchase: purchase),
-              ],
-              if (purchase.status == ProductPurchaseStatus.cancelled) ...[
-                const SizedBox(height: 14),
-                _CancelledCard(purchase: purchase),
-              ],
-              if (showPayButton) ...[
-                const SizedBox(height: 14),
-                _PayMonthButton(
-                  monthNo: nextIdx + 1,
-                  amount: purchase.monthlyPayment,
-                  busy: _requestingInvoice,
-                  onPressed: () => _onPayMonthTap(purchase),
-                ),
-              ],
-              const SizedBox(height: 18),
-              Text(
-                isInstallment ? 'Төлбөрийн хуваарь' : 'Төлбөрийн мэдээлэл',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+              _ProgressCard(purchase: purchase),
+            ],
+            if (purchase.status == ProductPurchaseStatus.cancelled) ...[
+              const SizedBox(height: 14),
+              _CancelledCard(purchase: purchase),
+            ],
+            if (purchase.status == ProductPurchaseStatus.completed) ...[
+              const SizedBox(height: 14),
+              PickupInstructionsSection(code: purchase.pickupCode),
+            ],
+            if (showPayButton) ...[
+              const SizedBox(height: 14),
+              _PayDayButton(
+                dayNo: nextDay,
+                amount: nextDayAmount,
+                busy: _requestingInvoice,
+                onPressed: () => _onPayDayTap(purchase),
               ),
-              if (isInstallment && purchase.monthlyPayment > 0) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Нийт ${purchase.months} сар × ${formatMNT(purchase.monthlyPayment)}',
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 11),
+            ],
+            const SizedBox(height: 18),
+            const Text(
+              'Төлбөрийн түүх',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            if (isInstallment) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Нийт ${purchase.totalDays} өдөр × ${formatMNT(purchase.dailyPayment)} (${purchase.months} сар)',
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ],
+            const SizedBox(height: 10),
+            if (history.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F1F22),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withOpacity(0.06)),
                 ),
-              ],
-              const SizedBox(height: 10),
-              ...List.generate(schedule.length, (i) {
-                final row = schedule[i];
-                final isNext = isInstallment &&
-                    purchase.status == ProductPurchaseStatus.active &&
-                    i == nextIdx;
+                child: const Text(
+                  'Төлбөрийн түүх алга.',
+                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              )
+            else
+              ...List.generate(history.length, (i) {
+                final row = history[i];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _ScheduleRowCard(
-                    row: row,
-                    isNext: isNext,
-                    productName: ps.name,
-                  ),
+                  child: _HistoryRowCard(row: row),
                 );
               }),
-              const SizedBox(height: 10),
-              if (purchase.status == ProductPurchaseStatus.active) ...[
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(8),
-                    border:
-                        Border.all(color: Colors.amber.withOpacity(0.25)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          size: 14, color: Colors.amberAccent),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Сар бүрийн төлбөрөө тогтсон огноонд хийгээрэй. '
-                          'Цуцлах хүсэлт гаргавал шимтгэл хасагдана.',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 11),
-                        ),
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: 10),
+            if (purchase.status == ProductPurchaseStatus.active) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: Colors.amber.withOpacity(0.25)),
                 ),
-              ],
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 14, color: Colors.amberAccent),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Өдөр бүрийн төлбөрөө цаг тухайд нь хийгээрэй. '
+                        'Цуцлах хүсэлт гаргавал шимтгэл хасагдана.',
+                        style:
+                            TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
-          );
-        },
-      );
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -207,14 +229,14 @@ class PurchaseDetailScreen extends StatelessWidget {
   }
 }
 
-class _PayMonthButton extends StatelessWidget {
-  final int monthNo;
+class _PayDayButton extends StatelessWidget {
+  final int dayNo;
   final int amount;
   final bool busy;
   final VoidCallback onPressed;
 
-  const _PayMonthButton({
-    required this.monthNo,
+  const _PayDayButton({
+    required this.dayNo,
     required this.amount,
     required this.busy,
     required this.onPressed,
@@ -249,8 +271,77 @@ class _PayMonthButton extends StatelessWidget {
         label: Text(
           busy
               ? 'Нэхэмжлэх үүсгэж байна…'
-              : '$monthNo-р сарын ${formatMNT(amount)} төлөх',
+              : '$dayNo-р өдрийн ${formatMNT(amount)} төлөх',
         ),
+      ),
+    );
+  }
+}
+
+class _HistoryRowCard extends StatelessWidget {
+  final ScheduleRow row;
+
+  const _HistoryRowCard({required this.row});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F22),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: CustomColors.successGreen.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.check_circle,
+              size: 16,
+              color: CustomColors.successGreen,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${row.dayNo}-р өдрийн төлбөр',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _fmtDate(row.paidAt),
+                  style: TextStyle(
+                    color: CustomColors.successGreen,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            formatMNT(row.amount),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -313,7 +404,7 @@ class _HeaderCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   purchase.purchaseType == PurchaseType.installment
-                      ? '${purchase.months} сар хуваан төлөх'
+                      ? '${purchase.months} сар (${purchase.totalDays} өдөр) хуваан төлөх'
                       : 'Шууд худалдан авалт',
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
@@ -452,6 +543,7 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final daysLeft = purchase.daysUntilDeadline;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -466,7 +558,7 @@ class _ProgressCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${purchase.paidMonths}/${purchase.months} сар төлөгдсөн',
+                  '${purchase.paidDays}/${purchase.totalDays} өдөр төлөгдсөн',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -493,6 +585,40 @@ class _ProgressCard extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation(CustomColors.mainColor),
             ),
           ),
+          if (purchase.status == ProductPurchaseStatus.active &&
+              purchase.deadline != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.event_outlined,
+                    size: 12, color: Colors.white38),
+                const SizedBox(width: 4),
+                Text(
+                  'Дуусах хугацаа: ${_fmtDate(purchase.deadline!)}',
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 10.5,
+                  ),
+                ),
+                const Spacer(),
+                if (daysLeft != null)
+                  Text(
+                    daysLeft < 0
+                        ? '${-daysLeft} өдөр хоцорсон'
+                        : 'Үлдсэн: $daysLeft өдөр',
+                    style: TextStyle(
+                      color: daysLeft < 0
+                          ? const Color(0xFFE57373)
+                          : Colors.white54,
+                      fontWeight: daysLeft < 0
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      fontSize: 10.5,
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -551,134 +677,6 @@ class _CancelledCard extends StatelessWidget {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ScheduleRowCard extends StatelessWidget {
-  final ScheduleRow row;
-  final bool isNext;
-  final String productName;
-
-  const _ScheduleRowCard({
-    required this.row,
-    required this.isNext,
-    required this.productName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final paid = row.isPaid;
-    final overdue = row.isOverdue;
-
-    final Color leftColor;
-    final IconData leftIcon;
-    if (paid) {
-      leftColor = CustomColors.successGreen;
-      leftIcon = Icons.check_circle;
-    } else if (overdue) {
-      leftColor = CustomColors.alerRed;
-      leftIcon = Icons.warning_amber_rounded;
-    } else if (isNext) {
-      leftColor = CustomColors.mainColor;
-      leftIcon = Icons.schedule;
-    } else {
-      leftColor = Colors.white38;
-      leftIcon = Icons.circle_outlined;
-    }
-
-    final String stateText;
-    if (paid) {
-      stateText = row.paidAt != null
-          ? 'Төлсөн · ${_fmtDate(row.paidAt!)}'
-          : 'Төлсөн';
-    } else if (overdue) {
-      stateText = 'Хоцорсон';
-    } else if (isNext) {
-      stateText = 'Дараагийн төлбөр';
-    } else {
-      stateText = 'Хүлээгдэж буй';
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isNext
-              ? CustomColors.mainColor.withOpacity(0.55)
-              : Colors.white.withOpacity(0.06),
-          width: isNext ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: leftColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(leftIcon, size: 16, color: leftColor),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '${row.monthNo}-р төлбөр',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '· ${_fmtDate(row.dueDate)}',
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  stateText,
-                  style: TextStyle(
-                    color: paid
-                        ? CustomColors.successGreen
-                        : overdue
-                            ? const Color(0xFFE57373)
-                            : isNext
-                                ? CustomColors.mainColor
-                                : Colors.white54,
-                    fontSize: 11,
-                    fontWeight: paid || isNext || overdue
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            formatMNT(row.amount),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
         ],
       ),
     );

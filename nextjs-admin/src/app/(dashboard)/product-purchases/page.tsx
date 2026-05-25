@@ -236,7 +236,7 @@ export default function ProductPurchasesPage() {
                                 {p.product_snapshot.name}
                               </div>
                               <div className="text-[11px] text-muted-foreground">
-                                {p.months} сар × {formatPriceMNT(p.monthly_payment)}
+                                {p.months} сар · өдөр бүр {formatPriceMNT(p.daily_payment)}
                               </div>
                             </div>
                           </Link>
@@ -281,7 +281,7 @@ export default function ProductPurchasesPage() {
                             </span>
                           </div>
                           <div className="mt-0.5 text-[10px] text-muted-foreground">
-                            {p.paid_months}/{p.months} сар
+                            {p.paid_days}/{p.total_days} өдөр
                           </div>
                         </td>
                         <td className="px-2 py-2 text-[11px] text-muted-foreground tabular-nums">

@@ -74,11 +74,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             amount: result.amount,
             invoice: result.invoice,
             productName: widget.product.name,
-            appBarTitle: 'Хуваан төлөлт — 1-р сар',
+            appBarTitle: 'Хуваан төлөлт — 1-р өдөр',
             successTitle: 'Хуваан төлөлт эхэллээ',
             successMessage:
-                'Эхний сарын ${formatMNT(result.amount)} амжилттай төлөгдлөө. '
-                'Цаашид сар бүр төлбөрөө хийгээрэй ($months сарын дотор).',
+                'Эхний өдрийн ${formatMNT(result.amount)} амжилттай төлөгдлөө. '
+                'Цаашид өдөр бүр төлбөрөө хийгээрэй ($months сарын дотор).',
           ),
         ),
       );
@@ -139,7 +139,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = widget.product;
     final images = product.images;
     final maxMonths = product.maxMonths.clamp(1, 12);
-    final monthly = monthlyAmount(product.price, maxMonths);
+    final daily = dailyAmount(product.price, maxMonths);
 
     return Scaffold(
       backgroundColor: CustomColors.darkContainerColor,
@@ -247,7 +247,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 _PriceBlock(
                   price: product.price,
                   maxMonths: maxMonths,
-                  monthly: monthly,
+                  daily: daily,
                 ),
                 if (product.description.isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -364,12 +364,12 @@ class _ErrorThumb extends StatelessWidget {
 class _PriceBlock extends StatelessWidget {
   final int price;
   final int maxMonths;
-  final int monthly;
+  final int daily;
 
   const _PriceBlock({
     required this.price,
     required this.maxMonths,
-    required this.monthly,
+    required this.daily,
   });
 
   @override
@@ -412,8 +412,10 @@ class _PriceBlock extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Хуваан төлөхөд $maxMonths сар × ${formatMNT(monthly)}',
+                    'Хуваан төлөхөд $maxMonths сар, өдөр бүр ${formatMNT(daily)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

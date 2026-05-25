@@ -22,6 +22,11 @@ async function authUid(req) {
   return decoded.uid;
 }
 
+// Fixed conversion — 1 month = 30 days. Keeps daily math simple and
+// independent of calendar boundaries. The user picks N months in the UI
+// and the backend immediately translates to N*30 daily installments.
+const DAYS_PER_MONTH = 30;
+
 /**
  * createInstallmentInit
  * ---------------------
@@ -29,20 +34,19 @@ async function authUid(req) {
  * Headers: Authorization: Bearer <firebase id token>
  * Body:    { product_id: string, months: int }
  *
- * Starts a NEW installment plan. The product_purchases doc is NOT created
- * here — it's created in the corresponding callback only after the first
- * month's QPay payment lands. This prevents spam/test purchases from
- * polluting Firestore when the user never actually pays.
+ * Starts a NEW DAILY-installment plan. The user picks N months, the system
+ * stretches the payment across N*30 daily installments. The first daily
+ * invoice is created here; the purchase doc materialises only after the
+ * first day's QPay payment is confirmed (anti-spam).
  *
  * Flow:
  *  1. Validate user + product (active, has stock, etc.)
  *  2. Reject if the user already has an active installment (one at a time)
- *  3. Compute monthly_payment from product.price / months
- *  4. Reserve a pending_invoices doc up front (so we can include its id in
- *     the QPay callback URL)
- *  5. Create QPay invoice for the FIRST month's amount
- *  6. Persist pending_invoices/{pending_id} snapshotting everything needed
- *     to materialise the purchase doc later
+ *  3. Compute total_days = months*30, daily_payment = ceil(price/total_days)
+ *  4. Reserve a pending_invoices doc up front (callback URL needs the id)
+ *  5. Create QPay invoice for day 1's amount
+ *  6. Persist pending_invoices/{pending_id} with everything needed to
+ *     materialise the purchase doc later
  */
 exports.createInstallmentInit = onRequest({
   region: "asia-northeast1",
@@ -110,7 +114,8 @@ exports.createInstallmentInit = onRequest({
         });
       }
 
-      const monthlyPayment = Math.ceil(price / monthsInt);
+      const totalDays = monthsInt * DAYS_PER_MONTH;
+      const dailyPayment = Math.ceil(price / totalDays);
 
       // Snapshot user info
       const userSnap = await db.collection("users").doc(uid).get();
@@ -155,10 +160,10 @@ exports.createInstallmentInit = onRequest({
         invoice_code: "ONE_GRAM_GOLD_INVOICE",
         sender_invoice_no: senderInvoiceNo,
         invoice_receiver_code: "terminal",
-        amount: monthlyPayment,
+        amount: dailyPayment,
         callback_url: callbackUrl,
         invoice_description:
-          `Хуваан төлөлт — ${product.name || "Бараа"} (1/${monthsInt} сар)`,
+          `Хуваан төлөлт — ${product.name || "Бараа"} (1/${totalDays} өдөр)`,
       };
 
       const invoiceResp = await axios.post(
@@ -192,10 +197,11 @@ exports.createInstallmentInit = onRequest({
         product_snapshot: productSnapshot,
         user_id: uid,
         user_snapshot: userSnapshot,
-        amount: monthlyPayment,
+        amount: dailyPayment,
         total_price: price,
         months: monthsInt,
-        monthly_payment: monthlyPayment,
+        total_days: totalDays,
+        daily_payment: dailyPayment,
         status: "pending",
         qpay_invoice: qpayInvoice,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -207,7 +213,8 @@ exports.createInstallmentInit = onRequest({
         pending_id: pendingId,
         invoice_id: invoiceId,
         months: monthsInt,
-        monthly_payment: monthlyPayment,
+        total_days: totalDays,
+        daily_payment: dailyPayment,
       });
 
       return res.status(200).json({
@@ -215,9 +222,10 @@ exports.createInstallmentInit = onRequest({
         qpay_invoice: qpayInvoice,
         pending_id: pendingId,
         invoice_id: invoiceId,
-        amount: monthlyPayment,
+        amount: dailyPayment,
         months: monthsInt,
-        monthly_payment: monthlyPayment,
+        total_days: totalDays,
+        daily_payment: dailyPayment,
         total_price: price,
       });
     } catch (err) {

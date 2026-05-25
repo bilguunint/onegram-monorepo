@@ -6,14 +6,16 @@ enum ProductPurchaseStatus { active, completed, delivered, cancelled }
 enum PurchaseType { installment, direct }
 
 class PaymentRecord extends Equatable {
-  final int monthNo;
+  /// 1-based day index within the installment plan. For [PurchaseType.direct]
+  /// purchases this is always 1.
+  final int dayNo;
   final int amount;
   final DateTime? paidAt;
   final String? paymentMethod;
   final String? transactionId;
 
   const PaymentRecord({
-    required this.monthNo,
+    required this.dayNo,
     required this.amount,
     required this.paidAt,
     required this.paymentMethod,
@@ -22,7 +24,7 @@ class PaymentRecord extends Equatable {
 
   factory PaymentRecord.fromMap(Map<String, dynamic> map) {
     return PaymentRecord(
-      monthNo: ProductPurchase._toInt(map['month_no']),
+      dayNo: ProductPurchase._toInt(map['day_no']),
       amount: ProductPurchase._toInt(map['amount']),
       paidAt: ProductPurchase._toDate(map['paid_at']),
       paymentMethod: map['payment_method'] as String?,
@@ -32,7 +34,7 @@ class PaymentRecord extends Equatable {
 
   @override
   List<Object?> get props =>
-      [monthNo, amount, paidAt, paymentMethod, transactionId];
+      [dayNo, amount, paidAt, paymentMethod, transactionId];
 }
 
 class ProductSnapshot extends Equatable {
@@ -108,11 +110,28 @@ class ProductPurchase extends Equatable {
   final String userId;
   final UserSnapshot userSnapshot;
   final int totalPrice;
-  final int monthlyPayment;
+
+  /// Amount due per day (= ceil(totalPrice / totalDays)). The final day's
+  /// QPay invoice may be smaller due to ceiling rounding.
+  final int dailyPayment;
+
+  /// User-selected duration in months. Display-only — actual scheduling is
+  /// done in days (= months * 30 = [totalDays]).
   final int months;
+
+  /// Total number of daily installments (months * 30).
+  final int totalDays;
+
   final int paidAmount;
-  final int paidMonths;
-  final DateTime? nextDueDate;
+
+  /// Number of daily installments paid so far.
+  final int paidDays;
+
+  /// Optional deadline — the date by which all daily payments should be
+  /// made. Stored on the doc as `deadline` (set by backend on first
+  /// payment to started_at + totalDays days).
+  final DateTime? deadline;
+
   final ProductPurchaseStatus status;
   final DateTime? startedAt;
   final DateTime? completedAt;
@@ -123,6 +142,7 @@ class ProductPurchase extends Equatable {
   final DateTime? deliveredAt;
   final PurchaseType purchaseType;
   final List<PaymentRecord> payments;
+  final String? pickupCode;
 
   const ProductPurchase({
     required this.id,
@@ -131,11 +151,12 @@ class ProductPurchase extends Equatable {
     required this.userId,
     required this.userSnapshot,
     required this.totalPrice,
-    required this.monthlyPayment,
+    required this.dailyPayment,
     required this.months,
+    required this.totalDays,
     required this.paidAmount,
-    required this.paidMonths,
-    required this.nextDueDate,
+    required this.paidDays,
+    required this.deadline,
     required this.status,
     required this.startedAt,
     required this.completedAt,
@@ -146,9 +167,12 @@ class ProductPurchase extends Equatable {
     required this.deliveredAt,
     required this.purchaseType,
     required this.payments,
+    required this.pickupCode,
   });
 
   factory ProductPurchase.fromMap(String id, Map<String, dynamic> map) {
+    final months = _toInt(map['months']);
+    final totalDaysRaw = _toInt(map['total_days']);
     return ProductPurchase(
       id: id,
       productId: (map['product_id'] ?? '') as String,
@@ -158,11 +182,12 @@ class ProductPurchase extends Equatable {
       userSnapshot:
           UserSnapshot.fromMap(map['user_snapshot'] as Map<String, dynamic>? ?? const {}),
       totalPrice: _toInt(map['total_price']),
-      monthlyPayment: _toInt(map['monthly_payment']),
-      months: _toInt(map['months']),
+      dailyPayment: _toInt(map['daily_payment']),
+      months: months,
+      totalDays: totalDaysRaw > 0 ? totalDaysRaw : months * 30,
       paidAmount: _toInt(map['paid_amount']),
-      paidMonths: _toInt(map['paid_months']),
-      nextDueDate: _toDate(map['next_due_date']),
+      paidDays: _toInt(map['paid_days']),
+      deadline: _toDate(map['deadline']),
       status: _parseStatus(map['status']),
       startedAt: _toDate(map['started_at']),
       completedAt: _toDate(map['completed_at']),
@@ -173,6 +198,7 @@ class ProductPurchase extends Equatable {
       deliveredAt: _toDate(map['delivered_at']),
       purchaseType: _parsePurchaseType(map['purchase_type']),
       payments: _parsePayments(map['payments']),
+      pickupCode: map['pickup_code'] as String?,
     );
   }
 
@@ -221,6 +247,19 @@ class ProductPurchase extends Equatable {
   double get progress =>
       totalPrice <= 0 ? 0 : (paidAmount / totalPrice).clamp(0, 1).toDouble();
 
+  /// Days remaining until [deadline], or null when not applicable.
+  /// Negative values mean overdue.
+  int? get daysUntilDeadline {
+    if (deadline == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(deadline!.year, deadline!.month, deadline!.day);
+    return due.difference(today).inDays;
+  }
+
+  /// Remaining unpaid daily installments (totalDays - paidDays).
+  int get remainingDays => (totalDays - paidDays).clamp(0, totalDays);
+
   @override
   List<Object?> get props => [
         id,
@@ -228,11 +267,12 @@ class ProductPurchase extends Equatable {
         productSnapshot,
         userId,
         totalPrice,
-        monthlyPayment,
+        dailyPayment,
         months,
+        totalDays,
         paidAmount,
-        paidMonths,
-        nextDueDate,
+        paidDays,
+        deadline,
         status,
       ];
 }

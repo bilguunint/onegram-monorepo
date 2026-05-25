@@ -6,6 +6,12 @@ const axios = require("axios");
 const QPAY_USERNAME = "ONE_GRAM_GOLD";
 const QPAY_PASSWORD = "zElO7j40";
 
+// 6-digit pickup code (zero-padded, "000000"-"999999"). Shown to the user
+// after they finish paying; admin enters it to mark delivered.
+function generatePickupCode() {
+  return Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+}
+
 // Fetch a fresh QPay access token.
 async function getQPayToken() {
   const resp = await axios.post(
@@ -55,10 +61,10 @@ async function checkQPayPayment(invoiceId, token, attempts = 5) {
   return null;
 }
 
-// Apply a paid installment month to the purchase doc atomically.
-// Idempotent — if paid_months already covers this month, returns without
+// Apply a paid installment DAY to the purchase doc atomically.
+// Idempotent — if paid_days already covers this day, returns without
 // making changes.
-async function applyPaidMonth(db, purchaseId, monthNo, amount) {
+async function applyPaidDay(db, purchaseId, dayNo, amount) {
   const purchaseRef = db.collection("product_purchases").doc(purchaseId);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(purchaseRef);
@@ -66,25 +72,24 @@ async function applyPaidMonth(db, purchaseId, monthNo, amount) {
       throw new Error(`Purchase ${purchaseId} not found`);
     }
     const data = snap.data() || {};
-    const paidMonths = Number(data.paid_months || 0);
-    const months = Number(data.months || 0);
+    const paidDays = Number(data.paid_days || 0);
+    const totalDays = Number(data.total_days || 0);
 
-    if (paidMonths >= monthNo) {
-      logger.info("Idempotent skip — month already credited", {
+    if (paidDays >= dayNo) {
+      logger.info("Idempotent skip — day already credited", {
         purchaseId,
-        monthNo,
-        paidMonths,
+        dayNo,
+        paidDays,
       });
       return { changed: false, reason: "already_paid" };
     }
 
-    const newPaidMonths = paidMonths + 1;
+    const newPaidDays = paidDays + 1;
     const newPaidAmount =
       Number(data.paid_amount || 0) + Number(amount || 0);
 
-    // Append payment record
     const paymentEntry = {
-      month_no: monthNo,
+      day_no: dayNo,
       amount: Number(amount || 0),
       paid_at: admin.firestore.Timestamp.now(),
       payment_method: "qpay",
@@ -93,36 +98,25 @@ async function applyPaidMonth(db, purchaseId, monthNo, amount) {
       [...data.payments, paymentEntry] :
       [paymentEntry];
 
-    // Compute next_due_date or null if last month
-    let nextDue = null;
-    if (newPaidMonths < months) {
-      const start = data.started_at && data.started_at.toDate ?
-        data.started_at.toDate() :
-        new Date();
-      nextDue = admin.firestore.Timestamp.fromDate(
-        new Date(start.getFullYear(), start.getMonth() + newPaidMonths + 1, start.getDate()),
-      );
-    }
-
     const update = {
-      paid_months: newPaidMonths,
+      paid_days: newPaidDays,
       paid_amount: newPaidAmount,
-      next_due_date: nextDue,
       payments,
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
     };
-    if (newPaidMonths >= months) {
+    if (newPaidDays >= totalDays) {
       update.status = "completed";
       update.completed_at = admin.firestore.FieldValue.serverTimestamp();
+      update.pickup_code = generatePickupCode();
     }
 
     tx.update(purchaseRef, update);
 
     return {
       changed: true,
-      newPaidMonths,
+      newPaidDays,
       newPaidAmount,
-      completed: newPaidMonths >= months,
+      completed: newPaidDays >= totalDays,
     };
   });
 }
@@ -150,32 +144,32 @@ exports.installmentCallback = onRequest({
 }, async (req, res) => {
   const db = admin.firestore();
   const purchaseId = req.query && req.query.purchase_id;
-  const monthNoRaw = req.query && req.query.month_no;
-  const monthNo = parseInt(monthNoRaw, 10);
+  const dayNoRaw = req.query && req.query.day_no;
+  const dayNo = parseInt(dayNoRaw, 10);
 
   logger.info("📥 Installment callback received", {
     method: req.method,
     purchaseId,
-    monthNoRaw,
+    dayNoRaw,
     body: req.body,
   });
 
-  if (!purchaseId || !Number.isFinite(monthNo) || monthNo < 1) {
-    logger.error("Missing or invalid purchase_id/month_no", {
+  if (!purchaseId || !Number.isFinite(dayNo) || dayNo < 1) {
+    logger.error("Missing or invalid purchase_id/day_no", {
       purchaseId,
-      monthNoRaw,
+      dayNoRaw,
     });
     return res
       .status(400)
-      .json({ error: "Missing or invalid purchase_id/month_no" });
+      .json({ error: "Missing or invalid purchase_id/day_no" });
   }
 
   try {
-    // Find the pending invoice for this purchase + month.
+    // Find the pending invoice for this purchase + day.
     const pendingSnap = await db
       .collection("pending_invoices")
       .where("purchase_id", "==", purchaseId)
-      .where("month_no", "==", monthNo)
+      .where("day_no", "==", dayNo)
       .where("type", "==", "installment")
       .limit(1)
       .get();
@@ -183,7 +177,7 @@ exports.installmentCallback = onRequest({
     if (pendingSnap.empty) {
       logger.error("No pending installment invoice found", {
         purchaseId,
-        monthNo,
+        dayNo,
       });
       return res
         .status(404)
@@ -210,8 +204,8 @@ exports.installmentCallback = onRequest({
       });
     }
 
-    // Apply the month to the purchase doc atomically
-    const result = await applyPaidMonth(db, purchaseId, monthNo, amount);
+    // Apply the day to the purchase doc atomically
+    const result = await applyPaidDay(db, purchaseId, dayNo, amount);
 
     // Mark the pending invoice as processed (also idempotent)
     await pendingDoc.ref.update({
@@ -222,16 +216,16 @@ exports.installmentCallback = onRequest({
 
     logger.info("✅ Installment payment recorded", {
       purchaseId,
-      monthNo,
+      dayNo,
       invoiceId,
       result,
     });
 
     return res.status(200).json({
       success: true,
-      message: "Installment month credited",
+      message: "Installment day credited",
       purchase_id: purchaseId,
-      month_no: monthNo,
+      day_no: dayNo,
       invoice_id: invoiceId,
       result,
     });
@@ -240,14 +234,13 @@ exports.installmentCallback = onRequest({
       error: err.message,
       stack: err.stack,
       purchaseId,
-      monthNo,
+      dayNo,
     });
-    // Record the error for later inspection
     try {
       await db.collection("payment_callback_errors").add({
         type: "installment",
         purchase_id: purchaseId,
-        month_no: monthNo,
+        day_no: dayNo,
         error: err.message,
         errorStack: err.stack,
         requestData: {

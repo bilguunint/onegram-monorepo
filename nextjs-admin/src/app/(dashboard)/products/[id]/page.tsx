@@ -371,7 +371,7 @@ function PurchasesTable({
                     </span>
                   </div>
                   <div className="mt-0.5 text-[10px] text-muted-foreground">
-                    {p.paid_months}/{p.months} сар
+                    {p.paid_days}/{p.total_days} өдөр
                   </div>
                 </td>
                 <td className="px-2 py-2 text-[11px] text-muted-foreground tabular-nums">

@@ -6,6 +6,10 @@ const axios = require("axios");
 const QPAY_USERNAME = "ONE_GRAM_GOLD";
 const QPAY_PASSWORD = "zElO7j40";
 
+function generatePickupCode() {
+  return Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+}
+
 // Fetch a fresh QPay access token.
 async function getQPayToken() {
   const resp = await axios.post(
@@ -107,9 +111,11 @@ exports.installmentInitCallback = onRequest({
     }
 
     const invoiceId = pendingData.invoice_id;
-    const monthlyPayment = Number(pendingData.monthly_payment || 0);
+    const dailyPayment = Number(pendingData.daily_payment || 0);
     const totalPrice = Number(pendingData.total_price || 0);
     const months = Number(pendingData.months || 0);
+    const totalDays = Number(pendingData.total_days || 0);
+    const firstAmount = Number(pendingData.amount || dailyPayment);
 
     // Idempotent: if we've already created the purchase, just acknowledge.
     if (pendingData.status === "processed" && pendingData.purchase_id) {
@@ -143,17 +149,17 @@ exports.installmentInitCallback = onRequest({
     const now = admin.firestore.Timestamp.now();
     const nowDate = now.toDate();
 
-    // For a 1-month plan, the very first payment IS the full plan — go
-    // straight to completed status. For multi-month plans, leave active
-    // with paid_months=1 and a next_due_date one month out.
-    const isFullyPaid = months <= 1;
-    const nextDue = isFullyPaid ?
+    // For a 1-day plan, the very first payment IS the full plan — go
+    // straight to completed status. For multi-day plans, leave active with
+    // paid_days=1 and deadline = started_at + total_days days.
+    const isFullyPaid = totalDays <= 1;
+    const deadline = isFullyPaid ?
       null :
       admin.firestore.Timestamp.fromDate(
         new Date(
           nowDate.getFullYear(),
-          nowDate.getMonth() + 2,
-          nowDate.getDate(),
+          nowDate.getMonth(),
+          nowDate.getDate() + totalDays,
         ),
       );
 
@@ -169,19 +175,22 @@ exports.installmentInitCallback = onRequest({
         user_id: pendingData.user_id,
         user_snapshot: pendingData.user_snapshot || {},
         total_price: totalPrice,
-        monthly_payment: monthlyPayment,
+        daily_payment: dailyPayment,
         months,
-        paid_amount: monthlyPayment,
-        paid_months: 1,
-        next_due_date: nextDue,
+        total_days: totalDays,
+        paid_amount: firstAmount,
+        paid_days: 1,
+        deadline,
         status: isFullyPaid ? "completed" : "active",
         started_at: now,
-        ...(isFullyPaid ? { completed_at: now } : {}),
+        ...(isFullyPaid ?
+          { completed_at: now, pickup_code: generatePickupCode() } :
+          {}),
         purchase_type: "installment",
         payments: [
           {
-            month_no: 1,
-            amount: monthlyPayment,
+            day_no: 1,
+            amount: firstAmount,
             paid_at: now,
             payment_method: "qpay",
             invoice_id: invoiceId,
@@ -201,7 +210,8 @@ exports.installmentInitCallback = onRequest({
       invoiceId,
       purchase_id: purchaseRef.id,
       months,
-      monthly_payment: monthlyPayment,
+      total_days: totalDays,
+      daily_payment: dailyPayment,
       total_price: totalPrice,
     });
 

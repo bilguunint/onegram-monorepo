@@ -16,8 +16,8 @@ class ProductCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cover = product.coverImage;
-    final monthly =
-        monthlyAmount(product.price, product.maxMonths.clamp(1, 12));
+    final daily =
+        dailyAmount(product.price, product.maxMonths.clamp(1, 12));
 
     return GestureDetector(
       onTap: onTap,
@@ -99,7 +99,7 @@ class ProductCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 2.0),
                   Text(
-                    '${product.maxMonths} сар × ${formatMNT(monthly)}',
+                    'Өдөр бүр ${formatMNT(daily)} (${product.maxMonths} сар)',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

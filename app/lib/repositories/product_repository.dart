@@ -69,6 +69,27 @@ class ProductRepository {
     });
   }
 
+  /// Stream the caller's most-recent fully-paid-but-not-yet-delivered
+  /// purchase. Used to show the "ready for pickup" screen with the 6-digit
+  /// pickup code + store info.
+  Stream<ProductPurchase?> watchMyPickupReadyPurchase(String userId) {
+    return _purchases
+        .where('user_id', isEqualTo: userId)
+        .where('status', isEqualTo: 'completed')
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs
+          .map((d) => ProductPurchase.fromMap(d.id, d.data()))
+          .toList()
+        ..sort((a, b) {
+          final ta = a.completedAt?.millisecondsSinceEpoch ?? 0;
+          final tb = b.completedAt?.millisecondsSinceEpoch ?? 0;
+          return tb.compareTo(ta);
+        });
+      return list.isEmpty ? null : list.first;
+    });
+  }
+
   static const String _createInstallmentPaymentUrl =
       'https://asia-northeast1-grammgold.cloudfunctions.net/createInstallmentPayment';
 
@@ -126,7 +147,7 @@ class ProductRepository {
       throw StateError('pending_id олдсонгүй.');
     }
     final amount =
-        (body['amount'] as num?)?.toInt() ?? (body['monthly_payment'] as num?)?.toInt() ?? 0;
+        (body['amount'] as num?)?.toInt() ?? (body['daily_payment'] as num?)?.toInt() ?? 0;
     final monthsResp = (body['months'] as num?)?.toInt() ?? months;
     return (
       invoice: MakeOrder.fromJson(invoice),

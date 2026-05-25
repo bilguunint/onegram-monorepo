@@ -29,10 +29,13 @@ async function authUid(req) {
  * Headers: Authorization: Bearer <firebase id token>
  * Body:    { purchase_id: string }
  *
- * Looks up the user's active installment purchase, computes which month is
- * due next (paid_months + 1), creates a QPay invoice for that month's
- * payment, and returns the QPay invoice payload (qr_text, qr_image,
- * qPay_shortUrl, urls[]) for the app to render.
+ * Looks up the user's active installment purchase, computes which DAY is
+ * due next (paid_days + 1), creates a QPay invoice for that day's payment,
+ * and returns the QPay invoice payload (qr_text, qr_image, qPay_shortUrl,
+ * urls[]) for the app to render.
+ *
+ * The last day's invoice amount is adjusted so the sum of all daily
+ * payments equals total_price exactly (handles ceil rounding remainder).
  */
 exports.createInstallmentPayment = onRequest({
   region: "asia-northeast1",
@@ -72,23 +75,37 @@ exports.createInstallmentPayment = onRequest({
         return res.status(409).json({ error: "Purchase is not an installment plan" });
       }
 
-      const paidMonths = Number(purchase.paid_months || 0);
-      const months = Number(purchase.months || 0);
-      if (paidMonths >= months) {
-        return res.status(409).json({ error: "All months are already paid" });
+      const paidDays = Number(purchase.paid_days || 0);
+      const totalDays = Number(purchase.total_days || 0);
+      const totalPrice = Number(purchase.total_price || 0);
+      const paidAmount = Number(purchase.paid_amount || 0);
+      if (totalDays <= 0) {
+        return res.status(409).json({ error: "Invalid total_days value" });
       }
-      const nextMonth = paidMonths + 1;
-      const monthlyPayment = Number(purchase.monthly_payment || 0);
-      if (monthlyPayment <= 0) {
-        return res.status(409).json({ error: "Invalid monthly_payment value" });
+      if (paidDays >= totalDays) {
+        return res.status(409).json({ error: "All days are already paid" });
+      }
+      const nextDay = paidDays + 1;
+      const dailyPayment = Number(purchase.daily_payment || 0);
+      if (dailyPayment <= 0) {
+        return res.status(409).json({ error: "Invalid daily_payment value" });
+      }
+      // Final day adjusts to whatever is left, so the sum of all daily
+      // payments equals total_price exactly (avoids ceil-rounding overpay).
+      const isLastDay = nextDay >= totalDays;
+      const invoiceAmount = isLastDay ?
+        Math.max(totalPrice - paidAmount, 0) :
+        dailyPayment;
+      if (invoiceAmount <= 0) {
+        return res.status(409).json({ error: "Nothing left to pay" });
       }
 
-      // Avoid duplicate invoices for the same month: reuse an existing pending
-      // invoice if one already exists for this (purchase, month).
+      // Avoid duplicate invoices for the same day: reuse an existing pending
+      // invoice if one already exists for this (purchase, day).
       const existing = await db
         .collection("pending_invoices")
         .where("purchase_id", "==", purchase_id)
-        .where("month_no", "==", nextMonth)
+        .where("day_no", "==", nextDay)
         .where("status", "==", "pending")
         .limit(1)
         .get();
@@ -98,15 +115,15 @@ exports.createInstallmentPayment = onRequest({
         if (data.qpay_invoice) {
           logger.info("Reusing existing pending invoice", {
             purchase_id,
-            nextMonth,
+            nextDay,
             invoice_id: data.invoice_id,
           });
           return res.status(200).json({
             message: "Pending invoice already exists",
             qpay_invoice: data.qpay_invoice,
             invoice_id: data.invoice_id,
-            month_no: nextMonth,
-            amount: monthlyPayment,
+            day_no: nextDay,
+            amount: invoiceAmount,
           });
         }
       }
@@ -120,18 +137,18 @@ exports.createInstallmentPayment = onRequest({
       const token = tokenResp.data.access_token;
 
       // Build invoice
-      const senderInvoiceNo = `INSTALL-${purchase_id}-${nextMonth}`;
+      const senderInvoiceNo = `INSTALL-${purchase_id}-${nextDay}`;
       const callbackUrl =
         `${CALLBACK_BASE}?purchase_id=${encodeURIComponent(purchase_id)}` +
-        `&month_no=${nextMonth}`;
+        `&day_no=${nextDay}`;
       const invoicePayload = {
         invoice_code: "ONE_GRAM_GOLD_INVOICE",
         sender_invoice_no: senderInvoiceNo,
         invoice_receiver_code: "terminal",
-        amount: monthlyPayment,
+        amount: invoiceAmount,
         callback_url: callbackUrl,
         invoice_description:
-          `Хуваан төлөлт — ${purchase.product_snapshot && purchase.product_snapshot.name || "Бараа"} (${nextMonth}/${months} сар)`,
+          `Хуваан төлөлт — ${purchase.product_snapshot && purchase.product_snapshot.name || "Бараа"} (${nextDay}/${totalDays} өдөр)`,
       };
 
       const invoiceResp = await axios.post(
@@ -160,9 +177,9 @@ exports.createInstallmentPayment = onRequest({
         type: "installment",
         invoice_id: invoiceId,
         purchase_id,
-        month_no: nextMonth,
+        day_no: nextDay,
         userId: uid,
-        amount: monthlyPayment,
+        amount: invoiceAmount,
         status: "pending",
         qpay_invoice: qpayInvoice,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -170,17 +187,17 @@ exports.createInstallmentPayment = onRequest({
 
       logger.info("Created installment QPay invoice", {
         purchase_id,
-        nextMonth,
+        nextDay,
         invoice_id: invoiceId,
-        amount: monthlyPayment,
+        amount: invoiceAmount,
       });
 
       return res.status(200).json({
         message: "Installment QPay invoice created",
         qpay_invoice: qpayInvoice,
         invoice_id: invoiceId,
-        month_no: nextMonth,
-        amount: monthlyPayment,
+        day_no: nextDay,
+        amount: invoiceAmount,
       });
     } catch (err) {
       logger.error("Failed to create installment payment", {

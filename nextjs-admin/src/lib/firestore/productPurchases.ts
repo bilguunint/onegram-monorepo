@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getCountFromServer,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -34,7 +35,7 @@ export type UserSnapshot = {
 };
 
 export type PaymentRecord = {
-  month_no: number;
+  day_no: number;
   amount: number;
   paid_at: Timestamp | string | null;
   payment_method?: string;
@@ -48,11 +49,16 @@ export type ProductPurchase = {
   user_id: string;
   user_snapshot: UserSnapshot;
   total_price: number;
-  monthly_payment: number;
+  /** Per-day installment amount (= ceil(total_price / total_days)). */
+  daily_payment: number;
+  /** User-selected duration in months (display only). */
   months: number;
+  /** Number of daily installments (= months * 30). */
+  total_days: number;
   paid_amount: number;
-  paid_months: number;
-  next_due_date: Timestamp | null;
+  paid_days: number;
+  /** Date by which all daily payments should be made. */
+  deadline: Timestamp | null;
   status: ProductPurchaseStatus;
   started_at: Timestamp | null;
   completed_at: Timestamp | null;
@@ -63,6 +69,7 @@ export type ProductPurchase = {
   refund_fee?: number;
   delivered_at: Timestamp | null;
   delivered_by?: string;
+  pickup_code?: string;
   payments?: PaymentRecord[];
 };
 
@@ -86,11 +93,14 @@ function mapPurchase(id: string, raw: DocumentData): ProductPurchase {
       email: us.email,
     },
     total_price: Number(raw.total_price ?? 0),
-    monthly_payment: Number(raw.monthly_payment ?? 0),
+    daily_payment: Number(raw.daily_payment ?? 0),
     months: Number(raw.months ?? 0),
+    total_days: Number(
+      raw.total_days ?? Number(raw.months ?? 0) * 30
+    ),
     paid_amount: Number(raw.paid_amount ?? 0),
-    paid_months: Number(raw.paid_months ?? 0),
-    next_due_date: raw.next_due_date ?? null,
+    paid_days: Number(raw.paid_days ?? 0),
+    deadline: raw.deadline ?? null,
     status: (raw.status ?? "active") as ProductPurchaseStatus,
     started_at: raw.started_at ?? null,
     completed_at: raw.completed_at ?? null,
@@ -102,6 +112,7 @@ function mapPurchase(id: string, raw: DocumentData): ProductPurchase {
     refund_fee: raw.refund_fee == null ? undefined : Number(raw.refund_fee),
     delivered_at: raw.delivered_at ?? null,
     delivered_by: raw.delivered_by,
+    pickup_code: raw.pickup_code,
     payments: Array.isArray(raw.payments)
       ? (raw.payments as PaymentRecord[])
       : undefined,
@@ -168,9 +179,40 @@ export async function cancelProductPurchase(
   });
 }
 
-export async function deliverProductPurchase(purchaseId: string): Promise<void> {
+/**
+ * Mark a completed purchase as delivered. The admin must enter the 6-digit
+ * `pickup_code` that the user has on their phone; the function fetches the
+ * purchase doc, compares codes server-side, and throws on mismatch so the
+ * caller can surface an inline error in the dialog.
+ */
+export async function deliverProductPurchase(
+  purchaseId: string,
+  enteredCode: string
+): Promise<void> {
   const uid = currentAdminUid();
-  await updateDoc(doc(getDb(), "product_purchases", purchaseId), {
+  const ref = doc(getDb(), "product_purchases", purchaseId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error("Худалдан авалт олдсонгүй.");
+  }
+  const data = snap.data() as DocumentData;
+  if (data.status === "delivered") {
+    throw new Error("Энэ худалдан авалт аль хэдийн хүлээлгэн өгөгдсөн байна.");
+  }
+  if (data.status !== "completed") {
+    throw new Error(
+      "Зөвхөн төлбөр бүрэн төлөгдсөн худалдан авалтыг хүлээлгэн өгч болно."
+    );
+  }
+  const expected = String(data.pickup_code ?? "").trim();
+  const provided = enteredCode.trim();
+  if (!expected) {
+    throw new Error("Энэ худалдан авалт дээр код байхгүй байна.");
+  }
+  if (expected !== provided) {
+    throw new Error("Код буруу байна. Хэрэглэгчийн утаснаас уншсан 6 оронтой кодыг шалгана уу.");
+  }
+  await updateDoc(ref, {
     status: "delivered",
     delivered_at: serverTimestamp(),
     delivered_by: uid,

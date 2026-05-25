@@ -8,14 +8,14 @@ import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Screen that displays the QPay invoice for a single installment month.
+/// Screen that displays the QPay invoice for a single daily installment.
 ///
 /// Listens to the purchase doc in Firestore; once the backend callback marks
-/// the month as paid (paid_months increments past [monthNo]), the UI flips to
-/// a "Төлсөн" success state.
+/// the day as paid (paid_days increments past [dayNo]), the UI flips to a
+/// "Төлсөн" success state.
 class InstallmentPaymentScreen extends StatefulWidget {
   final String purchaseId;
-  final int monthNo;
+  final int dayNo;
   final int amount;
   final MakeOrder invoice;
   final String productName;
@@ -23,7 +23,7 @@ class InstallmentPaymentScreen extends StatefulWidget {
   const InstallmentPaymentScreen({
     super.key,
     required this.purchaseId,
-    required this.monthNo,
+    required this.dayNo,
     required this.amount,
     required this.invoice,
     required this.productName,
@@ -45,7 +45,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          '${widget.monthNo}-р сарын төлбөр',
+          '${widget.dayNo}-р өдрийн төлбөр',
           style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
@@ -61,13 +61,13 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           final data = snapshot.data?.data();
-          final paidMonths = (data?['paid_months'] as num?)?.toInt() ?? 0;
+          final paidDays = (data?['paid_days'] as num?)?.toInt() ?? 0;
           final purchaseStatus = data?['status'] as String?;
-          final isPaid = paidMonths >= widget.monthNo;
+          final isPaid = paidDays >= widget.dayNo;
           final isCompleted = purchaseStatus == 'completed' ||
               purchaseStatus == 'delivered';
 
-          // Auto-close once the month becomes paid so the user lands back on
+          // Auto-close once the day becomes paid so the user lands back on
           // the detail screen with the updated progress.
           if (isPaid && !_alreadyPopped) {
             _alreadyPopped = true;
@@ -79,7 +79,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
           if (isPaid) {
             return _PaidView(
               amount: widget.amount,
-              monthNo: widget.monthNo,
+              dayNo: widget.dayNo,
               isCompleted: isCompleted,
             );
           }
@@ -87,7 +87,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
           return _PendingView(
             invoice: widget.invoice,
             amount: widget.amount,
-            monthNo: widget.monthNo,
+            dayNo: widget.dayNo,
             productName: widget.productName,
           );
         },
@@ -116,8 +116,8 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         ),
         content: Text(
           isCompleted
-              ? 'Та энэ барааны бүх сарын төлбөрөө төлж дуусгалаа. Удахгүй барааг хүлээлгэн өгөх болно.'
-              : '${widget.monthNo}-р сарын ${formatMNT(widget.amount)} төлбөр амжилттай төлөгдлөө.',
+              ? 'Та энэ барааны бүх өдрийн төлбөрөө төлж дуусгалаа. Удахгүй барааг хүлээлгэн өгөх болно.'
+              : '${widget.dayNo}-р өдрийн ${formatMNT(widget.amount)} төлбөр амжилттай төлөгдлөө.',
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         actions: [
@@ -135,13 +135,13 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
 class _PendingView extends StatelessWidget {
   final MakeOrder invoice;
   final int amount;
-  final int monthNo;
+  final int dayNo;
   final String productName;
 
   const _PendingView({
     required this.invoice,
     required this.amount,
-    required this.monthNo,
+    required this.dayNo,
     required this.productName,
   });
 
@@ -189,7 +189,7 @@ class _PendingView extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '$productName — $monthNo-р сар',
+                '$productName — $dayNo-р өдөр',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -330,12 +330,12 @@ class _PendingView extends StatelessWidget {
 
 class _PaidView extends StatelessWidget {
   final int amount;
-  final int monthNo;
+  final int dayNo;
   final bool isCompleted;
 
   const _PaidView({
     required this.amount,
-    required this.monthNo,
+    required this.dayNo,
     required this.isCompleted,
   });
 
@@ -370,7 +370,7 @@ class _PaidView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '$monthNo-р сар • ${formatMNT(amount)}',
+              '$dayNo-р өдөр • ${formatMNT(amount)}',
               style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],

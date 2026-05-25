@@ -177,7 +177,7 @@ class _PurchaseRowCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           if (isInstallment)
                             Text(
-                              '${purchase.paidMonths}/${purchase.months} сар',
+                              '${purchase.paidDays}/${purchase.totalDays} өдөр',
                               style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 11,
@@ -230,7 +230,7 @@ class _PurchaseRowCard extends StatelessWidget {
                   valueColor: AlwaysStoppedAnimation(_progressColor()),
                 ),
               ),
-              if (purchase.nextDueDate != null &&
+              if (purchase.deadline != null &&
                   purchase.status == ProductPurchaseStatus.active) ...[
                 const SizedBox(height: 6),
                 Row(
@@ -242,7 +242,7 @@ class _PurchaseRowCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Дараагийн төлбөр: ${_fmtDate(purchase.nextDueDate!)}',
+                      'Дуусах хугацаа: ${_fmtDate(purchase.deadline!)}',
                       style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 11,

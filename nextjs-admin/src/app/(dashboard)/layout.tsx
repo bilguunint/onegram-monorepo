@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />
           <main className="flex-1">
-            <div className="mx-auto w-full max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6">
+            <div className="mx-auto w-full max-w-[1440px] px-4 py-5 sm:px-6 sm:py-6">
               {children}
             </div>
           </main>

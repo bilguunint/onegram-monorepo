@@ -134,18 +134,23 @@ class ActivePurchaseBanner extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // Segmented progress
-            _SegmentedProgress(
-              total: purchase.months,
-              paid: purchase.paidMonths,
+            // Linear progress (segmented bar with 30+ days is too granular)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: purchase.progress,
+                minHeight: 6,
+                backgroundColor: Colors.white.withOpacity(0.08),
+                valueColor: AlwaysStoppedAnimation(CustomColors.mainColor),
+              ),
             ),
             const SizedBox(height: 8),
 
-            // Month labels (paid/total)
+            // Day labels (paid/total)
             Row(
               children: [
                 Text(
-                  '${purchase.paidMonths}/${purchase.months} сар төлөгдсөн',
+                  '${purchase.paidDays}/${purchase.totalDays} өдөр төлөгдсөн',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -165,13 +170,13 @@ class ActivePurchaseBanner extends StatelessWidget {
             ),
 
             const SizedBox(height: 12),
-            // Stats: monthly / paid / next due
+            // Stats: daily / paid / remaining
             Row(
               children: [
                 Expanded(
                   child: _MiniStat(
-                    label: 'Сар бүр',
-                    value: formatMNT(purchase.monthlyPayment),
+                    label: 'Өдөр бүр',
+                    value: formatMNT(purchase.dailyPayment),
                   ),
                 ),
                 Expanded(
@@ -190,7 +195,7 @@ class ActivePurchaseBanner extends StatelessWidget {
               ],
             ),
 
-            if (purchase.nextDueDate != null) ...[
+            if (purchase.deadline != null) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -206,7 +211,7 @@ class ActivePurchaseBanner extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Дараагийн төлбөр',
+                        'Дуусах хугацаа',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 11,
@@ -214,7 +219,7 @@ class ActivePurchaseBanner extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _fmtDate(purchase.nextDueDate!),
+                      _fmtDate(purchase.deadline!),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -228,86 +233,6 @@ class ActivePurchaseBanner extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SegmentedProgress extends StatelessWidget {
-  final int total;
-  final int paid;
-
-  const _SegmentedProgress({required this.total, required this.paid});
-
-  @override
-  Widget build(BuildContext context) {
-    final segments = total.clamp(1, 12);
-    final paidCount = paid.clamp(0, segments);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 4.0;
-        final totalGap = gap * (segments - 1);
-        final segWidth = (constraints.maxWidth - totalGap) / segments;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: List.generate(segments, (i) {
-                final filled = i < paidCount;
-                final isLast = i == segments - 1;
-                return Padding(
-                  padding: EdgeInsets.only(right: isLast ? 0 : gap),
-                  child: Container(
-                    width: segWidth,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: filled
-                          ? CustomColors.mainColor
-                          : Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: filled
-                          ? [
-                              BoxShadow(
-                                color: CustomColors.mainColor.withOpacity(0.4),
-                                blurRadius: 6,
-                              ),
-                            ]
-                          : null,
-                    ),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 4),
-            // Show month numbers under each segment (only when there's room)
-            if (segments <= 6)
-              Row(
-                children: List.generate(segments, (i) {
-                  final isLast = i == segments - 1;
-                  return Padding(
-                    padding: EdgeInsets.only(right: isLast ? 0 : gap),
-                    child: SizedBox(
-                      width: segWidth,
-                      child: Text(
-                        '${i + 1}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: i < paidCount
-                              ? CustomColors.mainColor
-                              : Colors.white38,
-                          fontWeight: i < paidCount
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-          ],
-        );
-      },
     );
   }
 }
