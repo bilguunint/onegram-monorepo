@@ -127,14 +127,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* KPI grid: 2 → 3 → 6 cols */}
+      {/* KPI grid: 2 → 3 → 5 cols */}
       <section>
         <div className="mb-2 px-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Нийт үзүүлэлт
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           {loading ? (
-            Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
+            Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
           ) : (
             <>
               <StatCard
