@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Timestamp } from "firebase/firestore";
 import {
   CheckCircle2,
   ChevronLeft,
@@ -26,6 +27,10 @@ import {
 import {
   formatPriceMNT,
   getPurchaseUserName,
+  purchaseDaysBehind,
+  purchaseDaysUntilDeadline,
+  purchaseExpectedPaidDays,
+  purchaseLastPaidAt,
   purchaseProgress,
   purchaseStatusBadge,
   purchaseStatusText,
@@ -40,9 +45,9 @@ export default function ProductPurchasesPage() {
   const [items, setItems] = useState<ProductPurchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | ProductPurchaseStatus>(
-    ""
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "" | ProductPurchaseStatus | "overdue"
+  >("");
   const [page, setPage] = useState(1);
 
   const [cancelTarget, setCancelTarget] = useState<ProductPurchase | null>(
@@ -85,7 +90,11 @@ export default function ProductPurchasesPage() {
         );
       });
     }
-    if (statusFilter) {
+    if (statusFilter === "overdue") {
+      list = list.filter(
+        (p) => p.status === "active" && (purchaseDaysBehind(p) ?? 0) > 0
+      );
+    } else if (statusFilter) {
       list = list.filter((p) => p.status === statusFilter);
     }
     return list;
@@ -109,10 +118,19 @@ export default function ProductPurchasesPage() {
     setSearch(v);
     setPage(1);
   };
-  const handleStatus = (v: "" | ProductPurchaseStatus) => {
+  const handleStatus = (v: "" | ProductPurchaseStatus | "overdue") => {
     setStatusFilter(v);
     setPage(1);
   };
+
+  // Overdue count for the filter chip — only relevant for active plans.
+  const overdueCount = useMemo(
+    () =>
+      items.filter(
+        (p) => p.status === "active" && (purchaseDaysBehind(p) ?? 0) > 0
+      ).length,
+    [items]
+  );
 
   return (
     <div className="space-y-5">
@@ -159,11 +177,16 @@ export default function ProductPurchasesPage() {
             <Select
               value={statusFilter}
               onChange={(e) =>
-                handleStatus(e.target.value as "" | ProductPurchaseStatus)
+                handleStatus(
+                  e.target.value as "" | ProductPurchaseStatus | "overdue"
+                )
               }
             >
               <option value="">Бүгд</option>
               <option value="active">Идэвхтэй</option>
+              <option value="overdue">
+                Хоцорсон ({overdueCount})
+              </option>
               <option value="completed">Төлөгдсөн</option>
               <option value="delivered">Хүлээлгэн өгсөн</option>
               <option value="cancelled">Цуцалсан</option>
@@ -209,6 +232,10 @@ export default function ProductPurchasesPage() {
                 <tbody>
                   {pageRows.map((p) => {
                     const progress = purchaseProgress(p);
+                    const expected = purchaseExpectedPaidDays(p);
+                    const behind = purchaseDaysBehind(p);
+                    const daysLeft = purchaseDaysUntilDeadline(p);
+                    const lastPaid = purchaseLastPaidAt(p);
                     return (
                       <tr
                         key={p.id}
@@ -236,7 +263,12 @@ export default function ProductPurchasesPage() {
                                 {p.product_snapshot.name}
                               </div>
                               <div className="text-[11px] text-muted-foreground">
-                                {p.months} сар · өдөр бүр {formatPriceMNT(p.daily_payment)}
+                                <span className="font-medium text-foreground/80">
+                                  {formatPriceMNT(p.daily_payment)}
+                                </span>
+                                {" / өдөр"}
+                                <span className="text-foreground/40"> · </span>
+                                {p.months} сар ({p.total_days} өдөр)
                               </div>
                             </div>
                           </Link>
@@ -280,12 +312,64 @@ export default function ProductPurchasesPage() {
                               {progress}%
                             </span>
                           </div>
-                          <div className="mt-0.5 text-[10px] text-muted-foreground">
-                            {p.paid_days}/{p.total_days} өдөр
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <span>
+                              {p.paid_days}/{p.total_days} өдөр
+                            </span>
+                            {p.status === "active" &&
+                              expected != null &&
+                              expected !== p.paid_days && (
+                                <span
+                                  className={cn(
+                                    "text-foreground/60",
+                                    behind && behind > 0
+                                      ? "text-rose-600 dark:text-rose-400"
+                                      : ""
+                                  )}
+                                >
+                                  · төл-х: {expected}
+                                </span>
+                              )}
                           </div>
+                          {p.status === "active" && behind != null && behind > 0 && (
+                            <div className="mt-1 inline-flex items-center rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                              {behind} өдөр хоцорсон
+                            </div>
+                          )}
                         </td>
-                        <td className="px-2 py-2 text-[11px] text-muted-foreground tabular-nums">
-                          {formatOrderDate(p.started_at)}
+                        <td className="px-2 py-2 text-[11px] tabular-nums">
+                          <div className="text-muted-foreground">
+                            Эхэлсэн: {formatOrderDate(p.started_at)}
+                          </div>
+                          {p.deadline && (
+                            <div
+                              className={cn(
+                                "text-muted-foreground",
+                                p.status === "active" &&
+                                  daysLeft != null &&
+                                  daysLeft < 0
+                                  ? "text-rose-600 dark:text-rose-400 font-medium"
+                                  : ""
+                              )}
+                            >
+                              Дуусах: {formatOrderDate(p.deadline)}
+                              {p.status === "active" &&
+                                daysLeft != null &&
+                                daysLeft >= 0 && (
+                                  <span className="text-foreground/40">
+                                    {" "}
+                                    · {daysLeft} өдөр
+                                  </span>
+                                )}
+                            </div>
+                          )}
+                          {lastPaid && (
+                            <div className="text-foreground/40">
+                              Сүүлд: {formatOrderDate(
+                                Timestamp.fromDate(lastPaid)
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 py-2">
                           <span

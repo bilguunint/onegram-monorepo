@@ -250,11 +250,12 @@ class _PendingView extends StatelessWidget {
             itemBuilder: (context, i) {
               final link = invoice.links[i];
               return GestureDetector(
-                onTap: () async {
-                  final uri = Uri.parse(link.deeplink);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
+                onTap: () {
+                  // No canLaunchUrl gate — custom bank schemes need to be
+                  // declared in iOS LSApplicationQueriesSchemes + Android
+                  // <queries> for the check to return true, and we don't
+                  // ship those declarations. Mirrors payment_screen.dart.
+                  launchUrl(Uri.parse(link.deeplink));
                 },
                 child: Container(
                   padding: const EdgeInsets.all(8),

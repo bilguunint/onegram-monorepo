@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase/firestore";
 import type { Product, ProductStatus } from "@/lib/firestore/products";
 import type {
   ProductPurchase,
@@ -65,6 +66,74 @@ export function getPurchaseUserName(p: ProductPurchase): string {
 
 export function getProductPrimaryImage(p: Pick<Product, "images">): string | null {
   return p.images?.[0] ?? null;
+}
+
+// ---------- Daily-installment helpers ----------
+
+function tsToDate(t: Timestamp | string | null | undefined): Date | null {
+  if (!t) return null;
+  if (typeof t === "string") {
+    const d = new Date(t);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (t instanceof Timestamp) return t.toDate();
+  // Plain object with seconds/nanoseconds (Firestore-like)
+  const o = t as unknown as { seconds?: number };
+  if (o && typeof o.seconds === "number") return new Date(o.seconds * 1000);
+  return null;
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Days elapsed since started_at (0+); null when started_at unknown. */
+export function purchaseDaysSinceStart(p: ProductPurchase): number | null {
+  const start = tsToDate(p.started_at);
+  if (!start) return null;
+  const ms = startOfDay(new Date()).getTime() - startOfDay(start).getTime();
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+/**
+ * Days the user *should* have paid by today if on schedule (one payment
+ * per day). Capped at total_days. Returns null without started_at.
+ */
+export function purchaseExpectedPaidDays(p: ProductPurchase): number | null {
+  const elapsed = purchaseDaysSinceStart(p);
+  if (elapsed == null) return null;
+  // +1 because day 1 is paid on start day
+  return Math.min(p.total_days || 0, elapsed + 1);
+}
+
+/**
+ * Days the user is behind schedule (expected - actual). 0 when on track or
+ * ahead. Null when started_at unknown or plan inactive.
+ */
+export function purchaseDaysBehind(p: ProductPurchase): number | null {
+  if (p.status !== "active") return null;
+  const expected = purchaseExpectedPaidDays(p);
+  if (expected == null) return null;
+  return Math.max(0, expected - (p.paid_days || 0));
+}
+
+/** Days until deadline (negative = overdue). Null when no deadline. */
+export function purchaseDaysUntilDeadline(p: ProductPurchase): number | null {
+  const dl = tsToDate(p.deadline);
+  if (!dl) return null;
+  const ms = startOfDay(dl).getTime() - startOfDay(new Date()).getTime();
+  return Math.floor(ms / 86_400_000);
+}
+
+/** Date of the latest payment in payments[], or null if none. */
+export function purchaseLastPaidAt(p: ProductPurchase): Date | null {
+  if (!p.payments || p.payments.length === 0) return null;
+  let latest: Date | null = null;
+  for (const r of p.payments) {
+    const d = tsToDate(r.paid_at);
+    if (d && (!latest || d > latest)) latest = d;
+  }
+  return latest;
 }
 
 /**

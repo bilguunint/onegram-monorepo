@@ -2,17 +2,33 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:onegrgold/models/product_model.dart';
+import 'package:onegrgold/repositories/product_repository.dart';
+import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_detail_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/product_detail_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class LotteryWidget extends StatefulWidget {
-  const LotteryWidget({super.key});
+  /// Optional context for the products-slider fallback shown when no
+  /// marketing campaign is active. Without these, the widget renders
+  /// [SizedBox.shrink] in the no-campaign state.
+  final String? uid;
+  final UserRepository? userRepository;
+
+  const LotteryWidget({
+    super.key,
+    this.uid,
+    this.userRepository,
+  });
 
   @override
   State<LotteryWidget> createState() => _LotteryWidgetState();
 }
 
 class _LotteryWidgetState extends State<LotteryWidget> {
+  final ProductRepository _productRepo = ProductRepository();
   String? _name;
   String? _description;
   DateTime? _endDate;
@@ -72,6 +88,15 @@ class _LotteryWidgetState extends State<LotteryWidget> {
       return const SizedBox.shrink();
     }
     if (_name == null) {
+      // No active campaign — fall back to the "Хувааж ав" products slider in
+      // the same half-width slot.
+      if (widget.uid != null && widget.userRepository != null) {
+        return _ProductsPromo(
+          uid: widget.uid!,
+          userRepository: widget.userRepository!,
+          repo: _productRepo,
+        );
+      }
       return const SizedBox.shrink();
     }
 
@@ -248,6 +273,220 @@ class _LotteryWidgetState extends State<LotteryWidget> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "Хувааж ав" promo block shown in place of the lottery card when there is
+/// no active marketing campaign. Sized to the same half-width / 240-height
+/// slot, with a horizontal slider of products inside.
+class _ProductsPromo extends StatelessWidget {
+  final String uid;
+  final UserRepository userRepository;
+  final ProductRepository repo;
+
+  const _ProductsPromo({
+    required this.uid,
+    required this.userRepository,
+    required this.repo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardWidth = MediaQuery.of(context).size.width / 2 - 24;
+    return StreamBuilder<List<Product>>(
+      stream: repo.watchActiveProducts(),
+      builder: (context, snapshot) {
+        final products = snapshot.data ?? const <Product>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
+              child: Text(
+                'Хуваан төлөөд ав',
+                style: TextStyle(
+                  fontFamily: 'InterBold',
+                  fontSize: 14.0,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(
+                width: cardWidth,
+                height: 240,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color.fromARGB(255, 13, 17, 21),
+                      Color.fromARGB(255, 15, 17, 20),
+                      Color.fromARGB(255, 9, 19, 28),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF455A64),
+                    width: 2,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: products.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text(
+                            'Бүтээгдэхүүн алга',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      )
+                    : PageView.builder(
+                        controller:
+                            PageController(viewportFraction: 1.0),
+                        itemCount: products.length,
+                        itemBuilder: (context, i) {
+                          return _PromoSlide(
+                            product: products[i],
+                            current: i + 1,
+                            total: products.length,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ProductDetailScreen(
+                                    product: products[i],
+                                    uid: uid,
+                                    userRepository: userRepository,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PromoSlide extends StatelessWidget {
+  final Product product;
+  final int current;
+  final int total;
+  final VoidCallback onTap;
+
+  const _PromoSlide({
+    required this.product,
+    required this.current,
+    required this.total,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cover = product.coverImage;
+    final maxMonths = product.maxMonths.clamp(1, 12);
+    final daily = dailyAmount(product.price, maxMonths);
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: double.infinity,
+                        color: const Color(0xFF252528),
+                        child: cover != null
+                            ? Image.network(
+                                cover,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: Colors.white24,
+                                    size: 28,
+                                  ),
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Colors.white24,
+                                  size: 30,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    product.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Өдөр бүр ${formatMNT(daily)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: CustomColors.mainColor,
+                      fontFamily: 'RubikBold',
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (total > 1)
+            Positioned(
+              top: 8,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.35),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$current/$total',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

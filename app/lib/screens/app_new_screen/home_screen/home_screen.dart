@@ -410,10 +410,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Title for Safebox and News
                   
                   // Safebox and News Widget
-                  const Row(
+                  Row(
                     children: [
-                      LotteryWidget(),
-                      LeaseGoldWidget()
+                      LotteryWidget(
+                        uid: widget.uid,
+                        userRepository: widget.userRepository,
+                      ),
+                      const LeaseGoldWidget()
                     ],
                   ),
                   const Padding(

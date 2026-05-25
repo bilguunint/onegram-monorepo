@@ -258,11 +258,9 @@ class _PendingView extends StatelessWidget {
             itemBuilder: (context, i) {
               final link = invoice.links[i];
               return GestureDetector(
-                onTap: () async {
-                  final uri = Uri.parse(link.deeplink);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
+                onTap: () {
+                  // No canLaunchUrl gate — see installment_payment_screen.dart.
+                  launchUrl(Uri.parse(link.deeplink));
                 },
                 child: Container(
                   padding: const EdgeInsets.all(8),

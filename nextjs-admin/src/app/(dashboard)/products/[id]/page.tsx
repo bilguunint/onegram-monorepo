@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Timestamp } from "firebase/firestore";
 import {
   ChevronLeft,
   CheckCircle2,
@@ -27,6 +28,10 @@ import {
   getPurchaseUserName,
   productStatusBadge,
   productStatusText,
+  purchaseDaysBehind,
+  purchaseDaysUntilDeadline,
+  purchaseExpectedPaidDays,
+  purchaseLastPaidAt,
   purchaseProgress,
   purchaseStatusBadge,
   purchaseStatusText,
@@ -326,6 +331,10 @@ function PurchasesTable({
         <tbody>
           {rows.map((p) => {
             const progress = purchaseProgress(p);
+            const expected = purchaseExpectedPaidDays(p);
+            const behind = purchaseDaysBehind(p);
+            const daysLeft = purchaseDaysUntilDeadline(p);
+            const lastPaid = purchaseLastPaidAt(p);
             return (
               <tr
                 key={p.id}
@@ -370,12 +379,63 @@ function PurchasesTable({
                       {progress}%
                     </span>
                   </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span>
+                      {p.paid_days}/{p.total_days} өдөр
+                    </span>
+                    {p.status === "active" &&
+                      expected != null &&
+                      expected !== p.paid_days && (
+                        <span
+                          className={cn(
+                            "text-foreground/60",
+                            behind && behind > 0
+                              ? "text-rose-600 dark:text-rose-400"
+                              : ""
+                          )}
+                        >
+                          · төл-х: {expected}
+                        </span>
+                      )}
+                  </div>
+                  {p.status === "active" && behind != null && behind > 0 && (
+                    <div className="mt-1 inline-flex items-center rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                      {behind} өдөр хоцорсон
+                    </div>
+                  )}
                   <div className="mt-0.5 text-[10px] text-muted-foreground">
-                    {p.paid_days}/{p.total_days} өдөр
+                    Өдөр бүр: {formatPriceMNT(p.daily_payment)}
                   </div>
                 </td>
-                <td className="px-2 py-2 text-[11px] text-muted-foreground tabular-nums">
-                  {formatOrderDate(p.started_at)}
+                <td className="px-2 py-2 text-[11px] tabular-nums">
+                  <div className="text-muted-foreground">
+                    Эхэлсэн: {formatOrderDate(p.started_at)}
+                  </div>
+                  {p.deadline && (
+                    <div
+                      className={cn(
+                        "text-muted-foreground",
+                        p.status === "active" && daysLeft != null && daysLeft < 0
+                          ? "text-rose-600 dark:text-rose-400 font-medium"
+                          : ""
+                      )}
+                    >
+                      Дуусах: {formatOrderDate(p.deadline)}
+                      {p.status === "active" &&
+                        daysLeft != null &&
+                        daysLeft >= 0 && (
+                          <span className="text-foreground/40">
+                            {" "}
+                            · {daysLeft} өдөр
+                          </span>
+                        )}
+                    </div>
+                  )}
+                  {lastPaid && (
+                    <div className="text-foreground/40">
+                      Сүүлд: {formatOrderDate(Timestamp.fromDate(lastPaid))}
+                    </div>
+                  )}
                 </td>
                 <td className="px-2 py-2">
                   <span
