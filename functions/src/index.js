@@ -80,6 +80,11 @@ const runCheckInvoices = require("./import/checkInvoices");
 const runGetPayments = require("./import/getQPayPayments");
 const { createSmsCampaign } = require("./services/createSmsCampaign");
 const { sendSavingsRemindersScheduled, sendSavingsReminders } = require("./services/savingsReminderService");
+const {
+  installmentReminderMorning,
+  installmentReminderEvening,
+  installmentReminderManual,
+} = require("./services/installmentReminderService");
 const { sendCustomNotification } = require("./services/customNotificationService");
 const { scheduledBackup, manualBackup } = require("./services/backupService");
 const { scheduledCampaignStatusUpdate } = require("./payment/lotteryService");
@@ -150,6 +155,11 @@ exports.createSmsCampaign = createSmsCampaign;
 // Exports - Savings Reminder Service
 exports.sendSavingsRemindersScheduled = sendSavingsRemindersScheduled;
 exports.sendSavingsReminders = sendSavingsReminders;
+
+// Exports - Installment Payment Reminder Service (10:00 + 20:00 UB time)
+exports.installmentReminderMorning = installmentReminderMorning;
+exports.installmentReminderEvening = installmentReminderEvening;
+exports.installmentReminderManual = installmentReminderManual;
 
 // Exports - Custom Notification Service
 exports.sendCustomNotification = sendCustomNotification;

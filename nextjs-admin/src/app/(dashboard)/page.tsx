@@ -10,7 +10,6 @@ import {
   ShoppingCart,
   TrendingDown,
   Users,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -167,12 +166,6 @@ export default function DashboardPage() {
                 icon={TrendingDown}
                 value={formatCompactGram(overall?.total_gold_withdraws_all_time)}
                 meta={`Мөнгө: ${formatCompactGram(overall?.total_silver_withdraws_all_time)}`}
-              />
-              <StatCard
-                label="Хөрөнгө оруулалт"
-                icon={Wallet}
-                value={formatCompactGram(overall?.total_investments)}
-                meta={`${formatInt(data?.investorCount)} оруулагч`}
               />
             </>
           )}
