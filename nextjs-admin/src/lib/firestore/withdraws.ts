@@ -35,6 +35,9 @@ export type Withdraw = {
   status?: string;
   withdraw_type?: string;
   notes?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  attachments?: string[];
   verificationCode?: string;
   verificationCodeUsed?: boolean;
   verificationCodeExpiresAt?: Timestamp | null;
@@ -56,6 +59,9 @@ function mapWithdrawDoc(id: string, raw: DocumentData): Withdraw {
     status: raw.status,
     withdraw_type: raw.withdraw_type,
     notes: raw.notes,
+    bank_name: raw.bank_name,
+    bank_account_number: raw.bank_account_number,
+    attachments: Array.isArray(raw.attachments) ? raw.attachments : undefined,
     verificationCode: raw.verificationCode,
     verificationCodeUsed: raw.verificationCodeUsed,
     verificationCodeExpiresAt: raw.verificationCodeExpiresAt ?? null,
@@ -65,6 +71,17 @@ function mapWithdrawDoc(id: string, raw: DocumentData): Withdraw {
     created_at: raw.created_at ?? null,
     updated_at: raw.updated_at ?? null,
   };
+}
+
+export async function findWithdrawByVerificationCode(
+  code: string
+): Promise<Withdraw | null> {
+  const col = collection(getDb(), "withdraws");
+  const q = query(col, where("verificationCode", "==", code));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return mapWithdrawDoc(d.id, d.data());
 }
 
 function rangeStartDate(range: WithdrawDateRange): Date | null {

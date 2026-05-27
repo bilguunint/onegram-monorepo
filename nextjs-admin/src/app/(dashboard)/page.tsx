@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { SellerHome } from "@/components/seller/SellerHome";
 import {
   fetchDashboardSnapshot,
   type DashboardSnapshot,
@@ -40,6 +41,14 @@ import { DailyRevenueChart } from "@/components/dashboard/DailyRevenueChart";
 import { GoldBalanceDistribution } from "@/components/dashboard/GoldBalanceDistribution";
 
 export default function DashboardPage() {
+  const { adminData } = useAuth();
+  if (adminData?.role === "seller") {
+    return <SellerHome />;
+  }
+  return <AdminDashboard />;
+}
+
+function AdminDashboard() {
   const { adminData } = useAuth();
   const [data, setData] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);

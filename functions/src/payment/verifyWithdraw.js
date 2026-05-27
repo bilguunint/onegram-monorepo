@@ -44,15 +44,33 @@ exports.verifyWithdraw = onRequest({
       }
       const adminData = adminDocSnap.data() || {};
       const adminRole = (adminData.role || "").toString().toLowerCase();
-      if (!adminRole || !["admin", "superadmin", "owner"].includes(adminRole)) {
+      if (!adminRole || !["admin", "superadmin", "owner", "seller"].includes(adminRole)) {
         return res.status(403).json({ error: "Forbidden: Insufficient role" });
       }
       const adminName = adminData.name || decoded.name || decoded.email || "unknown";
 
-      const { verificationCode, withdrawId, withdrawType } = req.body || {};
+      const {
+        verificationCode,
+        withdrawId,
+        withdrawType,
+        bankName,
+        bankAccountNumber,
+        notes,
+        attachments,
+      } = req.body || {};
       if (!verificationCode || !withdrawId) {
         return res.status(400).json({ error: "Missing required fields: verificationCode, withdrawId" });
       }
+
+      const trimmedBankName = typeof bankName === "string" ? bankName.trim() : "";
+      const trimmedBankAccount =
+        typeof bankAccountNumber === "string" ? bankAccountNumber.trim() : "";
+      const trimmedNotes = typeof notes === "string" ? notes.trim() : "";
+      const cleanAttachments = Array.isArray(attachments) ?
+        attachments
+          .filter((u) => typeof u === "string" && u.startsWith("https://"))
+          .slice(0, 10) :
+        [];
 
       const result = await db.runTransaction(async (tx) => {
         // ALL READS MUST BE DONE FIRST BEFORE ANY WRITES
@@ -101,15 +119,26 @@ exports.verifyWithdraw = onRequest({
           throw new Error("Verification code already used");
         }
 
-        // Check if verification code is expired (skip for special admin)
+        // Check if verification code is expired (skip for special admin).
+        // For seller role we override the expiration to 15 min from created_at,
+        // since the original verificationCodeExpiresAt is 10 min (admin flow).
         const isSpecialAdmin = adminUid === "mOlavOSKiyfGXnEQ0D4ODDIb9eq1";
         if (!isSpecialAdmin) {
           const now = new Date();
-          const expiresAt = withdraw.verificationCodeExpiresAt && withdraw.verificationCodeExpiresAt.toDate ?
-            withdraw.verificationCodeExpiresAt.toDate() :
-            null;
-          if (!expiresAt || now > expiresAt) {
-            throw new Error("Verification code has expired");
+          if (adminRole === "seller") {
+            const createdAt = withdraw.created_at && withdraw.created_at.toDate ?
+              withdraw.created_at.toDate() :
+              null;
+            if (!createdAt || now.getTime() - createdAt.getTime() > 15 * 60 * 1000) {
+              throw new Error("Код идэвхжүүлэх хугацаа дууссан");
+            }
+          } else {
+            const expiresAt = withdraw.verificationCodeExpiresAt && withdraw.verificationCodeExpiresAt.toDate ?
+              withdraw.verificationCodeExpiresAt.toDate() :
+              null;
+            if (!expiresAt || now > expiresAt) {
+              throw new Error("Verification code has expired");
+            }
           }
         }
 
@@ -158,10 +187,32 @@ exports.verifyWithdraw = onRequest({
         };
         
         // Add withdraw_type if provided
+        const effectiveWithdrawType = withdrawType ?
+          String(withdrawType) :
+          (withdraw.withdraw_type ? String(withdraw.withdraw_type) : null);
         if (withdrawType) {
           updateData.withdraw_type = String(withdrawType);
         }
-        
+
+        // sold_to_us: require bank name + account number
+        if (effectiveWithdrawType === "sold_to_us") {
+          if (!trimmedBankName || !trimmedBankAccount) {
+            throw new Error("Bank name and account number are required for sold_to_us");
+          }
+          updateData.bank_name = trimmedBankName;
+          updateData.bank_account_number = trimmedBankAccount;
+        }
+
+        // notes (used as тайлбар for taken_physically; also accepted for sold_to_us)
+        if (trimmedNotes) {
+          updateData.notes = trimmedNotes;
+        }
+
+        // attachments
+        if (cleanAttachments.length > 0) {
+          updateData.attachments = cleanAttachments;
+        }
+
         tx.update(withdrawRef, updateData);
 
         // Deduct user's balance by metal_id and quantity.

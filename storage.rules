@@ -29,6 +29,20 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // Withdraw attachments — баталгаажуулалтын файлууд (зураг, PDF).
+    // Зөвхөн admin (seller doc-той орно) бичнэ. 10MB-ээс дээш файл хориглоно.
+    // image/* эсвэл application/pdf content type.
+    match /withdraws/{withdrawId}/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if isAdmin()
+        && request.resource.size < 10 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType == 'application/pdf'
+        );
+      allow delete: if isAdmin();
+    }
+
     // Бусад бүх зам хориглох.
     match /{allPaths=**} {
       allow read, write: if false;

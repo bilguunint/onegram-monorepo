@@ -7,16 +7,19 @@ import {
   Home,
   Package,
   Receipt,
+  ShieldCheck,
   ShoppingBag,
   Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import type { AdminRole } from "@/lib/auth/roles";
 
 export type MenuItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  roles?: AdminRole[];
 };
 
 export const MENU: MenuItem[] = [
@@ -31,4 +34,10 @@ export const MENU: MenuItem[] = [
   { label: "Бараа худалдан авалт", href: "/product-purchases", icon: ShoppingBag },
   { label: "Мэдэгдэл", href: "/custom-notifications", icon: Bell },
   { label: "Сугалаат аян", href: "/campaigns", icon: ClipboardList },
+  { label: "Админууд", href: "/admins", icon: ShieldCheck, roles: ["admin"] },
 ];
+
+export function filterMenuByRole(role: AdminRole | null | undefined): MenuItem[] {
+  if (!role) return [];
+  return MENU.filter((item) => !item.roles || item.roles.includes(role));
+}

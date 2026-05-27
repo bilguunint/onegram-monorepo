@@ -8,6 +8,10 @@ export type VerifyWithdrawRequest = {
   verificationCode: string;
   withdrawId: string;
   withdrawType?: WithdrawType;
+  bankName?: string;
+  bankAccountNumber?: string;
+  notes?: string;
+  attachments?: string[];
 };
 
 export type VerifyWithdrawResponse = {
