@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   verifyWithdraw,
   type VerifyWithdrawResponse,
@@ -81,9 +82,20 @@ function VerifyBody({
   onClose: () => void;
   onCompleted: () => void;
 }) {
-  const [type, setType] = useState<WithdrawType>("sold_to_us");
+  const [type, setType] = useState<WithdrawType>(
+    withdraw.withdraw_type === "taken_physically"
+      ? "taken_physically"
+      : "sold_to_us"
+  );
   const [code, setCode] = useState("");
+  const [bankName, setBankName] = useState(withdraw.bank_name ?? "");
+  const [bankAccount, setBankAccount] = useState(
+    withdraw.bank_account_number ?? ""
+  );
+  const [notes, setNotes] = useState(withdraw.notes ?? "");
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
+
+  const isSold = type === "sold_to_us";
 
   const handleSubmit = async () => {
     const trimmed = code.trim().toUpperCase();
@@ -99,12 +111,28 @@ function VerifyBody({
       setPhase({ kind: "form", error: "Код тоо болон үсгээс бүрдэх ёстой." });
       return;
     }
+    const trimmedBankName = bankName.trim();
+    const trimmedBankAccount = bankAccount.trim();
+    if (isSold) {
+      if (!trimmedBankName) {
+        setPhase({ kind: "form", error: "Банкны нэр оруулна уу." });
+        return;
+      }
+      if (!trimmedBankAccount) {
+        setPhase({ kind: "form", error: "Дансны дугаар оруулна уу." });
+        return;
+      }
+    }
     setPhase({ kind: "submitting" });
     try {
       const res = await verifyWithdraw({
         verificationCode: trimmed,
         withdrawId: withdraw.id,
         withdrawType: type,
+        ...(isSold
+          ? { bankName: trimmedBankName, bankAccountNumber: trimmedBankAccount }
+          : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
       setPhase({ kind: "success", result: res });
     } catch (err) {
@@ -124,7 +152,9 @@ function VerifyBody({
           <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span className="text-[13px] font-medium">
-              Биетээр авах хүсэлт амжилттай баталгаажлаа.
+              {isSold
+                ? "Манайд зарах хүсэлт амжилттай баталгаажлаа."
+                : "Биетээр авах хүсэлт амжилттай баталгаажлаа."}
             </span>
           </div>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-lg border border-border-light bg-muted/30 p-3 text-[12px]">
@@ -161,7 +191,8 @@ function VerifyBody({
             <strong>
               {formatQuantity(withdraw.metal_id, withdraw.quantity)}
             </strong>{" "}
-            биетээр авах хүсэлтийг баталгаажуулах гэж байна.
+            {isSold ? "манайд зарах" : "биетээр авах"} хүсэлтийг баталгаажуулах
+            гэж байна.
           </div>
         </div>
 
@@ -178,6 +209,40 @@ function VerifyBody({
           </Select>
         </div>
 
+        {isSold && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="bank-name">
+                Банкны нэр <span className="text-rose-500">*</span>
+              </Label>
+              <Input
+                id="bank-name"
+                autoComplete="off"
+                placeholder="Жишээ: Хаан банк"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                disabled={submitting}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="bank-account">
+                Дансны дугаар <span className="text-rose-500">*</span>
+              </Label>
+              <Input
+                id="bank-account"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="0000000000"
+                value={bankAccount}
+                onChange={(e) => setBankAccount(e.target.value)}
+                disabled={submitting}
+                className="font-mono"
+              />
+            </div>
+          </>
+        )}
+
         <div className="space-y-1.5">
           <Label htmlFor="verification-code">
             SMS-ээр ирсэн 5 оронтой код
@@ -192,6 +257,20 @@ function VerifyBody({
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             disabled={submitting}
             className="tracking-[0.4em] text-center font-mono uppercase"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="withdraw-notes">
+            Тайлбар <span className="text-muted-foreground">(заавал биш)</span>
+          </Label>
+          <Textarea
+            id="withdraw-notes"
+            rows={2}
+            placeholder="Нэмэлт тэмдэглэл..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            disabled={submitting}
           />
         </div>
 
