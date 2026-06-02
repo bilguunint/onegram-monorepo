@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -42,6 +43,11 @@ import { DeliverPurchaseDialog } from "@/components/products/DeliverPurchaseDial
 const ITEMS_PER_PAGE = 20;
 
 export default function ProductPurchasesPage() {
+  const { adminData } = useAuth();
+  const role = adminData?.role ?? null;
+  // Accountant is view/export-only — no deliver/cancel actions.
+  const canSeeActions = role !== "accountant";
+
   const [items, setItems] = useState<ProductPurchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -226,7 +232,9 @@ export default function ProductPurchasesPage() {
                     <th className="px-2 py-2 text-left font-medium">Progress</th>
                     <th className="px-2 py-2 text-left font-medium">Огноо</th>
                     <th className="px-2 py-2 text-left font-medium">Төлөв</th>
-                    <th className="px-2 py-2 text-right font-medium">Үйлдэл</th>
+                    {canSeeActions && (
+                      <th className="px-2 py-2 text-right font-medium">Үйлдэл</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -381,36 +389,38 @@ export default function ProductPurchasesPage() {
                             {purchaseStatusText(p.status)}
                           </span>
                         </td>
-                        <td className="px-2 py-2">
-                          <div className="flex items-center justify-end gap-1">
-                            {p.status === "completed" && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                title="Хүлээлгэн өгөх"
-                                onClick={() => setDeliverTarget(p)}
-                                className="text-primary-600 hover:bg-primary-50"
-                              >
-                                <PackageCheck className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                            {(p.status === "active" ||
-                              p.status === "completed") && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                title="Цуцлах"
-                                onClick={() => setCancelTarget(p)}
-                                className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
-                              >
-                                <XCircle className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                            {p.status === "delivered" && (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                            )}
-                          </div>
-                        </td>
+                        {canSeeActions && (
+                          <td className="px-2 py-2">
+                            <div className="flex items-center justify-end gap-1">
+                              {p.status === "completed" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  title="Хүлээлгэн өгөх"
+                                  onClick={() => setDeliverTarget(p)}
+                                  className="text-primary-600 hover:bg-primary-50"
+                                >
+                                  <PackageCheck className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {(p.status === "active" ||
+                                p.status === "completed") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  title="Цуцлах"
+                                  onClick={() => setCancelTarget(p)}
+                                  className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {p.status === "delivered" && (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

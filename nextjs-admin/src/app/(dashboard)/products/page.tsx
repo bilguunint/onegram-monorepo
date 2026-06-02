@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -30,6 +31,11 @@ import {
 } from "@/lib/products";
 
 export default function ProductsPage() {
+  const { adminData } = useAuth();
+  const role = adminData?.role ?? null;
+  // Accountant is view-only — no create/edit/status actions.
+  const canSeeActions = role !== "accountant";
+
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -104,10 +110,12 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button render={<Link href="/products/new" />} size="sm">
-            <Plus className="h-3.5 w-3.5" />
-            Шинэ бараа
-          </Button>
+          {canSeeActions && (
+            <Button render={<Link href="/products/new" />} size="sm">
+              <Plus className="h-3.5 w-3.5" />
+              Шинэ бараа
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon-sm"
@@ -184,7 +192,9 @@ export default function ProductsPage() {
                     <th className="px-2 py-2 text-center font-medium">Сар</th>
                     <th className="px-2 py-2 text-center font-medium">Stock</th>
                     <th className="px-2 py-2 text-left font-medium">Төлөв</th>
-                    <th className="px-2 py-2 text-right font-medium">Үйлдэл</th>
+                    {canSeeActions && (
+                      <th className="px-2 py-2 text-right font-medium">Үйлдэл</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -247,41 +257,43 @@ export default function ProductsPage() {
                           {productStatusText(p.status)}
                         </span>
                       </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Засах"
-                            render={<Link href={`/products/${p.id}/edit`} />}
-                            className="text-primary-600 hover:bg-primary-50"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title={
-                              p.status === "active"
-                                ? "Идэвхгүй болгох"
-                                : "Идэвхжүүлэх"
-                            }
-                            disabled={togglingId === p.id}
-                            onClick={() => setPendingToggle(p)}
-                            className={cn(
-                              p.status === "active"
-                                ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
-                                : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-                            )}
-                          >
-                            {togglingId === p.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Power className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                        </div>
-                      </td>
+                      {canSeeActions && (
+                        <td className="px-2 py-2">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Засах"
+                              render={<Link href={`/products/${p.id}/edit`} />}
+                              className="text-primary-600 hover:bg-primary-50"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title={
+                                p.status === "active"
+                                  ? "Идэвхгүй болгох"
+                                  : "Идэвхжүүлэх"
+                              }
+                              disabled={togglingId === p.id}
+                              onClick={() => setPendingToggle(p)}
+                              className={cn(
+                                p.status === "active"
+                                  ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                  : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                              )}
+                            >
+                              {togglingId === p.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Power className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

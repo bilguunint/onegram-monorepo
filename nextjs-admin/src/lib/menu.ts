@@ -32,8 +32,18 @@ export const MENU: MenuItem[] = [
   { label: "Биетээр авах статистик", href: "/withdraws_statistics", icon: BarChart3 },
   { label: "Бараа", href: "/products", icon: Package },
   { label: "Бараа худалдан авалт", href: "/product-purchases", icon: ShoppingBag },
-  { label: "Мэдэгдэл", href: "/custom-notifications", icon: Bell },
-  { label: "Сугалаат аян", href: "/campaigns", icon: ClipboardList },
+  {
+    label: "Мэдэгдэл",
+    href: "/custom-notifications",
+    icon: Bell,
+    roles: ["admin", "manager", "seller"],
+  },
+  {
+    label: "Сугалаат аян",
+    href: "/campaigns",
+    icon: ClipboardList,
+    roles: ["admin", "manager", "seller"],
+  },
   { label: "Админууд", href: "/admins", icon: ShieldCheck, roles: ["admin"] },
 ];
 
