@@ -4,8 +4,8 @@ const admin = require("firebase-admin");
 const axios = require("axios");
 const cors = require("cors")({ origin: true });
 
-const QPAY_USERNAME = "ONE_GRAM_GOLD";
-const QPAY_PASSWORD = "zElO7j40";
+const QPAY_USERNAME = "LISTLY_AGENT";
+const QPAY_PASSWORD = "nbIqiJvG";
 
 const CALLBACK_BASE =
   "https://asia-northeast1-grammgold.cloudfunctions.net/installmentCallback";
@@ -142,7 +142,7 @@ exports.createInstallmentPayment = onRequest({
         `${CALLBACK_BASE}?purchase_id=${encodeURIComponent(purchase_id)}` +
         `&day_no=${nextDay}`;
       const invoicePayload = {
-        invoice_code: "ONE_GRAM_GOLD_INVOICE",
+        invoice_code: "LISTLY_AGENT_INVOICE",
         sender_invoice_no: senderInvoiceNo,
         invoice_receiver_code: "terminal",
         amount: invoiceAmount,

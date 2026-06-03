@@ -33,6 +33,7 @@ const { verifyWithdraw } = require("./payment/verifyWithdraw");
 const makeInvest = require("./payment/makeInvest");
 const closeInvestment = require("./payment/closeInvestment");
 const { scheduledAutoVerifyOrders, initAutoVerifyOrders } = require("./payment/autoVerifyOrders");
+const { scheduledAutoVerifyInstallments, initAutoVerifyInstallments } = require("./payment/autoVerifyInstallments");
 
 // Analytics
 const {
@@ -171,6 +172,10 @@ exports.manualBackup = manualBackup;
 // Exports - Auto Verify Orders
 exports.scheduledAutoVerifyOrders = scheduledAutoVerifyOrders;
 exports.initAutoVerifyOrders = initAutoVerifyOrders;
+
+// Exports - Auto Verify Installments (хуваан төлөлт safety net)
+exports.scheduledAutoVerifyInstallments = scheduledAutoVerifyInstallments;
+exports.initAutoVerifyInstallments = initAutoVerifyInstallments;
 
 // Exports - Gold Balance Distribution
 exports.initGoldBalanceDistribution = initGoldBalanceDistribution;
