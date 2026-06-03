@@ -220,7 +220,7 @@ export default function ProductsPage() {
                               <Package className="h-4 w-4 text-muted-foreground" />
                             )}
                           </span>
-                          <div className="min-w-0">
+                          <div className="min-w-0 max-w-[280px]">
                             <div className="truncate font-medium text-foreground hover:text-primary-600">
                               {p.name || "—"}
                             </div>
