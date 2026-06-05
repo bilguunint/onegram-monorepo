@@ -137,6 +137,36 @@ export function purchaseLastPaidAt(p: ProductPurchase): Date | null {
 }
 
 /**
+ * How many days an active plan may go without a payment before it is
+ * flagged overdue. A user who pays the first day and then stops will be
+ * surfaced to admins once this gap is reached.
+ */
+export const OVERDUE_GAP_DAYS = 10;
+
+/**
+ * Days since the most recent payment (falling back to started_at when no
+ * payment record exists). Null when the plan isn't active or has no start
+ * date. Unlike purchaseDaysBehind (cumulative schedule lag), this measures
+ * the gap since the last actual payment, so it catches "prepaid then
+ * abandoned" plans too.
+ */
+export function purchaseDaysSinceLastPayment(
+  p: ProductPurchase
+): number | null {
+  if (p.status !== "active") return null;
+  const last = purchaseLastPaidAt(p) ?? tsToDate(p.started_at);
+  if (!last) return null;
+  const ms = startOfDay(new Date()).getTime() - startOfDay(last).getTime();
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+/** True when an active plan has had no payment for OVERDUE_GAP_DAYS+ days. */
+export function purchaseIsOverdue(p: ProductPurchase): boolean {
+  const gap = purchaseDaysSinceLastPayment(p);
+  return gap != null && gap >= OVERDUE_GAP_DAYS;
+}
+
+/**
  * Compute refund split given paid amount and cancel fee % (0..100).
  */
 export function computeRefundSplit(

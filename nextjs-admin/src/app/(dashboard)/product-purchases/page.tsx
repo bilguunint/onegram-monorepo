@@ -29,12 +29,15 @@ import {
   formatPriceMNT,
   getPurchaseUserName,
   purchaseDaysBehind,
+  purchaseDaysSinceLastPayment,
   purchaseDaysUntilDeadline,
   purchaseExpectedPaidDays,
+  purchaseIsOverdue,
   purchaseLastPaidAt,
   purchaseProgress,
   purchaseStatusBadge,
   purchaseStatusText,
+  OVERDUE_GAP_DAYS,
 } from "@/lib/products";
 import { formatOrderDate } from "@/lib/orders";
 import { CancelPurchaseDialog } from "@/components/products/CancelPurchaseDialog";
@@ -97,9 +100,7 @@ export default function ProductPurchasesPage() {
       });
     }
     if (statusFilter === "overdue") {
-      list = list.filter(
-        (p) => p.status === "active" && (purchaseDaysBehind(p) ?? 0) > 0
-      );
+      list = list.filter((p) => purchaseIsOverdue(p));
     } else if (statusFilter) {
       list = list.filter((p) => p.status === statusFilter);
     }
@@ -129,12 +130,10 @@ export default function ProductPurchasesPage() {
     setPage(1);
   };
 
-  // Overdue count for the filter chip — only relevant for active plans.
+  // Overdue count for the filter chip — active plans with no payment for
+  // OVERDUE_GAP_DAYS+ days.
   const overdueCount = useMemo(
-    () =>
-      items.filter(
-        (p) => p.status === "active" && (purchaseDaysBehind(p) ?? 0) > 0
-      ).length,
+    () => items.filter((p) => purchaseIsOverdue(p)).length,
     [items]
   );
 
@@ -191,7 +190,7 @@ export default function ProductPurchasesPage() {
               <option value="">Бүгд</option>
               <option value="active">Идэвхтэй</option>
               <option value="overdue">
-                Хоцорсон ({overdueCount})
+                {OVERDUE_GAP_DAYS}+ хоног төлбөргүй ({overdueCount})
               </option>
               <option value="completed">Төлөгдсөн</option>
               <option value="delivered">Хүлээлгэн өгсөн</option>
@@ -244,6 +243,8 @@ export default function ProductPurchasesPage() {
                     const behind = purchaseDaysBehind(p);
                     const daysLeft = purchaseDaysUntilDeadline(p);
                     const lastPaid = purchaseLastPaidAt(p);
+                    const gap = purchaseDaysSinceLastPayment(p);
+                    const overdue = purchaseIsOverdue(p);
                     return (
                       <tr
                         key={p.id}
@@ -342,6 +343,11 @@ export default function ProductPurchasesPage() {
                           {p.status === "active" && behind != null && behind > 0 && (
                             <div className="mt-1 inline-flex items-center rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
                               {behind} өдөр хоцорсон
+                            </div>
+                          )}
+                          {overdue && gap != null && (
+                            <div className="mt-1 inline-flex items-center rounded-md bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white dark:bg-rose-600">
+                              {gap} хоног төлбөргүй
                             </div>
                           )}
                         </td>

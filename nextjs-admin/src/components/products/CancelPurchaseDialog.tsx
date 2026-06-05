@@ -17,6 +17,7 @@ import {
   cancelProductPurchase,
   type ProductPurchase,
 } from "@/lib/firestore/productPurchases";
+import { sendCustomNotification } from "@/lib/api/notificationActions";
 import {
   computeRefundSplit,
   formatPriceMNT,
@@ -96,6 +97,22 @@ function CancelBody({
         refundAmount: split.refund,
         refundFee: split.fee,
       });
+      // Notify the buyer (best-effort — a failed push must not block the
+      // cancel, which has already committed to Firestore).
+      try {
+        await sendCustomNotification({
+          title: "Худалдан авалт цуцлагдлаа",
+          body:
+            `${purchase.product_snapshot.name} — таны худалдан авалт цуцлагдлаа. ` +
+            `Буцаах дүн: ${formatPriceMNT(split.refund)}. ` +
+            `Шалтгаан: ${reason.trim()}`,
+          type: "purchase_cancelled",
+          userIds: [purchase.user_id],
+        });
+      } catch (notifyErr) {
+        console.error("Cancel notification failed", notifyErr);
+        toast.warning("Цуцлагдсан ч хэрэглэгчид мэдэгдэл илгээгдсэнгүй.");
+      }
       toast.success("Худалдан авалт цуцлагдлаа.");
       onCompleted();
     } catch (err) {
