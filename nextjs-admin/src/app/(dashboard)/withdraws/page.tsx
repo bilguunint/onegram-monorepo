@@ -68,6 +68,8 @@ export default function WithdrawsPage() {
   const adminUid = user?.uid ?? null;
   const canExportExcel = role === "admin" || role === "accountant";
   const canSeeActions = role === "admin";
+  // Accountant may open the detail view but performs no verify action.
+  const canViewDetail = role === "admin" || role === "accountant";
 
   const [all, setAll] = useState<Withdraw[]>([]);
   const [loading, setLoading] = useState(false);
@@ -442,7 +444,7 @@ export default function WithdrawsPage() {
                       sortDir={sortDir}
                       onSort={handleSort}
                     />
-                    {canSeeActions && (
+                    {canViewDetail && (
                       <th className="px-2 py-2 text-right font-medium">Үйлдэл</th>
                     )}
                   </tr>
@@ -451,7 +453,7 @@ export default function WithdrawsPage() {
                   {pageRows.length === 0 && (
                     <tr>
                       <td
-                        colSpan={canSeeActions ? 9 : 8}
+                        colSpan={canViewDetail ? 9 : 8}
                         className="py-12 text-center text-muted-foreground"
                       >
                         <Inbox className="mx-auto mb-2 h-6 w-6 opacity-60" />
@@ -560,7 +562,7 @@ export default function WithdrawsPage() {
                             </div>
                           )}
                         </td>
-                        {canSeeActions && (
+                        {canViewDetail && (
                           <td className="px-2 py-2 align-top">
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -572,7 +574,7 @@ export default function WithdrawsPage() {
                               >
                                 <Eye className="h-3.5 w-3.5" />
                               </Button>
-                              {canVerify && (
+                              {canSeeActions && canVerify && (
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
