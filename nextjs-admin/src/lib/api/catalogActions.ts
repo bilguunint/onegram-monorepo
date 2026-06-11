@@ -6,18 +6,15 @@ export type TranslatedProduct = {
   description: string;
 };
 
-/**
- * Ask the server (OpenAI) to translate product names/descriptions into
- * Simplified Chinese. Returns one entry per input id (falls back to the
- * original text server-side for anything the model drops).
- */
-export async function translateProductsToChinese(
-  items: { id: string; name: string; description: string }[]
-): Promise<TranslatedProduct[]> {
-  const user = getFirebaseAuth().currentUser;
-  if (!user) throw new Error("Нэвтрэх шаардлагатай.");
-  const token = await user.getIdToken();
+// Translate in small parallel batches. One big request over many products
+// makes the OpenAI call slow enough to hit the serverless timeout (504), so we
+// split the work — each request stays well under the limit and they run at once.
+const TRANSLATE_BATCH_SIZE = 8;
 
+async function translateBatch(
+  items: { id: string; name: string; description: string }[],
+  token: string
+): Promise<TranslatedProduct[]> {
   const res = await fetch("/api/translate-products", {
     method: "POST",
     headers: {
@@ -40,8 +37,31 @@ export async function translateProductsToChinese(
       `Орчуулга амжилтгүй (${res.status}).`;
     throw new Error(msg);
   }
-  const data = (payload as { data?: TranslatedProduct[] })?.data ?? [];
-  return data;
+  return (payload as { data?: TranslatedProduct[] })?.data ?? [];
+}
+
+/**
+ * Ask the server (OpenAI) to translate product names/descriptions into
+ * Simplified Chinese. Splits into parallel batches to avoid timeouts; returns
+ * one entry per input id (falls back to the original text server-side for
+ * anything the model drops).
+ */
+export async function translateProductsToChinese(
+  items: { id: string; name: string; description: string }[]
+): Promise<TranslatedProduct[]> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user) throw new Error("Нэвтрэх шаардлагатай.");
+  const token = await user.getIdToken();
+
+  const batches: { id: string; name: string; description: string }[][] = [];
+  for (let i = 0; i < items.length; i += TRANSLATE_BATCH_SIZE) {
+    batches.push(items.slice(i, i + TRANSLATE_BATCH_SIZE));
+  }
+
+  const results = await Promise.all(
+    batches.map((batch) => translateBatch(batch, token))
+  );
+  return results.flat();
 }
 
 /**

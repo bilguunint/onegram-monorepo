@@ -52,6 +52,10 @@ export async function POST(req: Request) {
       description: String(it.description ?? ""),
     }));
 
+    // gpt-5.x are reasoning models — without this they spend seconds "thinking"
+    // and can blow the function timeout (504). Translation needs no reasoning.
+    const isGpt5 = /^gpt-5/i.test(model);
+
     const res = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
@@ -61,6 +65,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model,
         response_format: { type: "json_object" },
+        ...(isGpt5 ? { reasoning_effort: "none" } : {}),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: JSON.stringify({ items: payload }) },
