@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CatalogPdfButton } from "@/components/products/CatalogPdfButton";
 import {
   fetchProducts,
   setProductStatus,
@@ -116,6 +117,7 @@ export default function ProductsPage() {
               Шинэ бараа
             </Button>
           )}
+          <CatalogPdfButton products={items} />
           <Button
             variant="outline"
             size="icon-sm"
