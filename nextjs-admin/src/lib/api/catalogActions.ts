@@ -45,16 +45,22 @@ export async function translateProductsToChinese(
 }
 
 /**
- * Fetch an image URL and return it as a data URL so @react-pdf can embed it
- * without hitting the network during render. Returns null on any failure
- * (missing URL, CORS, network) — the PDF then shows a "no image" placeholder.
+ * Fetch a product image as a data URL so @react-pdf can embed it without
+ * hitting the network during render. Firebase Storage URLs don't send CORS
+ * headers, so we go through our same-origin /api/image-proxy. Returns null on
+ * any failure — the PDF then shows a "no image" placeholder.
  */
 export async function fetchImageDataUrl(
   url: string | null | undefined
 ): Promise<string | null> {
   if (!url) return null;
   try {
-    const res = await fetch(url, { mode: "cors" });
+    const user = getFirebaseAuth().currentUser;
+    if (!user) return null;
+    const token = await user.getIdToken();
+    const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(url)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) return null;
     const blob = await res.blob();
     if (!blob.type.startsWith("image/")) return null;

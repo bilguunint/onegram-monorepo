@@ -123,6 +123,11 @@ function formatMnt(n: number): string {
   return `${MNT_FMT.format(Math.round(n))}₮`;
 }
 
+// The ₮ glyph is missing from the CJK font, so Chinese pages spell out "MNT".
+function formatMntPlain(n: number): string {
+  return `${MNT_FMT.format(Math.round(n))} MNT`;
+}
+
 function formatFx(priceMnt: number, c: CatalogCurrency): string {
   const value = c.rate > 0 ? priceMnt / c.rate : 0;
   return `${c.symbol}${FX_FMT.format(value)}`;
@@ -250,10 +255,22 @@ function CatalogDocument({
 
                 <View style={s.priceRow}>
                   {c ? (
-                    <>
+                    // Currency selected: show the converted price. On Chinese
+                    // pages show ONLY the selected currency (no MNT).
+                    opts.zh ? (
                       <Text style={s.priceMain}>{formatFx(p.priceMnt, c)}</Text>
-                      <Text style={s.priceSub}>{formatMnt(p.priceMnt)}</Text>
-                    </>
+                    ) : (
+                      <>
+                        <Text style={s.priceMain}>
+                          {formatFx(p.priceMnt, c)}
+                        </Text>
+                        <Text style={s.priceSub}>{formatMnt(p.priceMnt)}</Text>
+                      </>
+                    )
+                  ) : opts.zh ? (
+                    <Text style={s.priceMain}>
+                      {formatMntPlain(p.priceMnt)}
+                    </Text>
                   ) : (
                     <Text style={s.priceMain}>{formatMnt(p.priceMnt)}</Text>
                   )}
@@ -264,12 +281,6 @@ function CatalogDocument({
                     {`${L.months}: `}
                     <Text style={s.metaStrong}>
                       {`${p.minMonths}–${p.maxMonths} ${L.monthsUnit}`}
-                    </Text>
-                  </Text>
-                  <Text style={s.metaItem}>
-                    {`${L.stock}: `}
-                    <Text style={s.metaStrong}>
-                      {p.stock == null ? L.unlimited : String(p.stock)}
                     </Text>
                   </Text>
                 </View>
