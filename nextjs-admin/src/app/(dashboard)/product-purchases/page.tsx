@@ -1,17 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Timestamp } from "firebase/firestore";
 import {
+  AlertTriangle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Coins,
   Inbox,
   Loader2,
   Package,
   PackageCheck,
   RefreshCw,
+  ShoppingBag,
+  TrendingUp,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -42,8 +47,33 @@ import {
 import { formatOrderDate } from "@/lib/orders";
 import { CancelPurchaseDialog } from "@/components/products/CancelPurchaseDialog";
 import { DeliverPurchaseDialog } from "@/components/products/DeliverPurchaseDialog";
+import { PurchaseDetailDialog } from "@/components/products/PurchaseDetailDialog";
+import { StatCard } from "@/components/dashboard/StatCard";
 
 const ITEMS_PER_PAGE = 20;
+
+const fmtInt = (n: number) => new Intl.NumberFormat("mn-MN").format(n);
+
+const STATUS_ORDER: ProductPurchaseStatus[] = [
+  "active",
+  "completed",
+  "delivered",
+  "cancelled",
+];
+
+function paidAtToDate(
+  v: Timestamp | string | null | undefined
+): Date | null {
+  if (!v) return null;
+  if (v instanceof Timestamp) return v.toDate();
+  if (typeof v === "string") {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const o = v as unknown as { seconds?: number };
+  if (o && typeof o.seconds === "number") return new Date(o.seconds * 1000);
+  return null;
+}
 
 export default function ProductPurchasesPage() {
   const { adminData } = useAuth();
@@ -63,6 +93,9 @@ export default function ProductPurchasesPage() {
     null
   );
   const [deliverTarget, setDeliverTarget] = useState<ProductPurchase | null>(
+    null
+  );
+  const [detailTarget, setDetailTarget] = useState<ProductPurchase | null>(
     null
   );
 
@@ -137,6 +170,69 @@ export default function ProductPurchasesPage() {
     [items]
   );
 
+  // Overall installment statistics (computed over ALL purchases, not the
+  // current filter/page) shown as a summary above the table.
+  const stats = useMemo(() => {
+    let gmv = 0;
+    let collected = 0;
+    // Average number of days between consecutive payment DAYS — answers
+    // "do users pay daily, weekly, …?". Multiple installments paid on the
+    // same day count as one payment event.
+    let gapDaysSum = 0;
+    let gapCount = 0;
+    const statusCount: Record<ProductPurchaseStatus, number> = {
+      active: 0,
+      completed: 0,
+      delivered: 0,
+      cancelled: 0,
+    };
+    const productMap = new Map<
+      string,
+      { name: string; count: number; amount: number }
+    >();
+
+    for (const p of items) {
+      gmv += Number(p.total_price || 0);
+      collected += Number(p.paid_amount || 0);
+      statusCount[p.status] = (statusCount[p.status] ?? 0) + 1;
+
+      const dayMs = new Set<number>();
+      for (const rec of p.payments ?? []) {
+        const d = paidAtToDate(rec.paid_at);
+        if (d) {
+          dayMs.add(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime());
+        }
+      }
+      const days = [...dayMs].sort((a, b) => a - b);
+      for (let i = 1; i < days.length; i++) {
+        gapDaysSum += (days[i] - days[i - 1]) / 86_400_000;
+        gapCount += 1;
+      }
+
+      const key = p.product_id || p.product_snapshot.name;
+      const entry = productMap.get(key) ?? {
+        name: p.product_snapshot.name,
+        count: 0,
+        amount: 0,
+      };
+      entry.count += 1;
+      entry.amount += Number(p.total_price || 0);
+      productMap.set(key, entry);
+    }
+
+    return {
+      total: items.length,
+      gmv,
+      collected,
+      collectionRate: gmv > 0 ? (collected / gmv) * 100 : 0,
+      avgPaymentInterval: gapCount ? gapDaysSum / gapCount : null,
+      statusCount,
+      topProducts: [...productMap.values()]
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5),
+    };
+  }, [items]);
+
   return (
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -161,6 +257,113 @@ export default function ProductPurchasesPage() {
           </Button>
         </div>
       </header>
+
+      {!loading && items.length > 0 && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <StatCard
+              label="Нийт худалдан авалт"
+              value={fmtInt(stats.total)}
+              icon={ShoppingBag}
+              meta={`${fmtInt(stats.statusCount.active)} идэвхтэй`}
+            />
+            <StatCard
+              label="Нийт худалдан авалтын дүн"
+              value={formatPriceMNT(stats.gmv)}
+              icon={Coins}
+              meta="Бараануудын нийт үнэ"
+            />
+            <StatCard
+              label="Цуглуулсан төлбөр"
+              value={formatPriceMNT(stats.collected)}
+              icon={Wallet}
+              meta={`${stats.collectionRate.toFixed(1)}% төлөгдсөн`}
+            />
+            <StatCard
+              label="Төлбөрийн дундаж давтамж"
+              value={
+                stats.avgPaymentInterval == null
+                  ? "—"
+                  : `${stats.avgPaymentInterval.toFixed(1)} өдөр`
+              }
+              icon={Clock}
+              meta="Төлөлт хооронд дунджаар"
+            />
+            <StatCard
+              label="Хугацаа хэтэрсэн"
+              value={fmtInt(overdueCount)}
+              icon={AlertTriangle}
+              meta={`${OVERDUE_GAP_DAYS}+ хоног төлбөргүй`}
+            />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-xl border border-border-light bg-card p-4">
+              <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+                <TrendingUp className="h-4 w-4 text-primary-600" />
+                Хамгийн их захиалагдсан бараа
+              </h3>
+              {stats.topProducts.length === 0 ? (
+                <p className="text-[12px] text-muted-foreground">Мэдээлэл алга</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {stats.topProducts.map((p, i) => (
+                    <div key={p.name + i} className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold tabular-nums",
+                          i === 0
+                            ? "bg-primary-500 text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-medium text-foreground">
+                          {p.name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">
+                          {formatPriceMNT(p.amount)}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-[12px] font-semibold tabular-nums text-foreground">
+                        {fmtInt(p.count)} ширхэг
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border-light bg-card p-4">
+              <h3 className="mb-3 text-[13px] font-semibold text-foreground">
+                Төлвийн задаргаа
+              </h3>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {STATUS_ORDER.map((s) => (
+                  <div
+                    key={s}
+                    className="rounded-lg border border-border-light bg-background/40 p-3"
+                  >
+                    <div className="text-[20px] font-semibold tabular-nums text-foreground">
+                      {fmtInt(stats.statusCount[s])}
+                    </div>
+                    <span
+                      className={cn(
+                        "mt-1.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium",
+                        purchaseStatusBadge(s)
+                      )}
+                    >
+                      {purchaseStatusText(s)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-border-light bg-card">
         <div className="grid gap-3 border-b border-border-light px-4 py-3 sm:grid-cols-2 lg:grid-cols-12">
@@ -248,13 +451,11 @@ export default function ProductPurchasesPage() {
                     return (
                       <tr
                         key={p.id}
-                        className="border-b border-border-light/60 last:border-b-0 hover:bg-muted/40"
+                        onClick={() => setDetailTarget(p)}
+                        className="cursor-pointer border-b border-border-light/60 last:border-b-0 hover:bg-muted/40"
                       >
                         <td className="px-2 py-2">
-                          <Link
-                            href={`/products/${p.product_id}`}
-                            className="flex items-center gap-2"
-                          >
+                          <div className="flex items-center gap-2">
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
                               {p.product_snapshot.image ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -268,7 +469,7 @@ export default function ProductPurchasesPage() {
                               )}
                             </span>
                             <div className="min-w-0">
-                              <div className="truncate font-medium text-foreground hover:text-primary-600">
+                              <div className="truncate font-medium text-foreground">
                                 {p.product_snapshot.name}
                               </div>
                               <div className="text-[11px] text-muted-foreground">
@@ -280,7 +481,7 @@ export default function ProductPurchasesPage() {
                                 {p.months} сар ({p.total_days} өдөр)
                               </div>
                             </div>
-                          </Link>
+                          </div>
                         </td>
                         <td className="px-2 py-2">
                           <div className="font-medium text-foreground">
@@ -397,7 +598,10 @@ export default function ProductPurchasesPage() {
                         </td>
                         {canSeeActions && (
                           <td className="px-2 py-2">
-                            <div className="flex items-center justify-end gap-1">
+                            <div
+                              className="flex items-center justify-end gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {p.status === "completed" && (
                                 <Button
                                   variant="ghost"
@@ -486,6 +690,11 @@ export default function ProductPurchasesPage() {
         purchase={deliverTarget}
         onOpenChange={(o) => !o && setDeliverTarget(null)}
         onCompleted={() => void load()}
+      />
+      <PurchaseDetailDialog
+        open={!!detailTarget}
+        purchase={detailTarget}
+        onOpenChange={(o) => !o && setDetailTarget(null)}
       />
     </div>
   );

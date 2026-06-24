@@ -14,9 +14,11 @@ const PERIODS: { key: Period; label: string }[] = [
 type Props = {
   value: Period;
   onChange: (p: Period) => void;
+  /** Optional per-key label overrides (e.g. for a different language). */
+  labels?: Partial<Record<Period, string>>;
 };
 
-export function PeriodSelector({ value, onChange }: Props) {
+export function PeriodSelector({ value, onChange, labels }: Props) {
   return (
     <div className="inline-flex rounded-lg bg-sidebar p-0.5 text-[11px]">
       {PERIODS.map((p) => (
@@ -31,7 +33,7 @@ export function PeriodSelector({ value, onChange }: Props) {
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {p.label}
+          {labels?.[p.key] ?? p.label}
         </button>
       ))}
     </div>

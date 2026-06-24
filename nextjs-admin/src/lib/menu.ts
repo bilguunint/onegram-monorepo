@@ -9,6 +9,7 @@ import {
   Receipt,
   ShieldCheck,
   ShoppingBag,
+  TrendingUp,
   Users,
   Wallet,
   type LucideIcon,
@@ -45,6 +46,12 @@ export const MENU: MenuItem[] = [
     roles: ["admin", "manager", "seller"],
   },
   { label: "Админууд", href: "/admins", icon: ShieldCheck, roles: ["admin"] },
+  {
+    label: "Тайлан",
+    href: "/report",
+    icon: TrendingUp,
+    roles: ["admin", "manager", "accountant"],
+  },
 ];
 
 export function filterMenuByRole(role: AdminRole | null | undefined): MenuItem[] {

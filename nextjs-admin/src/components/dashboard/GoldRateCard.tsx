@@ -13,9 +13,9 @@ type Props = {
 
 export function GoldRateCard({ rate, history }: Props) {
   const rateValue = rate?.rate ?? 0;
-  const changeAbs = rate?.changes ?? 0;
-  const changePct = rateValue > 0 ? (changeAbs / rateValue) * 100 : 0;
-  const positive = changeAbs >= 0;
+  // `changes` is already a percentage (see crawlGoldRate.js), not an absolute delta.
+  const changePct = rate?.changes ?? 0;
+  const positive = changePct >= 0;
 
   const series = history.map((r) => ({ date: r.date, rate: r.rate }));
 
