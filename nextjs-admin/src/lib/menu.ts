@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Bell,
+  Building2,
   ClipboardList,
   FileText,
   Gift,
@@ -34,6 +35,12 @@ export const MENU: MenuItem[] = [
   { label: "Биетээр авах статистик", href: "/withdraws_statistics", icon: BarChart3 },
   { label: "Бараа", href: "/products", icon: Package },
   { label: "Бараа худалдан авалт", href: "/product-purchases", icon: ShoppingBag },
+  {
+    label: "Морин хуурын төв цогцолбор",
+    href: "/center",
+    icon: Building2,
+    roles: ["admin", "manager"],
+  },
   {
     label: "Мэдэгдэл",
     href: "/custom-notifications",

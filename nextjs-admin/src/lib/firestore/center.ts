@@ -1,0 +1,316 @@
+import {
+  collection,
+  doc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  type DocumentData,
+} from "firebase/firestore";
+import { getDb, getFirebaseAuth } from "@/lib/firebase/client";
+
+// ---------------------------------------------------------------------------
+// "Дэлхийн морин хуурын төв цогцолбор" fundraising campaign.
+//  - center_campaign/main      — single config doc (target amount, status…)
+//  - center_products           — physical products for sale
+//  - center_donations          — direct-purchase donation records (Phase 2)
+// ---------------------------------------------------------------------------
+
+export type CampaignStatus = "active" | "ended";
+export type CenterItemStatus = "active" | "inactive";
+
+export type CenterCampaign = {
+  name: string;
+  description: string;
+  cover_image: string | null;
+  gallery: string[]; // gallery photos shown in the app
+  target_amount: number; // MNT
+  top_count: number; // donors engraved (e.g. 99)
+  status: CampaignStatus;
+  updated_at: Timestamp | null;
+};
+
+export type CenterCampaignDraft = {
+  name: string;
+  description: string;
+  cover_image: string | null;
+  target_amount: number;
+  top_count: number;
+  status: CampaignStatus;
+};
+
+export type CenterProduct = {
+  id: string;
+  name: string;
+  description: string;
+  images: string[];
+  price: number; // MNT
+  stock: number | null; // null = unlimited / made-to-order
+  status: CenterItemStatus;
+  sold_count: number;
+  created_at: Timestamp | null;
+  updated_at: Timestamp | null;
+};
+
+export type CenterProductDraft = {
+  name: string;
+  description: string;
+  images: string[];
+  price: number;
+  stock: number | null;
+  status: CenterItemStatus;
+};
+
+export type CenterDonationItem = {
+  type: "product";
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+};
+
+export type CenterDonation = {
+  id: string;
+  buyer_uid: string;
+  buyer_name: string;
+  engrave_name: string;
+  anonymous: boolean;
+  items: CenterDonationItem[];
+  amount: number;
+  status: "completed" | "pending" | "cancelled" | string;
+  created_at: Timestamp | null;
+};
+
+// ---------------------------------------------------------------------------
+// Campaign config
+// ---------------------------------------------------------------------------
+const CAMPAIGN_DOC = () => doc(getDb(), "center_campaign", "main");
+
+const DEFAULT_CAMPAIGN: CenterCampaign = {
+  name: "Дэлхийн морин хуурын төв цогцолбор",
+  description: "",
+  cover_image: null,
+  gallery: [],
+  target_amount: 10_000_000_000, // 10 тэрбум төгрөг
+  top_count: 99,
+  status: "active",
+  updated_at: null,
+};
+
+export async function fetchCampaign(): Promise<CenterCampaign> {
+  const snap = await getDoc(CAMPAIGN_DOC());
+  if (!snap.exists()) return DEFAULT_CAMPAIGN;
+  const d = snap.data() as Partial<CenterCampaign>;
+  return {
+    name: d.name ?? DEFAULT_CAMPAIGN.name,
+    description: d.description ?? "",
+    cover_image: d.cover_image ?? null,
+    gallery: Array.isArray(d.gallery) ? (d.gallery as string[]) : [],
+    target_amount: Number(d.target_amount ?? 0),
+    top_count: Number(d.top_count ?? 99),
+    status: d.status === "ended" ? "ended" : "active",
+    updated_at: d.updated_at ?? null,
+  };
+}
+
+/** Persist only the gallery photos, leaving other campaign config untouched. */
+export async function saveGallery(gallery: string[]): Promise<void> {
+  await setDoc(
+    CAMPAIGN_DOC(),
+    { gallery, updated_at: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+export async function saveCampaign(draft: CenterCampaignDraft): Promise<void> {
+  await setDoc(
+    CAMPAIGN_DOC(),
+    {
+      name: draft.name.trim(),
+      description: draft.description.trim(),
+      cover_image: draft.cover_image,
+      target_amount: Math.max(0, Math.round(draft.target_amount)),
+      top_count: Math.max(1, Math.round(draft.top_count)),
+      status: draft.status,
+      updated_at: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Products
+// ---------------------------------------------------------------------------
+function adminUid(): string {
+  const u = getFirebaseAuth().currentUser;
+  if (!u) throw new Error("Нэвтрэх шаардлагатай.");
+  return u.uid;
+}
+
+function mapProduct(id: string, raw: DocumentData): CenterProduct {
+  return {
+    id,
+    name: String(raw.name ?? ""),
+    description: String(raw.description ?? ""),
+    images: Array.isArray(raw.images) ? (raw.images as string[]) : [],
+    price: Number(raw.price ?? 0),
+    stock: raw.stock == null ? null : Number(raw.stock),
+    status: raw.status === "inactive" ? "inactive" : "active",
+    sold_count: Number(raw.sold_count ?? 0),
+    created_at: raw.created_at ?? null,
+    updated_at: raw.updated_at ?? null,
+  };
+}
+
+export function newCenterProductRef() {
+  return doc(collection(getDb(), "center_products"));
+}
+
+export async function fetchCenterProducts(): Promise<CenterProduct[]> {
+  const snap = await getDocs(
+    query(collection(getDb(), "center_products"), orderBy("created_at", "desc"))
+  );
+  return snap.docs.map((d) => mapProduct(d.id, d.data()));
+}
+
+export async function createCenterProduct(
+  id: string,
+  draft: CenterProductDraft
+): Promise<void> {
+  const uid = adminUid();
+  await setDoc(doc(getDb(), "center_products", id), {
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    images: draft.images,
+    price: Math.round(draft.price),
+    stock: draft.stock,
+    status: draft.status,
+    sold_count: 0,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+    created_by: uid,
+  });
+}
+
+export async function updateCenterProduct(
+  id: string,
+  draft: CenterProductDraft
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_products", id), {
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    images: draft.images,
+    price: Math.round(draft.price),
+    stock: draft.stock,
+    status: draft.status,
+    updated_at: serverTimestamp(),
+  });
+}
+
+export async function setCenterProductStatus(
+  id: string,
+  status: CenterItemStatus
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_products", id), {
+    status,
+    updated_at: serverTimestamp(),
+  });
+}
+
+export async function deleteCenterProduct(id: string): Promise<void> {
+  await deleteDoc(doc(getDb(), "center_products", id));
+}
+
+// ---------------------------------------------------------------------------
+// Donations + stats (top donors, total raised)
+// ---------------------------------------------------------------------------
+function mapDonation(id: string, raw: DocumentData): CenterDonation {
+  return {
+    id,
+    buyer_uid: String(raw.buyer_uid ?? ""),
+    buyer_name: String(raw.buyer_name ?? ""),
+    engrave_name: String(raw.engrave_name ?? ""),
+    anonymous: !!raw.anonymous,
+    items: Array.isArray(raw.items) ? (raw.items as CenterDonationItem[]) : [],
+    amount: Number(raw.amount ?? 0),
+    status: String(raw.status ?? "pending"),
+    created_at: raw.created_at ?? null,
+  };
+}
+
+export async function fetchCenterDonations(): Promise<CenterDonation[]> {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(getDb(), "center_donations"),
+        orderBy("created_at", "desc")
+      )
+    );
+    return snap.docs.map((d) => mapDonation(d.id, d.data()));
+  } catch {
+    return [];
+  }
+}
+
+export type TopDonor = {
+  buyer_uid: string;
+  engrave_name: string;
+  anonymous: boolean;
+  amount: number;
+  count: number;
+  first_at: number; // earliest donation millis (tie-break)
+};
+
+export type CenterStats = {
+  totalRaised: number;
+  donorCount: number;
+  donationCount: number;
+  topDonors: TopDonor[];
+};
+
+export function computeCenterStats(
+  donations: CenterDonation[],
+  topCount = 99
+): CenterStats {
+  const byBuyer = new Map<string, TopDonor>();
+  let totalRaised = 0;
+  let donationCount = 0;
+
+  for (const d of donations) {
+    if (d.status !== "completed") continue;
+    totalRaised += d.amount;
+    donationCount += 1;
+    const at = d.created_at?.toMillis?.() ?? Number.MAX_SAFE_INTEGER;
+    const entry = byBuyer.get(d.buyer_uid) ?? {
+      buyer_uid: d.buyer_uid,
+      engrave_name: d.engrave_name || d.buyer_name,
+      anonymous: d.anonymous,
+      amount: 0,
+      count: 0,
+      first_at: at,
+    };
+    entry.amount += d.amount;
+    entry.count += 1;
+    entry.first_at = Math.min(entry.first_at, at);
+    // Latest non-empty engrave name / anonymity wins (most recent intent).
+    if (d.engrave_name) entry.engrave_name = d.engrave_name;
+    entry.anonymous = d.anonymous;
+    byBuyer.set(d.buyer_uid, entry);
+  }
+
+  const topDonors = [...byBuyer.values()]
+    .sort((a, b) => b.amount - a.amount || a.first_at - b.first_at)
+    .slice(0, topCount);
+
+  return {
+    totalRaised,
+    donorCount: byBuyer.size,
+    donationCount,
+    topDonors,
+  };
+}
