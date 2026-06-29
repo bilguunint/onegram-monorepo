@@ -36,6 +36,8 @@ const TYPE_LABELS: Record<string, string> = {
   gift_cancelled: "Бэлэг цуцлагдсан",
   created_investment: "Хөрөнгө оруулалт нээсэн",
   closed_investment: "Хөрөнгө оруулалт хаасан",
+  transfer_out: "Бүртгэл шилжүүлэлт",
+  transfer_in: "Бүртгэл хүлээн авсан",
 };
 
 const TYPE_BADGE: Record<string, string> = {
@@ -47,6 +49,8 @@ const TYPE_BADGE: Record<string, string> = {
   gift_cancelled: "bg-muted text-muted-foreground",
   created_investment: "bg-primary-100 text-primary-700",
   closed_investment: "bg-muted text-foreground",
+  transfer_out: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  transfer_in: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
 };
 
 function badgeClass(type: string): string {

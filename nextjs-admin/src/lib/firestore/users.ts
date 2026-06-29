@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   where,
   type Timestamp,
@@ -67,6 +68,44 @@ export async function fetchUsersByCategory(
     return tb - ta;
   });
   return users;
+}
+
+export async function fetchUserById(uid: string): Promise<AdminUser | null> {
+  const snap = await getDoc(doc(getDb(), "users", uid.trim()));
+  if (!snap.exists()) return null;
+  return mapUserDoc(snap.id, snap.data() as RawUser);
+}
+
+/** Find users by exact uid (doc id), phone or email — for the transfer tool. */
+export async function lookupUsers(term: string): Promise<AdminUser[]> {
+  const t = term.trim();
+  if (!t) return [];
+  const usersCol = collection(getDb(), "users");
+  const results = new Map<string, AdminUser>();
+  const add = (id: string, raw: RawUser) =>
+    results.set(id, mapUserDoc(id, raw));
+
+  // by uid (document id)
+  const byId = await getDoc(doc(getDb(), "users", t));
+  if (byId.exists()) add(byId.id, byId.data() as RawUser);
+
+  // by phone + email (exact). Email is also tried lower-cased.
+  const emailLower = t.toLowerCase();
+  const queries = [
+    getDocs(query(usersCol, where("phone", "==", t), limit(10))),
+    getDocs(query(usersCol, where("email", "==", t), limit(10))),
+  ];
+  if (emailLower !== t) {
+    queries.push(
+      getDocs(query(usersCol, where("email", "==", emailLower), limit(10)))
+    );
+  }
+  const snaps = await Promise.all(queries);
+  for (const snap of snaps) {
+    for (const d of snap.docs) add(d.id, d.data() as RawUser);
+  }
+
+  return [...results.values()];
 }
 
 export type LedgerTransaction = {

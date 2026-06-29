@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   BarChart3,
   Bell,
   ClipboardList,
@@ -46,6 +47,12 @@ export const MENU: MenuItem[] = [
     roles: ["admin", "manager", "seller"],
   },
   { label: "Админууд", href: "/admins", icon: ShieldCheck, roles: ["admin"] },
+  {
+    label: "Хэрэглэгч шилжүүлэх",
+    href: "/user-transfer",
+    icon: ArrowLeftRight,
+    roles: ["admin"],
+  },
   {
     label: "Тайлан",
     href: "/report",
