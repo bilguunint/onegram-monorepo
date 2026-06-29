@@ -91,6 +91,69 @@ function ledgerSum(txs: Record<string, unknown>[]): number {
   return txs.reduce((s, t) => round6(s + num(t.amount)), 0);
 }
 
+function tsMillis(v: unknown): number | null {
+  if (!v) return null;
+  const o = v as { toMillis?: () => number; seconds?: number };
+  if (typeof o.toMillis === "function") return o.toMillis();
+  if (typeof o.seconds === "number") return o.seconds * 1000;
+  return null;
+}
+
+export type MigrationRecord = {
+  id: string;
+  source_uid: string;
+  target_uid: string;
+  source_name: string;
+  target_name: string;
+  source_phone: string;
+  target_phone: string;
+  performed_by_name: string;
+  performed_by_uid: string;
+  status: string;
+  counts: Record<string, number>;
+  total_moved: number;
+  error: string | null;
+  note: string | null;
+  created_at: number | null;
+  completed_at: number | null;
+};
+
+export async function listMigrations(max = 100): Promise<MigrationRecord[]> {
+  const snap = await db
+    .collection("user_migrations")
+    .orderBy("created_at", "desc")
+    .limit(max)
+    .get();
+  return snap.docs.map((d) => {
+    const x = d.data();
+    const s = (x.source ?? {}) as Record<string, unknown>;
+    const t = (x.target ?? {}) as Record<string, unknown>;
+    const counts = (x.counts ?? {}) as Record<string, number>;
+    const totalMoved = Object.values(counts).reduce(
+      (a, b) => a + (typeof b === "number" ? b : 0),
+      0
+    );
+    return {
+      id: d.id,
+      source_uid: String(x.source_uid ?? ""),
+      target_uid: String(x.target_uid ?? ""),
+      source_name: `${s.last_name ?? ""} ${s.first_name ?? ""}`.trim(),
+      target_name: `${t.last_name ?? ""} ${t.first_name ?? ""}`.trim(),
+      source_phone: String(s.phone ?? ""),
+      target_phone: String(t.phone ?? ""),
+      performed_by_name: String(x.performed_by_name ?? ""),
+      performed_by_uid: String(x.performed_by_uid ?? ""),
+      status: String(x.status ?? ""),
+      counts,
+      total_moved: totalMoved,
+      error: x.error ? String(x.error) : null,
+      note: x.note ? String(x.note) : null,
+      created_at: tsMillis(x.created_at),
+      completed_at: tsMillis(x.completed_at),
+    };
+  });
+}
+
 export async function loadUserSummary(uid: string): Promise<UserSummary> {
   const snap = await db.collection("users").doc(uid).get();
   if (!snap.exists) return { uid, exists: false };

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  History,
   Loader2,
   Search,
   ShieldAlert,
@@ -25,6 +26,7 @@ import {
   type TransferResult,
   type TransferBalance,
 } from "@/lib/api/userTransferActions";
+import { TransferHistoryDialog } from "@/components/users/TransferHistoryDialog";
 
 const COUNT_LABELS: { key: string; label: string }[] = [
   { key: "orders", label: "Захиалга" },
@@ -192,6 +194,7 @@ export default function UserTransferPage() {
   const [confirmPhone, setConfirmPhone] = useState("");
   const [executing, setExecuting] = useState(false);
   const [result, setResult] = useState<TransferResult | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (!isAdmin) {
     return (
@@ -256,14 +259,26 @@ export default function UserTransferPage() {
 
   return (
     <div className="space-y-5">
-      <header className="space-y-1">
-        <h1 className="text-[18px] font-semibold text-foreground">
-          Хэрэглэгч шилжүүлэх
-        </h1>
-        <p className="text-[12px] text-muted-foreground">
-          Нэг хэрэглэгчийн бүх мэдээллийг (баланс, захиалга, ledger гэх мэт) өөр
-          хэрэглэгч рүү шилжүүлнэ. Зөвхөн утасны дугаараа сольсон тохиолдолд.
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-[18px] font-semibold text-foreground">
+            Хэрэглэгч шилжүүлэх
+          </h1>
+          <p className="text-[12px] text-muted-foreground">
+            Нэг хэрэглэгчийн бүх мэдээллийг (баланс, захиалга, ledger гэх мэт)
+            өөр хэрэглэгч рүү шилжүүлнэ. Зөвхөн утасны дугаараа сольсон
+            тохиолдолд.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setHistoryOpen(true)}
+          className="shrink-0"
+        >
+          <History className="h-3.5 w-3.5" />
+          Шилжүүлэлтийн түүх
+        </Button>
       </header>
 
       <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
@@ -451,6 +466,8 @@ export default function UserTransferPage() {
           </div>
         </div>
       )}
+
+      <TransferHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }

@@ -80,6 +80,33 @@ async function authedFetch<TRes>(
   return payload as TRes;
 }
 
+export type MigrationRecord = {
+  id: string;
+  source_uid: string;
+  target_uid: string;
+  source_name: string;
+  target_name: string;
+  source_phone: string;
+  target_phone: string;
+  performed_by_name: string;
+  performed_by_uid: string;
+  status: string;
+  counts: Record<string, number>;
+  total_moved: number;
+  error: string | null;
+  note: string | null;
+  created_at: number | null;
+  completed_at: number | null;
+};
+
+export async function fetchTransferHistory(): Promise<MigrationRecord[]> {
+  const res = await authedFetch<{ status: string; data: MigrationRecord[] }>(
+    "/api/user-transfer/history",
+    { method: "GET" }
+  );
+  return res.data;
+}
+
 export async function previewUserTransfer(
   sourceUid: string,
   targetUid: string
