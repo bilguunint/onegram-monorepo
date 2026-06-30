@@ -107,6 +107,11 @@ service cloud.firestore {
     match /center_campaign/{docId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
+      // Public donor-wall leaderboard (written only by Cloud Functions).
+      match /donors/{donorId} {
+        allow read: if request.auth != null;
+        allow write: if false;
+      }
     }
     match /center_products/{productId} {
       allow read: if request.auth != null;
@@ -121,6 +126,16 @@ service cloud.firestore {
     match /center_donations/{donationId} {
       allow read: if isAdmin()
         || (request.auth != null && resource.data.buyer_uid == request.auth.uid);
+      // Created only by Cloud Functions; admins mark delivery fulfillment.
+      allow update: if isAdmin();
+      allow create, delete: if false;
+    }
+
+    // Pending QPay invoices: the buyer reads their own to auto-detect payment
+    // completion (status == "processed"). Written only by Cloud Functions.
+    match /pending_invoices/{invoiceId} {
+      allow read: if request.auth != null
+        && resource.data.user_id == request.auth.uid;
       allow write: if false;
     }
 

@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   Power,
+  Receipt,
   RefreshCw,
   Target,
   Trash2,
@@ -37,15 +38,17 @@ import {
   fetchCenterDonations,
   setCenterProductStatus,
   deleteCenterProduct,
+  markDonationDelivered,
   computeCenterStats,
   type CenterCampaign,
   type CenterProduct,
   type CenterDonation,
 } from "@/lib/firestore/center";
 
-type Tab = "overview" | "products" | "gallery" | "settings";
+type Tab = "overview" | "orders" | "products" | "gallery" | "settings";
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Тойм" },
+  { key: "orders", label: "Захиалгууд" },
   { key: "products", label: "Бараа" },
   { key: "gallery", label: "Зургийн цомог" },
   { key: "settings", label: "Тохиргоо" },
@@ -181,6 +184,10 @@ export default function CenterPage() {
               productCount={products.length}
               topDonors={stats.topDonors}
             />
+          )}
+
+          {tab === "orders" && (
+            <OrdersTab donations={donations} onReload={() => void load()} />
           )}
 
           {tab === "products" && (
@@ -391,6 +398,195 @@ function ItemRow({
 }
 
 // ---------------------------------------------------------------------------
+const ORDER_STATUS: Record<string, { label: string; badge: string }> = {
+  completed: {
+    label: "Амжилттай",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  },
+  pending: {
+    label: "Хүлээгдэж буй",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  },
+  cancelled: {
+    label: "Цуцалсан",
+    badge: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  },
+};
+
+const ORDER_FILTERS: { key: string; label: string }[] = [
+  { key: "all", label: "Бүгд" },
+  { key: "completed", label: "Амжилттай" },
+  { key: "pending", label: "Хүлээгдэж буй" },
+  { key: "cancelled", label: "Цуцалсан" },
+];
+
+const DELIVERY: Record<string, { label: string; badge: string }> = {
+  delivered: {
+    label: "Хүлээлгэн өгсөн",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  },
+  pending: {
+    label: "Хүлээгдэж буй",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  },
+};
+
+function OrdersTab({
+  donations,
+  onReload,
+}: {
+  donations: CenterDonation[];
+  onReload: () => void;
+}) {
+  const { adminData } = useAuth();
+  const [filter, setFilter] = useState<string>("all");
+  const [deliverTarget, setDeliverTarget] = useState<CenterDonation | null>(null);
+
+  const filtered =
+    filter === "all" ? donations : donations.filter((d) => d.status === filter);
+  const completedTotal = donations
+    .filter((d) => d.status === "completed")
+    .reduce((s, d) => s + d.amount, 0);
+
+  const confirmDeliver = async () => {
+    if (!deliverTarget || !adminData) return;
+    try {
+      await markDonationDelivered(deliverTarget.id, {
+        uid: adminData.uid,
+        name: adminData.name,
+      });
+      toast.success("Хүлээлгэн өгсөн гэж тэмдэглэлээ.");
+      setDeliverTarget(null);
+      onReload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Алдаа гарлаа.");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[13px] text-muted-foreground">
+          Нийт <span className="font-medium text-foreground">{donations.length}</span> захиалга ·
+          Амжилттай дүн{" "}
+          <span className="font-medium text-foreground">{formatPriceMNT(completedTotal)}</span>
+        </div>
+        <div className="inline-flex rounded-lg bg-sidebar p-0.5 text-[12px]">
+          {ORDER_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition-colors",
+                filter === f.key
+                  ? "bg-card font-medium text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border-light py-12 text-center text-[13px] text-muted-foreground">
+          <Receipt className="mx-auto mb-2 h-6 w-6 text-muted-foreground/60" />
+          {donations.length === 0
+            ? "Хандивын захиалга одоогоор алга."
+            : "Энэ шүүлтэд тохирох захиалга алга."}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((d) => (
+            <OrderRow key={d.id} d={d} onDeliver={() => setDeliverTarget(d)} />
+          ))}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deliverTarget}
+        title="Хүлээлгэн өгөх"
+        description={
+          deliverTarget
+            ? `Худалдан авагчийн үзүүлсэн кодтой тулгана уу: ${deliverTarget.pickup_code || "—"}. "Хүлээлгэн өгсөн" гэж тэмдэглэх үү?`
+            : ""
+        }
+        confirmLabel="Хүлээлгэн өгсөн"
+        onOpenChange={(o) => !o && setDeliverTarget(null)}
+        onConfirm={() => void confirmDeliver()}
+      />
+    </div>
+  );
+}
+
+function OrderRow({ d, onDeliver }: { d: CenterDonation; onDeliver: () => void }) {
+  const st = ORDER_STATUS[d.status] ?? {
+    label: d.status,
+    badge: "bg-muted text-muted-foreground",
+  };
+  const who = d.anonymous ? "Нэрээ нууцалсан" : d.engrave_name || d.buyer_name || d.buyer_uid;
+  const items = d.items.map((it) => `${it.name}${it.qty > 1 ? ` ×${it.qty}` : ""}`).join(", ");
+  const date = d.created_at ? d.created_at.toDate().toLocaleString("mn-MN") : "—";
+  const isCompleted = d.status === "completed";
+  const delivered = d.delivery_status === "delivered";
+  const dv = delivered ? DELIVERY.delivered : DELIVERY.pending;
+
+  return (
+    <div className="rounded-xl border border-border-light bg-card p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-[14px] font-medium text-foreground">{who}</span>
+            <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium", st.badge)}>
+              {st.label}
+            </span>
+            {isCompleted && (
+              <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium", dv.badge)}>
+                {dv.label}
+              </span>
+            )}
+          </div>
+          {items && (
+            <div className="mt-0.5 truncate text-[12px] text-foreground/80">{items}</div>
+          )}
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            {date}
+            {!d.anonymous && d.buyer_name && d.engrave_name && d.engrave_name !== d.buyer_name
+              ? ` · Худалдан авагч: ${d.buyer_name}`
+              : ""}
+          </div>
+          {isCompleted && !delivered && d.pickup_code && (
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Авах код:{" "}
+              <span className="font-mono font-semibold tracking-widest text-foreground">
+                {d.pickup_code}
+              </span>
+            </div>
+          )}
+          {delivered && d.delivered_by_name && (
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Хүлээлгэн өгсөн: {d.delivered_by_name}
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="text-[14px] font-semibold tabular-nums text-primary-600">
+            {formatPriceMNT(d.amount)}
+          </div>
+          {isCompleted && !delivered && (
+            <Button size="sm" variant="outline" onClick={onDeliver}>
+              Хүлээлгэн өгсөн
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 function GalleryTab({
   campaign,
   onSaved,
@@ -455,6 +651,7 @@ function SettingsTab({
   const [topCount, setTopCount] = useState(String(campaign?.top_count ?? 99));
   const [status, setStatus] = useState<CenterCampaign["status"]>(campaign?.status ?? "active");
   const [cover, setCover] = useState<string[]>(campaign?.cover_image ? [campaign.cover_image] : []);
+  const [header, setHeader] = useState<string[]>(campaign?.header_image ? [campaign.header_image] : []);
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
@@ -468,6 +665,7 @@ function SettingsTab({
         name,
         description,
         cover_image: cover[0] ?? null,
+        header_image: header[0] ?? null,
         target_amount: targetNum,
         top_count: Number.isInteger(topNum) && topNum > 0 ? topNum : 99,
         status,
@@ -513,8 +711,21 @@ function SettingsTab({
         </Select>
       </div>
       <div className="space-y-1.5">
-        <Label>Нүүр зураг</Label>
-        <ImageGalleryInput productId="campaign" value={cover} onChange={setCover} />
+        <Label>Нүүр зураг (карт дээр)</Label>
+        <ImageGalleryInput productId="campaign" value={cover} onChange={setCover} max={1} />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Header зураг (апп дэлгэрэнгүй — 21:9)</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Апп дээрх кампанит дэлгэрэнгүйн дээд талын баннер. Өргөн (21:9) зураг
+          тохиромжтой.
+        </p>
+        <ImageGalleryInput
+          productId="campaign-header"
+          value={header}
+          onChange={setHeader}
+          max={1}
+        />
       </div>
       <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
         <Target className="h-3.5 w-3.5" />

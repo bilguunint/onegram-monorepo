@@ -28,6 +28,7 @@ export type CenterCampaign = {
   name: string;
   description: string;
   cover_image: string | null;
+  header_image: string | null; // 21:9 banner shown atop the app detail screen
   gallery: string[]; // gallery photos shown in the app
   target_amount: number; // MNT
   top_count: number; // donors engraved (e.g. 99)
@@ -39,6 +40,7 @@ export type CenterCampaignDraft = {
   name: string;
   description: string;
   cover_image: string | null;
+  header_image: string | null;
   target_amount: number;
   top_count: number;
   status: CampaignStatus;
@@ -83,6 +85,10 @@ export type CenterDonation = {
   items: CenterDonationItem[];
   amount: number;
   status: "completed" | "pending" | "cancelled" | string;
+  delivery_status: "pending" | "delivered" | string;
+  pickup_code: string;
+  delivered_at: Timestamp | null;
+  delivered_by_name: string;
   created_at: Timestamp | null;
 };
 
@@ -95,6 +101,7 @@ const DEFAULT_CAMPAIGN: CenterCampaign = {
   name: "Дэлхийн морин хуурын төв цогцолбор",
   description: "",
   cover_image: null,
+  header_image: null,
   gallery: [],
   target_amount: 10_000_000_000, // 10 тэрбум төгрөг
   top_count: 99,
@@ -110,6 +117,7 @@ export async function fetchCampaign(): Promise<CenterCampaign> {
     name: d.name ?? DEFAULT_CAMPAIGN.name,
     description: d.description ?? "",
     cover_image: d.cover_image ?? null,
+    header_image: d.header_image ?? null,
     gallery: Array.isArray(d.gallery) ? (d.gallery as string[]) : [],
     target_amount: Number(d.target_amount ?? 0),
     top_count: Number(d.top_count ?? 99),
@@ -134,6 +142,7 @@ export async function saveCampaign(draft: CenterCampaignDraft): Promise<void> {
       name: draft.name.trim(),
       description: draft.description.trim(),
       cover_image: draft.cover_image,
+      header_image: draft.header_image,
       target_amount: Math.max(0, Math.round(draft.target_amount)),
       top_count: Math.max(1, Math.round(draft.top_count)),
       status: draft.status,
@@ -239,8 +248,25 @@ function mapDonation(id: string, raw: DocumentData): CenterDonation {
     items: Array.isArray(raw.items) ? (raw.items as CenterDonationItem[]) : [],
     amount: Number(raw.amount ?? 0),
     status: String(raw.status ?? "pending"),
+    delivery_status: String(raw.delivery_status ?? "pending"),
+    pickup_code: String(raw.pickup_code ?? ""),
+    delivered_at: raw.delivered_at ?? null,
+    delivered_by_name: String(raw.delivered_by_name ?? ""),
     created_at: raw.created_at ?? null,
   };
+}
+
+/** Admin marks a donation's physical product handed over to the buyer. */
+export async function markDonationDelivered(
+  id: string,
+  admin: { uid: string; name: string }
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_donations", id), {
+    delivery_status: "delivered",
+    delivered_at: serverTimestamp(),
+    delivered_by: admin.uid,
+    delivered_by_name: admin.name,
+  });
 }
 
 export async function fetchCenterDonations(): Promise<CenterDonation[]> {
