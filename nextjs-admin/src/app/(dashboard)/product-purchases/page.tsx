@@ -554,6 +554,11 @@ export default function ProductPurchasesPage() {
                               {p.user_snapshot.phone}
                             </div>
                           )}
+                          {p.user_snapshot.email && (
+                            <div className="truncate text-[11px] text-muted-foreground">
+                              {p.user_snapshot.email}
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
                           <div className="font-semibold text-primary-600">

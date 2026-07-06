@@ -49,9 +49,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
           actions: [
             IconButton(
               tooltip: 'Миний худалдан авалт',
-              icon: SvgPicture.asset( 
+              icon: SvgPicture.asset(
                 'assets/icons/invoice.svg',
-                
                 colorFilter: const ColorFilter.mode(
                   Colors.white,
                   BlendMode.srcIn,
@@ -91,14 +90,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
               if (pickupSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CupertinoActivityIndicator());
               }
+              // A fully-paid (pickup-ready) purchase no longer hides the
+              // catalog — it becomes a banner above the grid so the user can
+              // keep browsing and start their next purchase right away.
               final pickup = pickupSnapshot.data;
-              if (pickup != null) {
-                return PickupReadyView(purchase: pickup);
-              }
-              return _ProductsGrid(
-                repo: _repo,
-                uid: widget.uid,
-                userRepository: widget.userRepository,
+              return Column(
+                children: [
+                  if (pickup != null) _PickupReadyBanner(purchase: pickup),
+                  Expanded(
+                    child: _ProductsGrid(
+                      repo: _repo,
+                      uid: widget.uid,
+                      userRepository: widget.userRepository,
+                    ),
+                  ),
+                ],
               );
             },
           );
@@ -239,6 +245,93 @@ class _ErrorState extends StatelessWidget {
               style: const TextStyle(color: Colors.white54, fontSize: 11),
               textAlign: TextAlign.center,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact banner shown above the catalog while a fully-paid purchase waits
+/// to be picked up. Tapping opens the full pickup screen (code + store info)
+/// — the catalog itself stays browsable so the user can start a new purchase.
+class _PickupReadyBanner extends StatelessWidget {
+  final ProductPurchase purchase;
+  const _PickupReadyBanner({required this.purchase});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              backgroundColor: CustomColors.darkContainerColor,
+              appBar: AppBar(
+                backgroundColor: CustomColors.darkContainerColor,
+                iconTheme: const IconThemeData(color: Colors.white),
+                title: const Text(
+                  'Хүлээж авахад бэлэн',
+                  style: TextStyle(
+                    fontFamily: 'InterBold',
+                    fontSize: 13,
+                    color: Colors.white,
+                  ),
+                ),
+                centerTitle: false,
+              ),
+              body: PickupReadyView(purchase: purchase),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: CustomColors.mainColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: CustomColors.mainColor.withOpacity(0.35)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: CustomColors.mainColor.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.celebration_rounded,
+                  size: 18, color: CustomColors.mainColor),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Хүлээж авахад бэлэн',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${purchase.productSnapshot.name} — авах кодоо харах',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                size: 20, color: CustomColors.mainColor),
           ],
         ),
       ),
