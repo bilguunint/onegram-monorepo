@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const {
   getQPayToken,
   checkQPayPayment,
-  applyPaidDay,
+  applyPaidUpToDay,
 } = require("./installmentShared");
 
 /**
@@ -73,7 +73,6 @@ exports.installmentCallback = onRequest({
     const pendingDoc = pendingSnap.docs[0];
     const pendingData = pendingDoc.data() || {};
     const invoiceId = pendingData.invoice_id;
-    const amount = Number(pendingData.amount || 0);
 
     // Verify payment status with QPay
     const token = await getQPayToken();
@@ -90,8 +89,9 @@ exports.installmentCallback = onRequest({
       });
     }
 
-    // Apply the day to the purchase doc atomically
-    const result = await applyPaidDay(db, purchaseId, dayNo, amount);
+    // Credit every day up to dayNo (single day, or a multi-day bundle whose
+    // callback URL carries the bundle's last day) — idempotent.
+    const result = await applyPaidUpToDay(db, purchaseId, dayNo);
 
     // Mark the pending invoice as processed (also idempotent)
     await pendingDoc.ref.update({

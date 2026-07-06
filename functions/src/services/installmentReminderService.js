@@ -66,10 +66,35 @@ function nextInvoiceAmount(purchase) {
   return dailyPayment;
 }
 
-// Build a (title, body) pair tailored to slot + payment state. Three cases:
-//   1. Paid today           → thank-you
-//   2. Not paid, behind     → urgent reminder with day-count
-//   3. Not paid, on track   → gentle reminder with daily amount
+// Days without any payment before the user is warned about cancellation,
+// and the threshold at which the plan may actually be cancelled. Mirrors the
+// app (ProductPurchase.installmentWarn/CancelGapDays) and the admin overdue
+// rule (OVERDUE_GAP_DAYS).
+const WARN_GAP_DAYS = 5;
+const CANCEL_GAP_DAYS = 10;
+
+// Calendar days since the most recent payment, falling back to started_at
+// when no payment carries a timestamp. null when neither is known.
+function daysSinceLastPayment(purchase) {
+  const payments = Array.isArray(purchase.payments) ? purchase.payments : [];
+  let last = null;
+  for (const p of payments) {
+    const d = tsToDate(p.paid_at);
+    if (d && (!last || d > last)) last = d;
+  }
+  if (!last) last = tsToDate(purchase.started_at);
+  if (!last) return null;
+  const diff = Math.floor(
+    (startOfDay(new Date()).getTime() - startOfDay(last).getTime()) / 86400000,
+  );
+  return diff < 0 ? 0 : diff;
+}
+
+// Build a (title, body) pair tailored to slot + payment state. Cases:
+//   1. Paid today                  → thank-you
+//   2. No payment for WARN+ days    → cancellation warning (escalates at CANCEL)
+//   3. Not paid, behind schedule    → urgent reminder with day-count
+//   4. Not paid, on track           → gentle reminder with daily amount
 function buildMessage(slot, purchase) {
   const productName =
     (purchase.product_snapshot && purchase.product_snapshot.name) || "Бараа";
@@ -88,6 +113,32 @@ function buildMessage(slot, purchase) {
         `${productName} — ${paidDays}/${totalDays} өдөр төллөө. ` +
         "Ийм л үргэлжлүүлээрэй!",
       kind: "thanks",
+    };
+  }
+
+  // No payment for WARN_GAP_DAYS+ days — warn about (and at CANCEL, flag
+  // imminent) cancellation. Takes priority over the plain overdue reminder.
+  const gap = daysSinceLastPayment(purchase);
+  if (gap != null && gap >= WARN_GAP_DAYS) {
+    const left = Math.max(0, CANCEL_GAP_DAYS - gap);
+    if (gap >= CANCEL_GAP_DAYS) {
+      return {
+        title: "🚫 Хуваан төлөлт цуцлагдаж болзошгүй",
+        body:
+          `${productName} — та ${gap} хоног төлбөр хийгээгүй байна. ` +
+          `Хуваан төлөлт цуцлагдах эрсдэлтэй. Өнөөдөр ${formatMNT(amount)} ` +
+          "төлж үргэлжлүүлнэ үү.",
+        kind: "lapse_warning",
+      };
+    }
+    return {
+      title: "⚠️ Төлбөрөө хийнэ үү — цуцлагдах эрсдэлтэй",
+      body:
+        `${productName} — та ${gap} хоног төлбөр хийгээгүй байна. ` +
+        `${CANCEL_GAP_DAYS} хоног төлбөргүй бол төлөлт цуцлагдана` +
+        `${left > 0 ? ` (дахин ${left} хоног)` : ""}. ` +
+        `Өнөөдөр ${formatMNT(amount)} төлнө үү.`,
+      kind: "lapse_warning",
     };
   }
 
@@ -136,7 +187,13 @@ async function sendInstallmentReminders(slot) {
   let currentBatch = db.batch();
   let pendingWrites = 0;
   let savedCount = 0;
-  const stats = { thanks: 0, reminder: 0, overdue: 0, skippedNoUser: 0 };
+  const stats = {
+    thanks: 0,
+    reminder: 0,
+    overdue: 0,
+    lapse_warning: 0,
+    skippedNoUser: 0,
+  };
 
   for (let i = 0; i < snap.docs.length; i++) {
     const purchase = snap.docs[i].data();

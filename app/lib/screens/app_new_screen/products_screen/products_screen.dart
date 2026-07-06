@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
@@ -48,10 +49,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
           actions: [
             IconButton(
               tooltip: 'Миний худалдан авалт',
-              icon: const Icon(
-                Icons.receipt_long_outlined,
-                color: Colors.white,
-                size: 22,
+              icon: SvgPicture.asset( 
+                'assets/icons/invoice.svg',
+                
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
               onPressed: () {
                 Navigator.of(context).push(
@@ -152,7 +156,9 @@ class _ProductsGrid extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 12.0,
             crossAxisSpacing: 12.0,
-            childAspectRatio: 0.72,
+            // Taller cards so a 2-line title still leaves room for the price
+            // and daily-amount rows below the square cover image.
+            childAspectRatio: 0.65,
           ),
           itemCount: products.length,
           itemBuilder: (context, index) {

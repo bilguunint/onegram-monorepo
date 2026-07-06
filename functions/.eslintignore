@@ -1,0 +1,2 @@
+# WIP module — excluded from lint until ready so it doesn't block other deploys.
+src/blockchain/

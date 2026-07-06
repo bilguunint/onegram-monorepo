@@ -340,6 +340,33 @@ exports.verifyOrder = onRequest({
         }
       }
 
+      // On-chain mirror (ONEGRAM token). Gold only — ONEGRAM is gold-backed.
+      // Defaults to SHADOW mode (logs only, no broadcast, no ethers needed), so
+      // this never touches the live system until CHAIN_SHADOW_MODE=false. The
+      // Firestore balance + ledger above are the source of truth regardless;
+      // a chain error here is logged and swallowed.
+      if (result && result.status === "verified" && Number(result.metal_id) === 1) {
+        try {
+          const chain = require("../blockchain/tokenService");
+          const chainResult = await chain.recordMint(String(user_id), result.qty, {
+            source: "verifyOrder",
+            order_id: String(order_id),
+          });
+          logger.info("Chain mint recorded", {
+            user_id: String(user_id),
+            order_id: String(order_id),
+            qty: result.qty,
+            ...chainResult,
+          });
+        } catch (e) {
+          logger.warn("Chain mint skipped (production unaffected)", {
+            error: e.message,
+            order_id: String(order_id),
+            user_id: String(user_id),
+          });
+        }
+      }
+
       // Lottery ticket allocation for gold orders
       if (result && result.status === "verified" && Number(result.metal_id) === 1) {
         try {

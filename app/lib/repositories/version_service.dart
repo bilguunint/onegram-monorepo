@@ -1,21 +1,25 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:version/version.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class VersionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
-  // Hardcoded current version from pubspec.yaml
-  // Update this when you update pubspec.yaml version
-  static const String currentAppVersion = '2.0.5';
 
-  /// Check if app version needs update
+  /// Check if app version needs update.
+  ///
+  /// Reads the REAL installed version at runtime via package_info_plus
+  /// (sourced from pubspec.yaml at build time) instead of a hardcoded
+  /// constant — otherwise the constant silently drifts from the shipped
+  /// version and the update prompt keeps showing even on the latest build.
   Future<bool> needsUpdate() async {
     try {
-      // Get current app version
-      final currentVersion = Version.parse(currentAppVersion);
+      // Get the actual installed app version (e.g. "2.0.8"). PackageInfo
+      // strips the "+build" suffix, matching the "x.y.z" stored in Firestore.
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = Version.parse(packageInfo.version);
 
       // Determine platform
       final platform = Platform.isIOS ? 'ios' : 'android';
@@ -32,15 +36,16 @@ class VersionService {
       }
 
       final firestoreVersionString = versionDoc.data()?['version'] as String?;
-      if (firestoreVersionString == null) {
+      if (firestoreVersionString == null || firestoreVersionString.isEmpty) {
         print('Version field not found in document');
         return false;
       }
 
-      final firestoreVersion = Version.parse(firestoreVersionString);
+      final firestoreVersion = Version.parse(firestoreVersionString.trim());
 
-      // Check if current version is older than Firestore version
-      print('Current version: $currentVersion, Firestore version: $firestoreVersion');
+      // Update is needed only when the installed version is strictly older
+      // than the required version published in Firestore.
+      print('Installed version: $currentVersion, Required version: $firestoreVersion');
       return currentVersion < firestoreVersion;
     } catch (e) {
       print('Error checking version: $e');

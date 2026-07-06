@@ -10,8 +10,8 @@ import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/balance_view.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/gold_rate_widget.dart';
-import 'package:onegrgold/screens/app_new_screen/home_screen/lease_gold_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_widget.dart';
+import 'package:onegrgold/screens/app_new_screen/home_screen/morin_khuur_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/notifications_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/order_list_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/recent_news_widget.dart';
@@ -409,14 +409,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   // Title for Safebox and News
                   
-                  // Safebox and News Widget
+                  // Services row. The right slot shows the Морин хуур donation
+                  // campaign while active, otherwise the loan service.
                   Row(
                     children: [
+                      const MorinKhuurWidget(),
                       LotteryWidget(
                         uid: widget.uid,
                         userRepository: widget.userRepository,
                       ),
-                      const LeaseGoldWidget()
                     ],
                   ),
                   const Padding(

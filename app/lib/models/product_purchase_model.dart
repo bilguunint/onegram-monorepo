@@ -144,6 +144,11 @@ class ProductPurchase extends Equatable {
   final List<PaymentRecord> payments;
   final String? pickupCode;
 
+  /// "pending" while a user-initiated cancel request awaits admin review.
+  final String? cancelRequestStatus;
+
+  bool get hasPendingCancelRequest => cancelRequestStatus == 'pending';
+
   const ProductPurchase({
     required this.id,
     required this.productId,
@@ -168,6 +173,7 @@ class ProductPurchase extends Equatable {
     required this.purchaseType,
     required this.payments,
     required this.pickupCode,
+    this.cancelRequestStatus,
   });
 
   factory ProductPurchase.fromMap(String id, Map<String, dynamic> map) {
@@ -176,11 +182,11 @@ class ProductPurchase extends Equatable {
     return ProductPurchase(
       id: id,
       productId: (map['product_id'] ?? '') as String,
-      productSnapshot:
-          ProductSnapshot.fromMap(map['product_snapshot'] as Map<String, dynamic>? ?? const {}),
+      productSnapshot: ProductSnapshot.fromMap(
+          map['product_snapshot'] as Map<String, dynamic>? ?? const {}),
       userId: (map['user_id'] ?? '') as String,
-      userSnapshot:
-          UserSnapshot.fromMap(map['user_snapshot'] as Map<String, dynamic>? ?? const {}),
+      userSnapshot: UserSnapshot.fromMap(
+          map['user_snapshot'] as Map<String, dynamic>? ?? const {}),
       totalPrice: _toInt(map['total_price']),
       dailyPayment: _toInt(map['daily_payment']),
       months: months,
@@ -193,12 +199,14 @@ class ProductPurchase extends Equatable {
       completedAt: _toDate(map['completed_at']),
       cancelledAt: _toDate(map['cancelled_at']),
       cancelReason: map['cancel_reason'] as String?,
-      refundAmount: map['refund_amount'] == null ? null : _toInt(map['refund_amount']),
+      refundAmount:
+          map['refund_amount'] == null ? null : _toInt(map['refund_amount']),
       refundFee: map['refund_fee'] == null ? null : _toInt(map['refund_fee']),
       deliveredAt: _toDate(map['delivered_at']),
       purchaseType: _parsePurchaseType(map['purchase_type']),
       payments: _parsePayments(map['payments']),
       pickupCode: map['pickup_code'] as String?,
+      cancelRequestStatus: map['cancel_request_status'] as String?,
     );
   }
 
@@ -260,6 +268,38 @@ class ProductPurchase extends Equatable {
   /// Remaining unpaid daily installments (totalDays - paidDays).
   int get remainingDays => (totalDays - paidDays).clamp(0, totalDays);
 
+  /// Days without a payment before the app warns the user.
+  static const int installmentWarnGapDays = 5;
+
+  /// Days without a payment before the plan may be cancelled.
+  static const int installmentCancelGapDays = 10;
+
+  /// Calendar days since the most recent payment (falling back to
+  /// [startedAt] when no payment carries a timestamp). Null when there is no
+  /// reference date. Mirrors the admin-side `purchaseDaysSinceLastPayment`.
+  int? get daysSinceLastPayment {
+    DateTime? last;
+    for (final p in payments) {
+      final d = p.paidAt;
+      if (d != null && (last == null || d.isAfter(last))) last = d;
+    }
+    last ??= startedAt;
+    if (last == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final ref = DateTime(last.year, last.month, last.day);
+    final diff = today.difference(ref).inDays;
+    return diff < 0 ? 0 : diff;
+  }
+
+  /// True when this is an active installment that has not been paid for
+  /// [installmentWarnGapDays]+ days — surfaces the in-app warning banner.
+  bool get isPaymentLapsing {
+    if (status != ProductPurchaseStatus.active) return false;
+    final gap = daysSinceLastPayment;
+    return gap != null && gap >= installmentWarnGapDays;
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -274,5 +314,6 @@ class ProductPurchase extends Equatable {
         paidDays,
         deadline,
         status,
+        cancelRequestStatus,
       ];
 }

@@ -72,11 +72,16 @@ async function checkQPayPayment(invoiceId, token, attempts = 5) {
   return null;
 }
 
-// Apply a paid installment DAY to an existing purchase doc atomically.
-// Idempotent — if paid_days already covers this day, returns without making
-// changes. Used for the 2nd…Nth day (type="installment"), where the
-// product_purchases doc already exists.
-async function applyPaidDay(db, purchaseId, dayNo, amount) {
+// Credit all installment days UP TO (and including) `toDay` on an existing
+// purchase doc atomically. Supports both single-day payments (toDay =
+// paid_days + 1) and multi-day bundles (toDay = paid_days + N).
+//
+// Idempotent and double-credit safe: it only credits the days that exceed
+// the current paid_days, and derives each day's amount from the purchase doc
+// (daily_payment, with the final day taking the rounding remainder) rather
+// than trusting a passed-in amount. Used for the 2nd…Nth day
+// (type="installment"), where the product_purchases doc already exists.
+async function applyPaidUpToDay(db, purchaseId, toDay) {
   const purchaseRef = db.collection("product_purchases").doc(purchaseId);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(purchaseRef);
@@ -86,29 +91,46 @@ async function applyPaidDay(db, purchaseId, dayNo, amount) {
     const data = snap.data() || {};
     const paidDays = Number(data.paid_days || 0);
     const totalDays = Number(data.total_days || 0);
+    const daily = Number(data.daily_payment || 0);
+    const totalPrice = Number(data.total_price || 0);
+    const paidAmount = Number(data.paid_amount || 0);
 
-    if (paidDays >= dayNo) {
-      logger.info("Idempotent skip — day already credited", {
+    // Never credit past the final day.
+    const target = Math.min(Number(toDay), totalDays);
+
+    if (paidDays >= target) {
+      logger.info("Idempotent skip — days already credited", {
         purchaseId,
-        dayNo,
+        toDay,
+        target,
         paidDays,
       });
       return { changed: false, reason: "already_paid" };
     }
 
-    const newPaidDays = paidDays + 1;
-    const newPaidAmount =
-      Number(data.paid_amount || 0) + Number(amount || 0);
+    // Credit each not-yet-paid day from paidDays+1 … target. The final day
+    // takes whatever is left so the sum equals total_price exactly.
+    const entries = [];
+    let creditAmount = 0;
+    for (let d = paidDays + 1; d <= target; d++) {
+      const isLast = d >= totalDays;
+      const amt = isLast ?
+        Math.max(totalPrice - paidAmount - creditAmount, 0) :
+        daily;
+      creditAmount += amt;
+      entries.push({
+        day_no: d,
+        amount: amt,
+        paid_at: admin.firestore.Timestamp.now(),
+        payment_method: "qpay",
+      });
+    }
 
-    const paymentEntry = {
-      day_no: dayNo,
-      amount: Number(amount || 0),
-      paid_at: admin.firestore.Timestamp.now(),
-      payment_method: "qpay",
-    };
+    const newPaidDays = target;
+    const newPaidAmount = paidAmount + creditAmount;
     const payments = Array.isArray(data.payments) ?
-      [...data.payments, paymentEntry] :
-      [paymentEntry];
+      [...data.payments, ...entries] :
+      [...entries];
 
     const update = {
       paid_days: newPaidDays,
@@ -126,6 +148,8 @@ async function applyPaidDay(db, purchaseId, dayNo, amount) {
 
     return {
       changed: true,
+      creditedDays: entries.length,
+      creditAmount,
       newPaidDays,
       newPaidAmount,
       completed: newPaidDays >= totalDays,
@@ -222,6 +246,6 @@ module.exports = {
   generatePickupCode,
   getQPayToken,
   checkQPayPayment,
-  applyPaidDay,
+  applyPaidUpToDay,
   createPurchaseFromInit,
 };

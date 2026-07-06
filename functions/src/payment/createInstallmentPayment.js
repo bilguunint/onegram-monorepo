@@ -50,10 +50,12 @@ exports.createInstallmentPayment = onRequest({
       }
 
       const uid = await authUid(req);
-      const { purchase_id } = req.body || {};
+      const { purchase_id, days } = req.body || {};
       if (!purchase_id) {
         return res.status(400).json({ error: "Missing purchase_id" });
       }
+      // How many upcoming days to bundle into a single invoice (default 1).
+      const requestedDays = Math.max(1, Math.floor(Number(days) || 1));
 
       const purchaseRef = db.collection("product_purchases").doc(purchase_id);
       const purchaseSnap = await purchaseRef.get();
@@ -74,6 +76,11 @@ exports.createInstallmentPayment = onRequest({
       if (purchase.purchase_type !== "installment") {
         return res.status(409).json({ error: "Purchase is not an installment plan" });
       }
+      if (purchase.cancel_request_status === "pending") {
+        return res.status(409).json({
+          error: "Цуцлах хүсэлт хүлээгдэж байгаа тул төлбөр хийх боломжгүй.",
+        });
+      }
 
       const paidDays = Number(purchase.paid_days || 0);
       const totalDays = Number(purchase.total_days || 0);
@@ -90,39 +97,50 @@ exports.createInstallmentPayment = onRequest({
       if (dailyPayment <= 0) {
         return res.status(409).json({ error: "Invalid daily_payment value" });
       }
-      // Final day adjusts to whatever is left, so the sum of all daily
-      // payments equals total_price exactly (avoids ceil-rounding overpay).
-      const isLastDay = nextDay >= totalDays;
-      const invoiceAmount = isLastDay ?
+
+      // Bundle: pay days nextDay … endDay in a single invoice. endDay is
+      // capped at the final day, so "pay all remaining" is just a large
+      // `days` value.
+      const endDay = Math.min(nextDay + requestedDays - 1, totalDays);
+      const includesLastDay = endDay >= totalDays;
+      // If the bundle reaches the final day, charge exactly what's left so the
+      // total equals total_price (avoids ceil-rounding overpay). Otherwise
+      // it's a flat dayCount × dailyPayment.
+      const dayCount = endDay - nextDay + 1;
+      const invoiceAmount = includesLastDay ?
         Math.max(totalPrice - paidAmount, 0) :
-        dailyPayment;
+        dailyPayment * dayCount;
       if (invoiceAmount <= 0) {
         return res.status(409).json({ error: "Nothing left to pay" });
       }
 
-      // Avoid duplicate invoices for the same day: reuse an existing pending
-      // invoice if one already exists for this (purchase, day).
+      // Avoid duplicate invoices: reuse an existing pending invoice only if it
+      // covers the exact same range (same nextDay → endDay).
       const existing = await db
         .collection("pending_invoices")
         .where("purchase_id", "==", purchase_id)
-        .where("day_no", "==", nextDay)
+        .where("day_no", "==", endDay)
         .where("status", "==", "pending")
         .limit(1)
         .get();
 
       if (!existing.empty) {
         const data = existing.docs[0].data();
-        if (data.qpay_invoice) {
+        if (data.qpay_invoice && Number(data.day_from || data.day_no) === nextDay) {
           logger.info("Reusing existing pending invoice", {
             purchase_id,
             nextDay,
+            endDay,
             invoice_id: data.invoice_id,
           });
           return res.status(200).json({
             message: "Pending invoice already exists",
             qpay_invoice: data.qpay_invoice,
             invoice_id: data.invoice_id,
-            day_no: nextDay,
+            day_no: endDay,
+            day_from: nextDay,
+            day_to: endDay,
+            day_count: dayCount,
             amount: invoiceAmount,
           });
         }
@@ -136,11 +154,15 @@ exports.createInstallmentPayment = onRequest({
       );
       const token = tokenResp.data.access_token;
 
-      // Build invoice
-      const senderInvoiceNo = `INSTALL-${purchase_id}-${nextDay}`;
+      // Build invoice. The callback URL carries day_no=endDay so the callback
+      // credits every day up to the end of the bundle in one shot.
+      const senderInvoiceNo = `INSTALL-${purchase_id}-${nextDay}-${endDay}`;
       const callbackUrl =
         `${CALLBACK_BASE}?purchase_id=${encodeURIComponent(purchase_id)}` +
-        `&day_no=${nextDay}`;
+        `&day_no=${endDay}&day_from=${nextDay}`;
+      const dayLabel = dayCount > 1 ?
+        `${nextDay}-${endDay}/${totalDays} өдөр` :
+        `${nextDay}/${totalDays} өдөр`;
       const invoicePayload = {
         invoice_code: "LISTLY_AGENT_INVOICE",
         sender_invoice_no: senderInvoiceNo,
@@ -148,7 +170,7 @@ exports.createInstallmentPayment = onRequest({
         amount: invoiceAmount,
         callback_url: callbackUrl,
         invoice_description:
-          `Хуваан төлөлт — ${purchase.product_snapshot && purchase.product_snapshot.name || "Бараа"} (${nextDay}/${totalDays} өдөр)`,
+          `Хуваан төлөлт — ${purchase.product_snapshot && purchase.product_snapshot.name || "Бараа"} (${dayLabel})`,
       };
 
       const invoiceResp = await axios.post(
@@ -172,12 +194,17 @@ exports.createInstallmentPayment = onRequest({
           .json({ error: "QPay invoice creation failed (no invoice_id)" });
       }
 
-      // Persist pending invoice (idempotent by invoice_id)
+      // Persist pending invoice (idempotent by invoice_id). day_no = endDay so
+      // the callback lookup (which queries by day_no) matches the bundle's
+      // last day; day_from/day_to/day_count record the full range.
       await db.collection("pending_invoices").doc(invoiceId).set({
         type: "installment",
         invoice_id: invoiceId,
         purchase_id,
-        day_no: nextDay,
+        day_no: endDay,
+        day_from: nextDay,
+        day_to: endDay,
+        day_count: dayCount,
         userId: uid,
         amount: invoiceAmount,
         status: "pending",
@@ -188,6 +215,8 @@ exports.createInstallmentPayment = onRequest({
       logger.info("Created installment QPay invoice", {
         purchase_id,
         nextDay,
+        endDay,
+        dayCount,
         invoice_id: invoiceId,
         amount: invoiceAmount,
       });
@@ -196,7 +225,10 @@ exports.createInstallmentPayment = onRequest({
         message: "Installment QPay invoice created",
         qpay_invoice: qpayInvoice,
         invoice_id: invoiceId,
-        day_no: nextDay,
+        day_no: endDay,
+        day_from: nextDay,
+        day_to: endDay,
+        day_count: dayCount,
         amount: invoiceAmount,
       });
     } catch (err) {

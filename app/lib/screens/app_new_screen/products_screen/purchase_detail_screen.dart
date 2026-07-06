@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/installment_day_select_sheet.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/cancel_installment_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/installment_payment_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_view.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -38,28 +40,37 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
 
   Future<void> _onPayDayTap(ProductPurchase purchase) async {
     if (_requestingInvoice) return;
+
+    // Let the user pick how many upcoming days to bundle into one payment.
+    final days = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => InstallmentDaySelectSheet(
+        nextDay: purchase.paidDays + 1,
+        totalDays: purchase.totalDays,
+        dailyPayment: purchase.dailyPayment,
+        totalPrice: purchase.totalPrice,
+        paidAmount: purchase.paidAmount,
+      ),
+    );
+    if (days == null || !mounted) return;
+
     setState(() => _requestingInvoice = true);
     try {
-      final invoice = await _repo.requestInstallmentPayment(
+      final result = await _repo.requestInstallmentPayment(
         purchaseId: purchase.id,
+        days: days,
       );
       if (!mounted) return;
-      final nextDay = purchase.paidDays + 1;
-      // Final day's invoice may be smaller (ceiling-rounding adjustment) —
-      // we display dailyPayment as an approximation; QPay invoice carries
-      // the exact amount.
-      final isLast = nextDay >= purchase.totalDays;
-      final shownAmount = isLast
-          ? (purchase.totalPrice - purchase.paidAmount)
-              .clamp(0, purchase.dailyPayment)
-          : purchase.dailyPayment;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => InstallmentPaymentScreen(
             purchaseId: purchase.id,
-            dayNo: nextDay,
-            amount: shownAmount,
-            invoice: invoice,
+            dayFrom: result.dayFrom,
+            dayTo: result.dayTo,
+            amount: result.amount,
+            invoice: result.invoice,
             productName: purchase.productSnapshot.name,
           ),
         ),
@@ -72,6 +83,45 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
     } finally {
       if (mounted) setState(() => _requestingInvoice = false);
     }
+  }
+
+  Future<void> _onCancelTap(ProductPurchase purchase) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F1F22),
+        title: const Text(
+          'Цуцлахдаа итгэлтэй байна уу?',
+          style: TextStyle(color: Colors.white, fontSize: 15),
+        ),
+        content: Text(
+          'Хуваан төлөлтийг цуцалснаар нийт төлсөн дүнгээс цуцлалтын шимтгэл '
+          '(${purchase.productSnapshot.cancelFeePercent}%) хасагдаж, үлдэгдэл '
+          'таны данс руу буцаан шилжинэ.',
+          style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Үгүй', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text(
+              'Тийм',
+              style: TextStyle(
+                  color: Color(0xFFE57373), fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CancelInstallmentScreen(purchase: purchase),
+      ),
+    );
   }
 
   @override
@@ -89,18 +139,18 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         if (data != null) {
           purchase = ProductPurchase.fromMap(widget.purchase.id, data);
         }
-        final isInstallment =
-            purchase.purchaseType == PurchaseType.installment;
+        final isInstallment = purchase.purchaseType == PurchaseType.installment;
         final history = buildPaymentHistory(purchase);
+        final cancelPending = purchase.hasPendingCancelRequest;
         final showPayButton = isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
-            purchase.paidDays < purchase.totalDays;
+            purchase.paidDays < purchase.totalDays &&
+            !cancelPending;
+        final showCancelButton = isInstallment &&
+            purchase.status == ProductPurchaseStatus.active &&
+            !cancelPending;
         final nextDay = purchase.paidDays + 1;
-        final isLastDay = nextDay >= purchase.totalDays;
-        final nextDayAmount = isLastDay
-            ? (purchase.totalPrice - purchase.paidAmount)
-                .clamp(0, purchase.dailyPayment)
-            : purchase.dailyPayment;
+        final remainingDays = purchase.totalDays - purchase.paidDays;
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -113,6 +163,12 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
               const SizedBox(height: 14),
               _ProgressCard(purchase: purchase),
             ],
+            if (isInstallment &&
+                purchase.status == ProductPurchaseStatus.active &&
+                purchase.isPaymentLapsing) ...[
+              const SizedBox(height: 14),
+              _PaymentLapseWarning(purchase: purchase),
+            ],
             if (purchase.status == ProductPurchaseStatus.cancelled) ...[
               const SizedBox(height: 14),
               _CancelledCard(purchase: purchase),
@@ -121,13 +177,25 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
               const SizedBox(height: 14),
               PickupInstructionsSection(code: purchase.pickupCode),
             ],
+            if (isInstallment &&
+                purchase.status == ProductPurchaseStatus.active &&
+                cancelPending) ...[
+              const SizedBox(height: 14),
+              const _CancelPendingBanner(),
+            ],
             if (showPayButton) ...[
               const SizedBox(height: 14),
               _PayDayButton(
-                dayNo: nextDay,
-                amount: nextDayAmount,
+                nextDay: nextDay,
+                remainingDays: remainingDays,
                 busy: _requestingInvoice,
                 onPressed: () => _onPayDayTap(purchase),
+              ),
+            ],
+            if (showCancelButton) ...[
+              const SizedBox(height: 10),
+              _CancelInstallmentButton(
+                onPressed: () => _onCancelTap(purchase),
               ),
             ],
             const SizedBox(height: 18),
@@ -168,33 +236,6 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                   child: _HistoryRowCard(row: row),
                 );
               }),
-            const SizedBox(height: 10),
-            if (purchase.status == ProductPurchaseStatus.active) ...[
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: Colors.amber.withOpacity(0.25)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        size: 14, color: Colors.amberAccent),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Өдөр бүрийн төлбөрөө цаг тухайд нь хийгээрэй. '
-                        'Цуцлах хүсэлт гаргавал шимтгэл хасагдана.',
-                        style:
-                            TextStyle(color: Colors.white70, fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         );
       },
@@ -230,14 +271,14 @@ class PurchaseDetailScreen extends StatelessWidget {
 }
 
 class _PayDayButton extends StatelessWidget {
-  final int dayNo;
-  final int amount;
+  final int nextDay;
+  final int remainingDays;
   final bool busy;
   final VoidCallback onPressed;
 
   const _PayDayButton({
-    required this.dayNo,
-    required this.amount,
+    required this.nextDay,
+    required this.remainingDays,
     required this.busy,
     required this.onPressed,
   });
@@ -255,8 +296,7 @@ class _PayDayButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
         icon: busy
             ? const SizedBox(
@@ -271,7 +311,7 @@ class _PayDayButton extends StatelessWidget {
         label: Text(
           busy
               ? 'Нэхэмжлэх үүсгэж байна…'
-              : '$dayNo-р өдрийн ${formatMNT(amount)} төлөх',
+              : 'Төлбөр төлөх ($nextDay-р өдрөөс, $remainingDays үлдсэн)',
         ),
       ),
     );
@@ -610,9 +650,8 @@ class _ProgressCard extends StatelessWidget {
                       color: daysLeft < 0
                           ? const Color(0xFFE57373)
                           : Colors.white54,
-                      fontWeight: daysLeft < 0
-                          ? FontWeight.w600
-                          : FontWeight.w500,
+                      fontWeight:
+                          daysLeft < 0 ? FontWeight.w600 : FontWeight.w500,
                       fontSize: 10.5,
                     ),
                   ),
@@ -683,9 +722,147 @@ class _CancelledCard extends StatelessWidget {
   }
 }
 
+/// Warns an active installment buyer who has gone several days without a
+/// payment. Amber while approaching the cancellation threshold, red once the
+/// plan is at risk of being cancelled.
+class _PaymentLapseWarning extends StatelessWidget {
+  final ProductPurchase purchase;
+  const _PaymentLapseWarning({required this.purchase});
+
+  @override
+  Widget build(BuildContext context) {
+    final gap = purchase.daysSinceLastPayment ?? 0;
+    final critical = gap >= ProductPurchase.installmentCancelGapDays;
+    final remaining = ProductPurchase.installmentCancelGapDays - gap;
+
+    final Color accent =
+        critical ? const Color(0xFFE57373) : Colors.amberAccent;
+    final Color bg =
+        critical ? const Color(0x33C2240B) : Colors.amber.withOpacity(0.10);
+    final Color border =
+        critical ? const Color(0x55C2240B) : Colors.amber.withOpacity(0.25);
+
+    final String body = critical
+        ? 'Та $gap хоног төлбөр хийгээгүй байна. Хуваан төлөлт цуцлагдах '
+            'эрсдэлтэй боллоо. Цуцлагдвал төлсөн дүнгээс цуцлах шимтгэл '
+            'хасагдана. Төлбөрөө яаралтай хийнэ үү.'
+        : 'Та $gap хоног төлбөр хийгээгүй байна. Дараалсан '
+            '${ProductPurchase.installmentCancelGapDays} хоног төлбөр хийхгүй '
+            'бол хуваан төлөлт цуцлагдаж болзошгүй'
+            '${remaining > 0 ? ' (та дахин $remaining хоногтой)' : ''}. '
+            'Төлбөрөө хийж үргэлжлүүлээрэй.';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            critical ? Icons.warning_amber_rounded : Icons.info_outline,
+            color: accent,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  critical ? 'Цуцлагдах эрсдэлтэй' : 'Төлбөрийн анхааруулга',
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 String _fmtDate(DateTime d) {
   final y = d.year.toString().padLeft(4, '0');
   final m = d.month.toString().padLeft(2, '0');
   final day = d.day.toString().padLeft(2, '0');
   return '$y.$m.$day';
+}
+
+/// Shown while the user's cancel request awaits admin review — payments are
+/// blocked meanwhile (both here and server-side).
+class _CancelPendingBanner extends StatelessWidget {
+  const _CancelPendingBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.amber.withOpacity(0.25)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.hourglass_top_rounded,
+              size: 16, color: Colors.amberAccent),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Цуцлах хүсэлт илгээгдсэн. Админ шалгаж баталгаажуулсны дараа '
+              'хуваан төлөлт цуцлагдаж, буцаан олгох дүн таны данс руу '
+              'шилжинэ. Энэ хооронд төлбөр хийх боломжгүй.',
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CancelInstallmentButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _CancelInstallmentButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: const Color(0xFFE57373).withOpacity(0.6)),
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'Хуваан төлөлт цуцлах',
+        style: TextStyle(
+          color: Color(0xFFE57373),
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
 }

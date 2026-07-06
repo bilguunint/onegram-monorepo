@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -30,6 +33,13 @@ import {
   type ProductPurchase,
   type ProductPurchaseStatus,
 } from "@/lib/firestore/productPurchases";
+import {
+  fetchCancelRequests,
+  approveCancelRequest,
+  rejectCancelRequest,
+  type InstallmentCancelRequest,
+} from "@/lib/firestore/installmentCancelRequests";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   formatPriceMNT,
   getPurchaseUserName,
@@ -98,12 +108,19 @@ export default function ProductPurchasesPage() {
   const [detailTarget, setDetailTarget] = useState<ProductPurchase | null>(
     null
   );
+  const [cancelRequests, setCancelRequests] = useState<
+    InstallmentCancelRequest[]
+  >([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAllProductPurchases();
+      const [data, requests] = await Promise.all([
+        fetchAllProductPurchases(),
+        fetchCancelRequests(),
+      ]);
       setItems(data);
+      setCancelRequests(requests);
     } catch (err) {
       console.error(err);
       toast.error("Худалдан авалт ачааллахад алдаа гарлаа.");
@@ -140,12 +157,30 @@ export default function ProductPurchasesPage() {
     return list;
   }, [items, search, statusFilter]);
 
-  const totalItems = filtered.length;
+  // Click the "Progress" column header to cycle: default → most-paid first
+  // → least-paid first → default.
+  const [progressSort, setProgressSort] = useState<"" | "desc" | "asc">("");
+  const sorted = useMemo(() => {
+    if (!progressSort) return filtered;
+    const list = [...filtered];
+    list.sort((a, b) => {
+      const d = purchaseProgress(a) - purchaseProgress(b);
+      return progressSort === "asc" ? d : -d;
+    });
+    return list;
+  }, [filtered, progressSort]);
+
+  const toggleProgressSort = () => {
+    setProgressSort((s) => (s === "" ? "desc" : s === "desc" ? "asc" : ""));
+    setPage(1);
+  };
+
+  const totalItems = sorted.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
-  const pageRows = filtered.slice(startIndex, endIndex);
+  const pageRows = sorted.slice(startIndex, endIndex);
 
   const pages = useMemo(() => {
     const max = 5;
@@ -257,6 +292,14 @@ export default function ProductPurchasesPage() {
           </Button>
         </div>
       </header>
+
+      {canSeeActions && (
+        <CancelRequestsPanel
+          requests={cancelRequests}
+          adminData={adminData}
+          onChanged={() => void load()}
+        />
+      )}
 
       {!loading && items.length > 0 && (
         <div className="space-y-3">
@@ -431,7 +474,26 @@ export default function ProductPurchasesPage() {
                     <th className="px-2 py-2 text-right font-medium">
                       Төлсөн / Нийт
                     </th>
-                    <th className="px-2 py-2 text-left font-medium">Progress</th>
+                    <th className="px-2 py-2 text-left font-medium">
+                      <button
+                        type="button"
+                        onClick={toggleProgressSort}
+                        title="Progress-оор эрэмбэлэх"
+                        className={cn(
+                          "inline-flex items-center gap-1 uppercase tracking-[0.08em] transition-colors hover:text-foreground",
+                          progressSort && "text-foreground"
+                        )}
+                      >
+                        Progress
+                        {progressSort === "desc" ? (
+                          <ArrowDown className="h-3 w-3" />
+                        ) : progressSort === "asc" ? (
+                          <ArrowUp className="h-3 w-3" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-50" />
+                        )}
+                      </button>
+                    </th>
                     <th className="px-2 py-2 text-left font-medium">Огноо</th>
                     <th className="px-2 py-2 text-left font-medium">Төлөв</th>
                     {canSeeActions && (
@@ -695,6 +757,145 @@ export default function ProductPurchasesPage() {
         open={!!detailTarget}
         purchase={detailTarget}
         onOpenChange={(o) => !o && setDetailTarget(null)}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// User-initiated installment cancel requests awaiting review. Approve cancels
+// the purchase (refund recorded; the bank transfer is done manually to the
+// account below). Reject leaves the plan active.
+function CancelRequestsPanel({
+  requests,
+  adminData,
+  onChanged,
+}: {
+  requests: InstallmentCancelRequest[];
+  adminData: { uid: string; name: string } | null;
+  onChanged: () => void;
+}) {
+  const [approveTarget, setApproveTarget] =
+    useState<InstallmentCancelRequest | null>(null);
+  const [rejectTarget, setRejectTarget] =
+    useState<InstallmentCancelRequest | null>(null);
+
+  const pending = requests.filter((r) => r.status === "pending");
+  if (pending.length === 0) return null;
+
+  const confirmApprove = async () => {
+    if (!approveTarget || !adminData) return;
+    try {
+      const refund = await approveCancelRequest(approveTarget, adminData);
+      toast.success(
+        `Хуваан төлөлт цуцлагдлаа. Буцаан олгох дүн: ${formatPriceMNT(refund)} — ${approveTarget.bank_name} ${approveTarget.account_number} (${approveTarget.account_holder}) данс руу шилжүүлнэ үү.`
+      );
+      setApproveTarget(null);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Алдаа гарлаа.");
+    }
+  };
+
+  const confirmReject = async () => {
+    if (!rejectTarget || !adminData) return;
+    try {
+      await rejectCancelRequest(rejectTarget, adminData);
+      toast.success("Хүсэлтийг татгалзлаа — хуваан төлөлт идэвхтэй хэвээр.");
+      setRejectTarget(null);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Алдаа гарлаа.");
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-amber-300/60 bg-amber-50/40 p-4 dark:border-amber-500/30 dark:bg-amber-500/5">
+      <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        Цуцлах хүсэлтүүд ({pending.length})
+      </h3>
+      <div className="space-y-2">
+        {pending.map((r) => (
+          <div
+            key={r.id}
+            className="rounded-lg border border-border-light bg-card p-3"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1 text-[12px]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] font-medium text-foreground">
+                    {r.user_name || r.user_id}
+                  </span>
+                  {r.user_phone && (
+                    <span className="text-muted-foreground">{r.user_phone}</span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-foreground/80">
+                  {r.product_name} · {r.paid_days}/{r.total_days} өдөр төлсөн
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  Төлсөн {formatPriceMNT(r.paid_amount)} − шимтгэл{" "}
+                  {r.fee_percent}% ({formatPriceMNT(r.fee_amount)}) ={" "}
+                  <span className="font-semibold text-foreground">
+                    {formatPriceMNT(r.refund_amount)}
+                  </span>{" "}
+                  буцаана
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  {r.bank_name} ·{" "}
+                  <span className="font-mono text-foreground">
+                    {r.account_number}
+                  </span>{" "}
+                  · {r.account_holder}
+                </div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">
+                  {r.created_at
+                    ? r.created_at.toDate().toLocaleString("mn-MN")
+                    : "—"}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRejectTarget(r)}
+                >
+                  Татгалзах
+                </Button>
+                <Button size="sm" onClick={() => setApproveTarget(r)}>
+                  Баталгаажуулах
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <ConfirmDialog
+        open={!!approveTarget}
+        title="Цуцлалтыг баталгаажуулах"
+        description={
+          approveTarget
+            ? `${approveTarget.user_name || approveTarget.user_id}-ийн хуваан төлөлт цуцлагдаж, ${formatPriceMNT(approveTarget.refund_amount)}-г ${approveTarget.bank_name} (${approveTarget.account_number}, ${approveTarget.account_holder}) данс руу гараар шилжүүлэх шаардлагатай. Баталгаажуулах уу?`
+            : ""
+        }
+        confirmLabel="Баталгаажуулах"
+        onOpenChange={(o) => !o && setApproveTarget(null)}
+        onConfirm={() => void confirmApprove()}
+      />
+      <ConfirmDialog
+        open={!!rejectTarget}
+        title="Хүсэлтийг татгалзах"
+        description={
+          rejectTarget
+            ? `${rejectTarget.user_name || rejectTarget.user_id}-ийн цуцлах хүсэлтийг татгалзаж, хуваан төлөлтийг идэвхтэй хэвээр үлдээх үү?`
+            : ""
+        }
+        confirmLabel="Татгалзах"
+        destructive
+        onOpenChange={(o) => !o && setRejectTarget(null)}
+        onConfirm={() => void confirmReject()}
       />
     </div>
   );

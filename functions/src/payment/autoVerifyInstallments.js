@@ -6,7 +6,7 @@ const cors = require("cors")({ origin: true });
 const {
   getQPayToken,
   checkQPayPayment,
-  applyPaidDay,
+  applyPaidUpToDay,
   createPurchaseFromInit,
 } = require("./installmentShared");
 
@@ -170,12 +170,7 @@ async function runAutoVerifyInstallments(sinceDate = null) {
           errors++;
           continue;
         }
-        const result = await applyPaidDay(
-          db,
-          purchaseId,
-          dayNo,
-          Number(data.amount || 0),
-        );
+        const result = await applyPaidUpToDay(db, purchaseId, dayNo);
         await doc.ref.update({
           status: "processed",
           paid_at: admin.firestore.FieldValue.serverTimestamp(),

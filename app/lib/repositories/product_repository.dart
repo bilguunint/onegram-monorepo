@@ -78,14 +78,13 @@ class ProductRepository {
         .where('status', isEqualTo: 'completed')
         .snapshots()
         .map((snap) {
-      final list = snap.docs
-          .map((d) => ProductPurchase.fromMap(d.id, d.data()))
-          .toList()
-        ..sort((a, b) {
-          final ta = a.completedAt?.millisecondsSinceEpoch ?? 0;
-          final tb = b.completedAt?.millisecondsSinceEpoch ?? 0;
-          return tb.compareTo(ta);
-        });
+      final list =
+          snap.docs.map((d) => ProductPurchase.fromMap(d.id, d.data())).toList()
+            ..sort((a, b) {
+              final ta = a.completedAt?.millisecondsSinceEpoch ?? 0;
+              final tb = b.completedAt?.millisecondsSinceEpoch ?? 0;
+              return tb.compareTo(ta);
+            });
       return list.isEmpty ? null : list.first;
     });
   }
@@ -129,7 +128,8 @@ class ProductRepository {
     try {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
-      throw StateError('Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+      throw StateError(
+          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
     }
 
     if (res.statusCode != 200) {
@@ -146,8 +146,9 @@ class ProductRepository {
     if (pendingId == null || pendingId.isEmpty) {
       throw StateError('pending_id олдсонгүй.');
     }
-    final amount =
-        (body['amount'] as num?)?.toInt() ?? (body['daily_payment'] as num?)?.toInt() ?? 0;
+    final amount = (body['amount'] as num?)?.toInt() ??
+        (body['daily_payment'] as num?)?.toInt() ??
+        0;
     final monthsResp = (body['months'] as num?)?.toInt() ?? months;
     return (
       invoice: MakeOrder.fromJson(invoice),
@@ -157,14 +158,17 @@ class ProductRepository {
     );
   }
 
-  /// Ask the backend to create a QPay invoice for the next pending month of
-  /// the given purchase. Returns the QPay invoice details for the app to
-  /// render (QR code, bank deeplinks).
+  /// Ask the backend to create a QPay invoice covering [days] upcoming
+  /// installment days (default 1) of the given purchase, starting from the
+  /// next unpaid day. Returns the QPay invoice plus the day range
+  /// (`dayFrom`…`dayTo`) and total `amount` the backend actually charged.
   ///
-  /// The backend determines which month is next from `paid_months + 1`, so
-  /// callers only need to pass [purchaseId].
-  Future<MakeOrder> requestInstallmentPayment({
+  /// The backend determines the starting day from `paid_days + 1`, so callers
+  /// only pass [purchaseId] and how many days to bundle.
+  Future<({MakeOrder invoice, int dayFrom, int dayTo, int amount})>
+      requestInstallmentPayment({
     required String purchaseId,
+    int days = 1,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -178,14 +182,15 @@ class ProductRepository {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $idToken',
       },
-      body: jsonEncode({'purchase_id': purchaseId}),
+      body: jsonEncode({'purchase_id': purchaseId, 'days': days}),
     );
 
     Map<String, dynamic> body;
     try {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
-      throw StateError('Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+      throw StateError(
+          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
     }
 
     if (res.statusCode != 200) {
@@ -198,7 +203,76 @@ class ProductRepository {
     if (invoice is! Map<String, dynamic>) {
       throw StateError('QPay invoice олдсонгүй.');
     }
-    return MakeOrder.fromJson(invoice);
+    final dayFrom = (body['day_from'] as num?)?.toInt() ??
+        (body['day_no'] as num?)?.toInt() ??
+        0;
+    final dayTo = (body['day_to'] as num?)?.toInt() ??
+        (body['day_no'] as num?)?.toInt() ??
+        dayFrom;
+    final amount = (body['amount'] as num?)?.toInt() ?? 0;
+    return (
+      invoice: MakeOrder.fromJson(invoice),
+      dayFrom: dayFrom,
+      dayTo: dayTo,
+      amount: amount,
+    );
+  }
+
+  static const String _requestInstallmentCancelUrl =
+      'https://asia-northeast1-grammgold.cloudfunctions.net/requestInstallmentCancel';
+
+  /// Submit a cancel request for the user's ACTIVE installment plan. The
+  /// backend computes the refund (paid − cancel fee) server-side, creates an
+  /// `installment_cancel_requests` doc for admin review and stamps the
+  /// purchase with `cancel_request_status: "pending"`. Returns the computed
+  /// refund breakdown.
+  Future<({int paidAmount, int feePercent, int feeAmount, int refundAmount})>
+      requestInstallmentCancel({
+    required String purchaseId,
+    required String bankName,
+    required String accountNumber,
+    required String accountHolder,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('Нэвтрээгүй байна.');
+    }
+    final idToken = await user.getIdToken();
+
+    final res = await http.post(
+      Uri.parse(_requestInstallmentCancelUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: jsonEncode({
+        'purchase_id': purchaseId,
+        'bank_name': bankName,
+        'account_number': accountNumber,
+        'account_holder': accountHolder,
+      }),
+    );
+
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw StateError(
+          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+    }
+
+    if (res.statusCode != 200) {
+      final msg = (body['error'] as String?) ??
+          'Цуцлах хүсэлт илгээх амжилтгүй (${res.statusCode}).';
+      throw StateError(msg);
+    }
+
+    return (
+      paidAmount: (body['paid_amount'] as num?)?.toInt() ?? 0,
+      feePercent: (body['fee_percent'] as num?)?.toInt() ?? 0,
+      feeAmount: (body['fee_amount'] as num?)?.toInt() ?? 0,
+      refundAmount: (body['refund_amount'] as num?)?.toInt() ?? 0,
+    );
   }
 
   static const String _createDirectPurchaseUrl =
@@ -231,7 +305,8 @@ class ProductRepository {
     try {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
-      throw StateError('Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+      throw StateError(
+          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
     }
 
     if (res.statusCode != 200) {

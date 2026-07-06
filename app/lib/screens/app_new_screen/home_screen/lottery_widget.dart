@@ -329,7 +329,7 @@ class _ProductsPromo extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: const Color(0xFF455A64),
-                    width: 2,
+                    width: 0.5,
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,

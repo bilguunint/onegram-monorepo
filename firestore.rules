@@ -139,6 +139,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Installment cancel requests: created by Cloud Functions (user request
+    // from the app); admins review + approve/reject; owner reads their own.
+    match /installment_cancel_requests/{requestId} {
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.user_id == request.auth.uid);
+      allow update: if isAdmin();
+      allow create, delete: if false;
+    }
+
     match /investments/{investmentId} {
       // Read access for authenticated users
       allow read: if request.auth != null;

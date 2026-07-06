@@ -8,14 +8,16 @@ import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Screen that displays the QPay invoice for a single daily installment.
+/// Screen that displays the QPay invoice for an installment payment covering
+/// one or more days ([dayFrom]…[dayTo]).
 ///
-/// Listens to the purchase doc in Firestore; once the backend callback marks
-/// the day as paid (paid_days increments past [dayNo]), the UI flips to a
-/// "Төлсөн" success state.
+/// Listens to the purchase doc in Firestore; once the backend callback credits
+/// the bundle (paid_days reaches [dayTo]), the UI flips to a "Төлсөн" success
+/// state.
 class InstallmentPaymentScreen extends StatefulWidget {
   final String purchaseId;
-  final int dayNo;
+  final int dayFrom;
+  final int dayTo;
   final int amount;
   final MakeOrder invoice;
   final String productName;
@@ -23,11 +25,18 @@ class InstallmentPaymentScreen extends StatefulWidget {
   const InstallmentPaymentScreen({
     super.key,
     required this.purchaseId,
-    required this.dayNo,
+    required this.dayFrom,
+    required this.dayTo,
     required this.amount,
     required this.invoice,
     required this.productName,
   });
+
+  /// Human label for the day range — "5-р өдөр" for a single day, or
+  /// "5–11-р өдөр" for a multi-day bundle.
+  String get dayLabel => dayFrom == dayTo
+      ? '$dayFrom-р өдөр'
+      : '$dayFrom–$dayTo-р өдөр';
 
   @override
   State<InstallmentPaymentScreen> createState() =>
@@ -45,7 +54,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          '${widget.dayNo}-р өдрийн төлбөр',
+          '${widget.dayLabel} төлбөр',
           style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
@@ -63,11 +72,11 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
           final data = snapshot.data?.data();
           final paidDays = (data?['paid_days'] as num?)?.toInt() ?? 0;
           final purchaseStatus = data?['status'] as String?;
-          final isPaid = paidDays >= widget.dayNo;
+          final isPaid = paidDays >= widget.dayTo;
           final isCompleted = purchaseStatus == 'completed' ||
               purchaseStatus == 'delivered';
 
-          // Auto-close once the day becomes paid so the user lands back on
+          // Auto-close once the bundle becomes paid so the user lands back on
           // the detail screen with the updated progress.
           if (isPaid && !_alreadyPopped) {
             _alreadyPopped = true;
@@ -79,7 +88,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
           if (isPaid) {
             return _PaidView(
               amount: widget.amount,
-              dayNo: widget.dayNo,
+              dayLabel: widget.dayLabel,
               isCompleted: isCompleted,
             );
           }
@@ -87,7 +96,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
           return _PendingView(
             invoice: widget.invoice,
             amount: widget.amount,
-            dayNo: widget.dayNo,
+            dayLabel: widget.dayLabel,
             productName: widget.productName,
           );
         },
@@ -117,7 +126,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         content: Text(
           isCompleted
               ? 'Та энэ барааны бүх өдрийн төлбөрөө төлж дуусгалаа. Удахгүй барааг хүлээлгэн өгөх болно.'
-              : '${widget.dayNo}-р өдрийн ${formatMNT(widget.amount)} төлбөр амжилттай төлөгдлөө.',
+              : '${widget.dayLabel} ${formatMNT(widget.amount)} төлбөр амжилттай төлөгдлөө.',
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         actions: [
@@ -135,13 +144,13 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
 class _PendingView extends StatelessWidget {
   final MakeOrder invoice;
   final int amount;
-  final int dayNo;
+  final String dayLabel;
   final String productName;
 
   const _PendingView({
     required this.invoice,
     required this.amount,
-    required this.dayNo,
+    required this.dayLabel,
     required this.productName,
   });
 
@@ -189,7 +198,7 @@ class _PendingView extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '$productName — $dayNo-р өдөр',
+                '$productName — $dayLabel',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -331,12 +340,12 @@ class _PendingView extends StatelessWidget {
 
 class _PaidView extends StatelessWidget {
   final int amount;
-  final int dayNo;
+  final String dayLabel;
   final bool isCompleted;
 
   const _PaidView({
     required this.amount,
-    required this.dayNo,
+    required this.dayLabel,
     required this.isCompleted,
   });
 
@@ -371,7 +380,7 @@ class _PaidView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '$dayNo-р өдөр • ${formatMNT(amount)}',
+              '$dayLabel • ${formatMNT(amount)}',
               style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
