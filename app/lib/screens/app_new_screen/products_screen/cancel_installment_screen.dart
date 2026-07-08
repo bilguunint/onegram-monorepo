@@ -39,6 +39,7 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
   final _accountCtrl = TextEditingController();
   final _holderCtrl = TextEditingController();
   String? _bank;
+  bool _termsAccepted = false;
   bool _submitting = false;
 
   @override
@@ -66,6 +67,10 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
     }
     if (holder.length < 2) {
       _toast('Хүлээн авагчийн нэрээ оруулна уу.');
+      return;
+    }
+    if (!_termsAccepted) {
+      _toast('Буцаан олголтын нөхцөлийг хүлээн зөвшөөрнө үү.');
       return;
     }
 
@@ -97,7 +102,8 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
           ),
           content: Text(
             'Таны цуцлах хүсэлтийг админ шалгаж баталгаажуулсны дараа '
-            '${formatMNT(_refund)} таны данс руу шилжинэ.',
+            '${formatMNT(_refund)} ажлын 5 хоногийн дотор таны данс руу '
+            'шилжинэ.',
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           actions: [
@@ -147,6 +153,8 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
                 _refundCard(),
                 const SizedBox(height: 14),
                 _bankForm(),
+                const SizedBox(height: 14),
+                _termsSection(),
                 const SizedBox(height: 14),
                 _infoNote(),
               ],
@@ -295,6 +303,106 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
     );
   }
 
+  String get _termsText => '''
+1. Хуваан төлөлтийг цуцлахад нийт төлсөн дүнгээс цуцлалтын шимтгэл ($_feePercent%) суутгагдана.
+
+2. Буцаан олгох дүнг цуцлах хүсэлтийг админ шалгаж баталгаажуулснаас хойш АЖЛЫН 5 ХОНОГИЙН ДОТОР таны заасан банкны данс руу шилжүүлнэ.
+
+3. Банк, дансны дугаар, хүлээн авагчийн нэрийг үнэн зөв оруулах нь хэрэглэгчийн хариуцлага бөгөөд буруу мэдээллээс үүдэх хойшлолт, алдааг Компани хариуцахгүй.
+
+4. Цуцлах хүсэлт хүлээгдэж байх хугацаанд тухайн хуваан төлөлтөд шинэ төлбөр хийх боломжгүй.
+
+5. Цуцлалт баталгаажсаны дараа худалдан авалт сэргээгдэхгүй бөгөөд төлсөн өдрүүд шинэ худалдан авалтад шилжихгүй.
+
+6. Буцаан олголт нь зөвхөн хэрэглэгчийн заасан данс руу нэг удаа хийгдэнэ.''';
+
+  Widget _termsSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Буцаан олголтын нөхцөл',
+            style: TextStyle(
+                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 160),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            padding: const EdgeInsets.all(10),
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                child: Text(
+                  _termsText,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () => setState(() => _termsAccepted = !_termsAccepted),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: _termsAccepted
+                          ? CustomColors.mainColor
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: _termsAccepted
+                            ? CustomColors.mainColor
+                            : Colors.white38,
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: _termsAccepted
+                        ? Icon(Icons.check,
+                            size: 14, color: CustomColors.mainBlack)
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Би мөнгөн буцаан олголтын дээрх нөхцөлүүдийг бүрэн '
+                      'уншиж танилцаж, хүлээн зөвшөөрч байна.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _infoNote() {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -311,8 +419,9 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
           Expanded(
             child: Text(
               'Хүсэлтийг админ шалгаж баталгаажуулсны дараа хуваан төлөлт '
-              'цуцлагдаж, буцаан олгох дүн дээрх данс руу ажлын өдрүүдэд '
-              'шилжинэ. Хүсэлт хүлээгдэж байх хооронд төлбөр хийх боломжгүй.',
+              'цуцлагдаж, буцаан олгох дүн ажлын 5 хоногийн дотор дээрх данс '
+              'руу шилжинэ. Хүсэлт хүлээгдэж байх хооронд төлбөр хийх '
+              'боломжгүй.',
               style:
                   TextStyle(color: Colors.white70, fontSize: 11, height: 1.4),
             ),

@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/models/product_model.dart';
+import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_detail_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -130,145 +132,145 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                 );
               },
               child: Container(
-              width: MediaQuery.of(context).size.width / 2 - 24,
-              height: 240,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color.fromARGB(255, 13, 17, 21),
-                    Color.fromARGB(255, 15, 17, 20),
-                    Color.fromARGB(255, 9, 19, 28),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                    offset: const Offset(0, 10),
+                width: MediaQuery.of(context).size.width / 2 - 24,
+                height: 240,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color.fromARGB(255, 13, 17, 21),
+                      Color.fromARGB(255, 15, 17, 20),
+                      Color.fromARGB(255, 9, 19, 28),
+                    ],
                   ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 40,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 20),
-                  ),
-                ],
-                border: Border.all(
-                  color: const Color(0xFF455A64),
-                  width: 2,
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Container(
-                    width: MediaQuery.of(context).size.width / 2 - 24,
-                    height: 240,
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color.fromARGB(255, 13, 17, 21),
-                          Color.fromARGB(255, 15, 17, 20),
-                          Color.fromARGB(255, 9, 19, 28),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
                     ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 40,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 20),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: const Color(0xFF455A64),
+                    width: 2,
                   ),
-                  /* Positioned(
+                ),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: MediaQuery.of(context).size.width / 2 - 24,
+                      height: 240,
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color.fromARGB(255, 13, 17, 21),
+                            Color.fromARGB(255, 15, 17, 20),
+                            Color.fromARGB(255, 9, 19, 28),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    /* Positioned(
               left: 0.0,
               right: 0.0,
               top: 10.0,
               child: SizedBox(
               height: 120,
               child: Image.asset('assets/images/goldbar_black.png'))), */
-                  Positioned(
-                    right: 10.0,
-                    top: 10.0,
-                    child: Row(
-                            children: [
-                              Lottie.asset('assets/icons/clock.json',
-                                  width: 20, height: 20),
-                              SizedBox(width: 4.0),
-                              Text(
-                                _endDate != null
-                                    ? "${_endDate!.difference(DateTime.now()).inDays} өдөр үлдсэн"
-                                    : "COMING SOON...",
-                                style: const TextStyle(
-                                  fontSize: 9.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                  Positioned(
-                      bottom: 20.0,
-                      right: 16.0,
-                      left: 16.0,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                    Positioned(
+                      right: 10.0,
+                      top: 10.0,
+                      child: Row(
                         children: [
-                          SizedBox(
-                              height: 100,
-                              child: Lottie.asset(
-                                  'assets/icons/golden_ticket.json',
-                                  repeat: false)),
-                          Container(
-                            width: 150.0,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.white24,
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Нийт сугалаа: ',
-                                  style: TextStyle(
-                                      color: CustomColors.mainColor,
-                                      fontSize: 12,
-                                      fontFamily: "RubikBold"),
-                                ),
-                                SizedBox(width: 16),
-                                Text(
-                                  '$_ticketCount',
-                                  style: TextStyle(
-                                      color: CustomColors.mainColor,
-                                      fontSize: 12,
-                                      fontFamily: "RubikBold"),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16.0),
+                          Lottie.asset('assets/icons/clock.json',
+                              width: 20, height: 20),
+                          SizedBox(width: 4.0),
                           Text(
-                            _name ?? "",
-                            style: TextStyle(
-                                fontSize: 12.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                            _endDate != null
+                                ? "${_endDate!.difference(DateTime.now()).inDays} өдөр үлдсэн"
+                                : "COMING SOON...",
+                            style: const TextStyle(
+                              fontSize: 9.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white54,
+                            ),
                           ),
                         ],
-                      )),
-                ],
+                      ),
+                    ),
+                    Positioned(
+                        bottom: 20.0,
+                        right: 16.0,
+                        left: 16.0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                                height: 100,
+                                child: Lottie.asset(
+                                    'assets/icons/golden_ticket.json',
+                                    repeat: false)),
+                            Container(
+                              width: 150.0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.white24,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Нийт сугалаа: ',
+                                    style: TextStyle(
+                                        color: CustomColors.mainColor,
+                                        fontSize: 12,
+                                        fontFamily: "RubikBold"),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Text(
+                                    '$_ticketCount',
+                                    style: TextStyle(
+                                        color: CustomColors.mainColor,
+                                        fontSize: 12,
+                                        fontFamily: "RubikBold"),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16.0),
+                            Text(
+                              _name ?? "",
+                              style: TextStyle(
+                                  fontSize: 12.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                          ],
+                        )),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
         ),
@@ -294,6 +296,24 @@ class _ProductsPromo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardWidth = MediaQuery.of(context).size.width / 2 - 24;
+    // With an ACTIVE installment the slot becomes "my installment" — progress
+    // + next-payment shortcut — instead of the products slider.
+    return StreamBuilder<ProductPurchase?>(
+      stream: repo.watchMyActiveInstallment(uid),
+      builder: (context, activeSnap) {
+        final active = activeSnap.data;
+        if (active != null) {
+          return _ActiveInstallmentPromo(
+            purchase: active,
+            cardWidth: cardWidth,
+          );
+        }
+        return _productsSlider(context, cardWidth);
+      },
+    );
+  }
+
+  Widget _productsSlider(BuildContext context, double cardWidth) {
     return StreamBuilder<List<Product>>(
       stream: repo.watchActiveProducts(),
       builder: (context, snapshot) {
@@ -347,8 +367,7 @@ class _ProductsPromo extends StatelessWidget {
                         ),
                       )
                     : PageView.builder(
-                        controller:
-                            PageController(viewportFraction: 1.0),
+                        controller: PageController(viewportFraction: 1.0),
                         itemCount: products.length,
                         itemBuilder: (context, i) {
                           return _PromoSlide(
@@ -469,8 +488,7 @@ class _PromoSlide extends StatelessWidget {
               top: 8,
               right: 10,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.35),
                   borderRadius: BorderRadius.circular(8),
@@ -487,6 +505,177 @@ class _PromoSlide extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Home-slot card shown instead of the products slider while the user has an
+/// ACTIVE installment: cover, progress and a next-payment shortcut. Tapping
+/// opens the full purchase detail where the next day(s) can be paid.
+class _ActiveInstallmentPromo extends StatelessWidget {
+  final ProductPurchase purchase;
+  final double cardWidth;
+
+  const _ActiveInstallmentPromo({
+    required this.purchase,
+    required this.cardWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ps = purchase.productSnapshot;
+    final pct = purchase.totalDays > 0
+        ? (purchase.paidDays / purchase.totalDays * 100).clamp(0, 100)
+        : 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
+          child: Text(
+            'Миний хуваан төлөлт',
+            style: TextStyle(
+              fontFamily: 'InterBold',
+              fontSize: 14.0,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PurchaseDetailScreen(purchase: purchase),
+                ),
+              );
+            },
+            child: Container(
+              width: cardWidth,
+              height: 240,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.fromARGB(255, 13, 17, 21),
+                    Color.fromARGB(255, 15, 17, 20),
+                    Color.fromARGB(255, 9, 19, 28),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF455A64),
+                  width: 0.5,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: double.infinity,
+                          color: const Color(0xFF252528),
+                          child: ps.image != null
+                              ? Image.network(
+                                  ps.image!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(
+                                      Icons.image_not_supported_outlined,
+                                      color: Colors.white24,
+                                      size: 28,
+                                    ),
+                                  ),
+                                )
+                              : const Center(
+                                  child: Icon(
+                                    Icons.inventory_2_outlined,
+                                    color: Colors.white24,
+                                    size: 30,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      ps.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: purchase.totalDays > 0
+                            ? purchase.paidDays / purchase.totalDays
+                            : 0,
+                        minHeight: 5,
+                        backgroundColor: Colors.white.withOpacity(0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            CustomColors.mainColor),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${purchase.paidDays}/${purchase.totalDays} өдөр',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 9.5,
+                          ),
+                        ),
+                        Text(
+                          '${pct.toStringAsFixed(pct < 10 ? 1 : 0)}%',
+                          style: TextStyle(
+                            color: CustomColors.mainColor,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 30,
+                      width: double.infinity,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: CustomColors.mainColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        purchase.hasPendingCancelRequest
+                            ? 'Дэлгэрэнгүй харах'
+                            : 'Дараагийн төлөлт хийх',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

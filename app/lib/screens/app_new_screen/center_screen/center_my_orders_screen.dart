@@ -18,7 +18,7 @@ class CenterMyOrdersScreen extends StatelessWidget {
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Миний туслалцаа',
+          'Миний дэмжлэг',
           style: TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
@@ -46,7 +46,7 @@ class CenterMyOrdersScreen extends StatelessWidget {
                         Icon(Icons.receipt_long_outlined,
                             color: Colors.white24, size: 48),
                         SizedBox(height: 12),
-                        Text('Туслалцааны захиалга алга.',
+                        Text('Дэмжлэгийн захиалга алга.',
                             style:
                                 TextStyle(color: Colors.white54, fontSize: 13)),
                       ],

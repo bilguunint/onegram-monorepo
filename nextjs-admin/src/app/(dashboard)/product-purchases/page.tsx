@@ -784,9 +784,16 @@ function CancelRequestsPanel({
     useState<InstallmentCancelRequest | null>(null);
   const [rejectTarget, setRejectTarget] =
     useState<InstallmentCancelRequest | null>(null);
+  const [tab, setTab] = useState<"pending" | "approved" | "rejected">(
+    "pending"
+  );
 
   const pending = requests.filter((r) => r.status === "pending");
-  if (pending.length === 0) return null;
+  const approved = requests.filter((r) => r.status === "approved");
+  const rejected = requests.filter((r) => r.status === "rejected");
+  if (requests.length === 0) return null;
+  const shown =
+    tab === "pending" ? pending : tab === "approved" ? approved : rejected;
 
   const confirmApprove = async () => {
     if (!approveTarget || !adminData) return;
@@ -815,13 +822,50 @@ function CancelRequestsPanel({
   };
 
   return (
-    <div className="rounded-xl border border-amber-300/60 bg-amber-50/40 p-4 dark:border-amber-500/30 dark:bg-amber-500/5">
-      <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
-        <AlertTriangle className="h-4 w-4 text-amber-500" />
-        Цуцлах хүсэлтүүд ({pending.length})
-      </h3>
+    <div
+      className={cn(
+        "rounded-xl border p-4",
+        pending.length > 0
+          ? "border-amber-300/60 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/5"
+          : "border-border-light bg-card"
+      )}
+    >
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          Цуцлах хүсэлтүүд
+        </h3>
+        <div className="inline-flex rounded-lg bg-sidebar p-0.5 text-[12px]">
+          {(
+            [
+              { key: "pending", label: `Хүлээгдэж буй (${pending.length})` },
+              { key: "approved", label: `Баталгаажсан (${approved.length})` },
+              { key: "rejected", label: `Татгалзсан (${rejected.length})` },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition-colors",
+                tab === t.key
+                  ? "bg-card font-medium text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {shown.length === 0 && (
+        <div className="py-6 text-center text-[12px] text-muted-foreground">
+          Энэ төлөвтэй хүсэлт алга.
+        </div>
+      )}
       <div className="space-y-2">
-        {pending.map((r) => (
+        {shown.map((r) => (
           <div
             key={r.id}
             className="rounded-lg border border-border-light bg-card p-3"
@@ -834,6 +878,16 @@ function CancelRequestsPanel({
                   </span>
                   {r.user_phone && (
                     <span className="text-muted-foreground">{r.user_phone}</span>
+                  )}
+                  {r.status === "approved" && (
+                    <span className="shrink-0 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                      Баталгаажсан
+                    </span>
+                  )}
+                  {r.status === "rejected" && (
+                    <span className="shrink-0 rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                      Татгалзсан
+                    </span>
                   )}
                 </div>
                 <div className="mt-0.5 text-foreground/80">
@@ -855,23 +909,28 @@ function CancelRequestsPanel({
                   · {r.account_holder}
                 </div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">
-                  {r.created_at
+                  Хүсэлт: {r.created_at
                     ? r.created_at.toDate().toLocaleString("mn-MN")
                     : "—"}
+                  {r.status !== "pending" && r.decided_at
+                    ? ` · Шийдвэр: ${r.decided_at.toDate().toLocaleString("mn-MN")}${r.decided_by_name ? ` (${r.decided_by_name})` : ""}`
+                    : ""}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setRejectTarget(r)}
-                >
-                  Татгалзах
-                </Button>
-                <Button size="sm" onClick={() => setApproveTarget(r)}>
-                  Баталгаажуулах
-                </Button>
-              </div>
+              {r.status === "pending" && (
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setRejectTarget(r)}
+                  >
+                    Татгалзах
+                  </Button>
+                  <Button size="sm" onClick={() => setApproveTarget(r)}>
+                    Баталгаажуулах
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ))}

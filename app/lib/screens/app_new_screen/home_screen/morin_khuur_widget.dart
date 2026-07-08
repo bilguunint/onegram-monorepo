@@ -123,7 +123,7 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
           const Padding(
             padding: EdgeInsets.only(top: 16.0, bottom: 16.0),
             child: Text(
-              'Туслалцааны аян',
+              'Дэмжлэгт аян',
               style: TextStyle(
                 fontFamily: 'InterBold',
                 fontSize: 14.0,
@@ -306,7 +306,7 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
         children: [
           _stat(Icons.workspace_premium_rounded, '$_productCount', 'бараа'),
           const SizedBox(width: 12),
-          _stat(Icons.volunteer_activism_rounded, '$_donorCount', 'туслагч'),
+          _stat(Icons.volunteer_activism_rounded, '$_donorCount', 'дэмжигч'),
         ],
       ),
     );

@@ -79,7 +79,7 @@ class _CenterPaymentScreenState extends State<CenterPaymentScreen> {
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Туслалцааны төлбөр',
+          'Дэмжлэгийн төлбөр',
           style: TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
@@ -366,7 +366,7 @@ class _PaidView extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${formatMNT(amount)} туслалцаа',
+                    '${formatMNT(amount)} дэмжлэг',
                     style: TextStyle(
                       color: CustomColors.mainColor,
                       fontFamily: 'RubikBold',
@@ -376,14 +376,14 @@ class _PaidView extends StatelessWidget {
                   const SizedBox(height: 20),
                   const Text(
                     'Дэлхийн Морин Хуурын Төв Цогцолборыг бүтээн байгуулах эрхэм '
-                    'үйлсэд туслалцаа үзүүлсэн Танд гүн талархал илэрхийлье.',
+                    'үйлсэд дэмжлэг үзүүлсэн Танд гүн талархал илэрхийлье.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         color: Colors.white70, fontSize: 13, height: 1.55),
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Таны сэтгэлийн туслалцаа Монголын өв соёл, морин хуурын аялгууг '
+                    'Таны сэтгэлийн дэмжлэг Монголын өв соёл, морин хуурын аялгууг '
                     'дэлхий дахинд түгээн дэлгэрүүлэх үнэт хувь нэмэр болж байна.',
                     textAlign: TextAlign.center,
                     style: TextStyle(

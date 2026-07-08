@@ -228,7 +228,7 @@ class _Header extends StatelessWidget {
                   const Icon(Icons.volunteer_activism_rounded,
                       size: 13, color: Colors.white54),
                   const SizedBox(width: 5),
-                  Text('${campaign.donorCount} туслагч',
+                  Text('${campaign.donorCount} дэмжигч',
                       style:
                           const TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
@@ -251,7 +251,7 @@ class _Header extends StatelessWidget {
                     const Expanded(
                       child: Text(
                         'Таны худалдан авалт Дэлхийн морин хуурын төв '
-                        'цогцолборын бүтээн байгуулалтад туслалцаа болж нэмэгдэнэ.',
+                        'цогцолборыг бүтээн байгуулах үйл хэрэгт дэмжлэг болно.',
                         style: TextStyle(
                             color: Colors.white70, fontSize: 11.5, height: 1.4),
                       ),
@@ -295,8 +295,8 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   s.hasDonated
-                      ? 'Таны туслалцаа: ${formatMNT(s.donatedAmount)}'
-                      : 'Та хараахан туслалцаа үзүүлээгүй байна',
+                      ? 'Таны дэмжлэг: ${formatMNT(s.donatedAmount)}'
+                      : 'Та хараахан дэмжлэг үзүүлээгүй байна',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -724,7 +724,7 @@ class _DonorsTab extends StatelessWidget {
             Expanded(
               child: donors.isEmpty
                   ? const Center(
-                      child: Text('Туслагч одоогоор алга.',
+                      child: Text('Дэмжигч одоогоор алга.',
                           style:
                               TextStyle(color: Colors.white54, fontSize: 13)),
                     )
@@ -804,7 +804,7 @@ class _DonorsTab extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Та шилдэг $topCount туслагчийн нэг болбол таны нэрийг алтан '
+              'Та шилдэг $topCount дэмжигчийн нэг болбол таны нэрийг алтан '
               'үсгээр сийлэн төв цогцолбортоо мөнхөлнө.',
               style: const TextStyle(
                   color: Colors.white70, fontSize: 12, height: 1.45),
