@@ -293,13 +293,13 @@ export default function ProductPurchasesPage() {
         </div>
       </header>
 
-      {canSeeActions && (
-        <CancelRequestsPanel
-          requests={cancelRequests}
-          adminData={adminData}
-          onChanged={() => void load()}
-        />
-      )}
+      {/* Accountants handle the refund bank transfer, so unlike the row
+          actions below this panel is visible/actionable for them too. */}
+      <CancelRequestsPanel
+        requests={cancelRequests}
+        adminData={adminData}
+        onChanged={() => void load()}
+      />
 
       {!loading && items.length > 0 && (
         <div className="space-y-3">

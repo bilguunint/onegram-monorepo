@@ -144,12 +144,11 @@ class AuthRepository {
       final fcmToken = await messaging.getToken();
       await messaging.subscribeToTopic("all");
       print(fcmToken);
-      if (fcmToken == null) {
-        print('⚠️ FCM token is null, skipping token save');
-        return;
-      }
-      final tokenData = {
-        'fcm_token': fcmToken,
+      // Runs on every app start / login, so last_opened_at doubles as the
+      // "user last opened the app" timestamp (written even without a token).
+      final tokenData = <String, dynamic>{
+        if (fcmToken != null) 'fcm_token': fcmToken,
+        'last_opened_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
       };
       await FirebaseFirestore.instance.collection('users').doc(uid).update(tokenData);
