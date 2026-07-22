@@ -8,6 +8,7 @@ const {
   checkQPayPayment,
   recordCenterDonationPaid,
 } = require("./centerDonationShared");
+const { recordTreeOrderPaid } = require("./treeOrderShared");
 
 const CHECKPOINT_DOC = "system_config/autoVerifyCenterCheckpoint";
 
@@ -94,7 +95,9 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
 
   for (const doc of pendingSnap.docs) {
     const data = doc.data();
-    if (data.type !== "center_donation") continue;
+    if (data.type !== "center_donation" && data.type !== "tree_order") {
+      continue;
+    }
 
     checked++;
 
@@ -119,14 +122,23 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
         continue;
       }
 
-      const { donationId } = await recordCenterDonationPaid(db, doc.ref, data);
+      if (data.type === "tree_order") {
+        const { orderId } = await recordTreeOrderPaid(db, doc.ref, data);
+        logger.info("AutoVerifyCenter: tree order credited", {
+          docId: doc.id,
+          invoiceId,
+          tree_order_id: orderId,
+        });
+      } else {
+        const { donationId } = await recordCenterDonationPaid(db, doc.ref, data);
+        logger.info("AutoVerifyCenter: donation credited", {
+          docId: doc.id,
+          invoiceId,
+          donation_id: donationId,
+        });
+      }
       autoVerified++;
       autoVerifiedIds.push(doc.id);
-      logger.info("AutoVerifyCenter: donation credited", {
-        docId: doc.id,
-        invoiceId,
-        donation_id: donationId,
-      });
 
       // Gentle pacing against QPay rate limits.
       await new Promise((resolve) => setTimeout(resolve, 200));

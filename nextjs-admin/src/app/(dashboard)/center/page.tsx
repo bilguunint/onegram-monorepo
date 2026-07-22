@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Target,
   Trash2,
+  TreePine,
   Trophy,
   Users,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ImageGalleryInput } from "@/components/products/ImageGalleryInput";
 import { CenterProductDialog } from "@/components/center/CenterProductDialog";
+import { CenterTreeDialog } from "@/components/center/CenterTreeDialog";
 import { formatPriceMNT } from "@/lib/products";
 import {
   fetchCampaign,
@@ -39,17 +41,24 @@ import {
   setCenterProductStatus,
   deleteCenterProduct,
   markDonationDelivered,
+  fetchCenterTrees,
+  fetchTreeOrders,
+  setCenterTreeStatus,
+  deleteCenterTree,
+  markTreePlanted,
   computeCenterStats,
   type CenterCampaign,
   type CenterProduct,
   type CenterDonation,
+  type CenterTreeOrder,
 } from "@/lib/firestore/center";
 
-type Tab = "overview" | "orders" | "products" | "gallery" | "settings";
+type Tab = "overview" | "orders" | "products" | "trees" | "gallery" | "settings";
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Тойм" },
   { key: "orders", label: "Захиалгууд" },
   { key: "products", label: "Бараа" },
+  { key: "trees", label: "Мод" },
   { key: "gallery", label: "Зургийн цомог" },
   { key: "settings", label: "Тохиргоо" },
 ];
@@ -68,6 +77,8 @@ export default function CenterPage() {
   const [campaign, setCampaign] = useState<CenterCampaign | null>(null);
   const [products, setProducts] = useState<CenterProduct[]>([]);
   const [donations, setDonations] = useState<CenterDonation[]>([]);
+  const [trees, setTrees] = useState<CenterProduct[]>([]);
+  const [treeOrders, setTreeOrders] = useState<CenterTreeOrder[]>([]);
 
   const [productDialog, setProductDialog] = useState<{ open: boolean; product: CenterProduct | null }>({
     open: false,
@@ -78,14 +89,18 @@ export default function CenterPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, p, d] = await Promise.all([
+      const [c, p, d, t, to] = await Promise.all([
         fetchCampaign(),
         fetchCenterProducts(),
         fetchCenterDonations(),
+        fetchCenterTrees(),
+        fetchTreeOrders(),
       ]);
       setCampaign(c);
       setProducts(p);
       setDonations(d);
+      setTrees(t);
+      setTreeOrders(to);
     } catch (err) {
       console.error(err);
       toast.error("Ачааллахад алдаа гарлаа.");
@@ -222,6 +237,10 @@ export default function CenterPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {tab === "trees" && (
+            <TreesTab trees={trees} orders={treeOrders} onReload={() => void load()} />
           )}
 
           {tab === "gallery" && <GalleryTab campaign={campaign} onSaved={() => void load()} />}
@@ -737,6 +756,192 @@ function SettingsTab({
           Хадгалах
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Мод тарих — trees CRUD + planting orders (label engraving) management.
+function TreesTab({
+  trees,
+  orders,
+  onReload,
+}: {
+  trees: CenterProduct[];
+  orders: CenterTreeOrder[];
+  onReload: () => void;
+}) {
+  const { adminData } = useAuth();
+  const [dialog, setDialog] = useState<{ open: boolean; tree: CenterProduct | null }>({
+    open: false,
+    tree: null,
+  });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [plantTarget, setPlantTarget] = useState<CenterTreeOrder | null>(null);
+
+  const toggleTree = async (t: CenterProduct) => {
+    await setCenterTreeStatus(t.id, t.status === "active" ? "inactive" : "active");
+    onReload();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteCenterTree(deleteTarget.id);
+      toast.success("Устгагдлаа.");
+      setDeleteTarget(null);
+      onReload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Устгахад алдаа гарлаа.");
+    }
+  };
+
+  const confirmPlanted = async () => {
+    if (!plantTarget || !adminData) return;
+    try {
+      await markTreePlanted(plantTarget.id, {
+        uid: adminData.uid,
+        name: adminData.name,
+      });
+      toast.success("Тарьсан гэж тэмдэглэлээ.");
+      setPlantTarget(null);
+      onReload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Алдаа гарлаа.");
+    }
+  };
+
+  const totalTreeAmount = orders
+    .filter((o) => o.status === "completed")
+    .reduce((s, o) => s + o.amount, 0);
+  const totalTreeQty = orders
+    .filter((o) => o.status === "completed")
+    .reduce((s, o) => s + o.qty, 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Trees CRUD */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-[13px] text-muted-foreground">
+            Модны төрөл: <span className="font-medium text-foreground">{trees.length}</span>
+          </div>
+          <Button size="sm" onClick={() => setDialog({ open: true, tree: null })}>
+            <Plus className="h-3.5 w-3.5" />
+            Шинэ мод
+          </Button>
+        </div>
+        {trees.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border-light py-10 text-center text-[13px] text-muted-foreground">
+            <TreePine className="mx-auto mb-2 h-6 w-6 text-muted-foreground/60" />
+            Мод бүртгэгдээгүй байна.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {trees.map((t) => (
+              <ItemRow
+                key={t.id}
+                image={t.images[0] ?? null}
+                name={t.name}
+                meta={`${formatPriceMNT(t.price)} · ${stockLabel(t.stock)} · ${t.sold_count} захиалагдсан`}
+                active={t.status === "active"}
+                onEdit={() => setDialog({ open: true, tree: t })}
+                onToggle={() => void toggleTree(t)}
+                onDelete={() => setDeleteTarget({ id: t.id, name: t.name })}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tree orders */}
+      <div className="space-y-3">
+        <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+          <TreePine className="h-4 w-4 text-emerald-600" />
+          Модны захиалгууд ({orders.length}) · {totalTreeQty} мод ·{" "}
+          {formatPriceMNT(totalTreeAmount)}
+        </h3>
+        {orders.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border-light py-10 text-center text-[13px] text-muted-foreground">
+            Захиалга одоогоор алга.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {orders.map((o) => {
+              const planted = o.planting_status === "planted";
+              return (
+                <div key={o.id} className="rounded-xl border border-border-light bg-card p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-emerald-100 px-2 py-0.5 font-mono text-[12px] font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
+                          «{o.label_name || "—"}»
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium",
+                            planted
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                          )}
+                        >
+                          {planted ? "Тарьсан" : "Тарих хүлээгдэж буй"}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-[12px] text-foreground/80">
+                        {o.tree_name}
+                        {o.qty > 1 ? ` ×${o.qty}` : ""} · {o.buyer_name || o.buyer_uid}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {o.created_at ? o.created_at.toDate().toLocaleString("mn-MN") : "—"}
+                        {planted && o.planted_by_name ? ` · Тарьсан: ${o.planted_by_name}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="text-[14px] font-semibold tabular-nums text-primary-600">
+                        {formatPriceMNT(o.amount)}
+                      </div>
+                      {!planted && (
+                        <Button size="sm" variant="outline" onClick={() => setPlantTarget(o)}>
+                          Тарьсан
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <CenterTreeDialog
+        open={dialog.open}
+        tree={dialog.tree}
+        onOpenChange={(o) => setDialog((s) => ({ ...s, open: o }))}
+        onSaved={onReload}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Устгах уу?"
+        description={deleteTarget ? `"${deleteTarget.name}"-г устгах уу? Энэ үйлдлийг буцаах боломжгүй.` : ""}
+        confirmLabel="Устгах"
+        destructive
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
+      <ConfirmDialog
+        open={!!plantTarget}
+        title="Мод тарьсан гэж тэмдэглэх"
+        description={
+          plantTarget
+            ? `«${plantTarget.label_name}» шошготой ${plantTarget.tree_name}${plantTarget.qty > 1 ? ` ×${plantTarget.qty}` : ""}-г таригдсан гэж тэмдэглэх үү?`
+            : ""
+        }
+        confirmLabel="Тарьсан"
+        onOpenChange={(o) => !o && setPlantTarget(null)}
+        onConfirm={() => void confirmPlanted()}
+      />
     </div>
   );
 }

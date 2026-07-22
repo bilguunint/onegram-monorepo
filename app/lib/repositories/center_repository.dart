@@ -42,6 +42,15 @@ class CenterRepository {
         .map((s) => s.docs.map(CenterProductItem.fromDoc).toList());
   }
 
+  /// Active trees for the planting campaign (same shape as products).
+  Stream<List<CenterProductItem>> watchActiveTrees() {
+    return _db
+        .collection('center_trees')
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((s) => s.docs.map(CenterProductItem.fromDoc).toList());
+  }
+
   /// Public donor-wall leaderboard, highest cumulative first.
   Stream<List<CenterTopDonor>> watchTopDonors({int limit = 99}) {
     return _db
@@ -122,6 +131,50 @@ class CenterRepository {
     } catch (_) {}
     return CenterUserHeaderStat(
         name: name, donatedAmount: myAmount, rank: rank);
+  }
+
+  static const _createTreeOrderUrl =
+      'https://asia-northeast1-grammgold.cloudfunctions.net/createTreeOrder';
+
+  /// Builds a QPay invoice for a tree-planting order (label engraved with
+  /// [labelName]). Throws on failure.
+  Future<CenterCheckout> createTreeOrder({
+    required String treeId,
+    required int qty,
+    required String labelName,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('Нэвтрэх шаардлагатай.');
+    }
+    final idToken = await user.getIdToken();
+
+    final res = await http.post(
+      Uri.parse(_createTreeOrderUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: jsonEncode({
+        'tree_id': treeId,
+        'qty': qty,
+        'label_name': labelName,
+      }),
+    );
+
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw Exception(
+          body['error']?.toString() ?? 'Захиалга үүсгэхэд алдаа гарлаа.');
+    }
+
+    final invoice =
+        MakeOrder.fromJson(body['qpay_invoice'] as Map<String, dynamic>);
+    return CenterCheckout(
+      pendingId: body['pending_id'] as String,
+      amount: (body['amount'] as num).toInt(),
+      invoice: invoice,
+    );
   }
 
   /// Builds a QPay invoice for the cart total. Throws on failure.

@@ -5,6 +5,7 @@ import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_orders_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -35,7 +36,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         backgroundColor: CustomColors.darkContainerColor,
         appBar: AppBar(
@@ -102,6 +103,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
                         fontSize: 12,
                       ),
                       tabs: [
+                        const Tab(text: 'Мод тарих'),
                         const Tab(text: 'Бүтээгдэхүүн'),
                         const Tab(text: 'Төслийн тухай'),
                         Tab(text: 'Шилдэг ${campaign.topCount}'),
@@ -112,6 +114,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
               ],
               body: TabBarView(
                 children: [
+                  _TreesTab(repo: repo),
                   _ProductsTab(repo: repo),
                   _AboutTab(campaign: campaign),
                   _DonorsTab(repo: repo, topCount: campaign.topCount),
@@ -867,6 +870,229 @@ class _GalleryViewer extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+/// "Мод тарих" — tree-planting storefront with a forest vibe. Each tree is
+/// ordered with a plaque name via [TreeOrderScreen].
+class _TreesTab extends StatelessWidget {
+  final CenterRepository repo;
+  const _TreesTab({required this.repo});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<CenterProductItem>>(
+      stream: repo.watchActiveTrees(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white24),
+          );
+        }
+        final trees = snapshot.data!;
+        return ListView(
+          padding: const EdgeInsets.all(12),
+          children: [
+            // Forest intro banner.
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    kForestGreen.withOpacity(0.25),
+                    kForestGreen.withOpacity(0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: kForestGreen.withOpacity(0.45)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.forest_rounded, size: 30, color: kLeafGreen),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Мод тарьж, ногоон өв үлдээгээрэй',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'InterBold',
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Таны тарьсан мод цогцолборын хотхонд ургаж, '
+                          'шошгон дээр таны нэр мөнхөрнө.',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11.5,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (trees.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: Center(
+                  child: Text('Мод удахгүй нэмэгдэнэ.',
+                      style: TextStyle(color: Colors.white54, fontSize: 13)),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.62,
+                ),
+                itemCount: trees.length,
+                itemBuilder: (context, i) => _TreeGridCard(tree: trees[i]),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TreeGridCard extends StatelessWidget {
+  final CenterProductItem tree;
+  const _TreeGridCard({required this.tree});
+
+  @override
+  Widget build(BuildContext context) {
+    final cover = tree.coverImage;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kForestGreen.withOpacity(0.35)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              color: const Color(0xFF223022),
+              child: cover != null
+                  ? Image.network(
+                      cover,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                              ? child
+                              : const Center(
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                ),
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.forest_rounded,
+                            color: kLeafGreen, size: 34),
+                      ),
+                    )
+                  : const Center(
+                      child: Icon(Icons.forest_rounded,
+                          color: kLeafGreen, size: 34),
+                    ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tree.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formatMNT(tree.price),
+                  style: const TextStyle(
+                    color: kLeafGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: tree.inStock
+                      ? () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TreeOrderScreen(tree: tree),
+                            ),
+                          );
+                        }
+                      : null,
+                  child: Container(
+                    height: 32,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: tree.inStock
+                          ? const LinearGradient(
+                              colors: [kForestGreen, kLeafGreen])
+                          : null,
+                      color:
+                          tree.inStock ? null : Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.park_rounded,
+                            size: 15,
+                            color:
+                                tree.inStock ? Colors.white : Colors.white38),
+                        const SizedBox(width: 5),
+                        Text(
+                          tree.inStock ? 'Мод тарих' : 'Дууссан',
+                          style: TextStyle(
+                              color:
+                                  tree.inStock ? Colors.white : Colors.white38,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

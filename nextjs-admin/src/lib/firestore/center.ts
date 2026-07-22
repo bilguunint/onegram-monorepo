@@ -236,6 +236,129 @@ export async function deleteCenterProduct(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Trees (мод тарих) — same shape as products, stored in `center_trees`.
+// ---------------------------------------------------------------------------
+export function newCenterTreeRef() {
+  return doc(collection(getDb(), "center_trees"));
+}
+
+export async function fetchCenterTrees(): Promise<CenterProduct[]> {
+  const snap = await getDocs(
+    query(collection(getDb(), "center_trees"), orderBy("created_at", "desc"))
+  );
+  return snap.docs.map((d) => mapProduct(d.id, d.data()));
+}
+
+export async function createCenterTree(
+  id: string,
+  draft: CenterProductDraft
+): Promise<void> {
+  const uid = adminUid();
+  await setDoc(doc(getDb(), "center_trees", id), {
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    images: draft.images,
+    price: Math.round(draft.price),
+    stock: draft.stock,
+    status: draft.status,
+    sold_count: 0,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+    created_by: uid,
+  });
+}
+
+export async function updateCenterTree(
+  id: string,
+  draft: CenterProductDraft
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_trees", id), {
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    images: draft.images,
+    price: Math.round(draft.price),
+    stock: draft.stock,
+    status: draft.status,
+    updated_at: serverTimestamp(),
+  });
+}
+
+export async function setCenterTreeStatus(
+  id: string,
+  status: CenterItemStatus
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_trees", id), {
+    status,
+    updated_at: serverTimestamp(),
+  });
+}
+
+export async function deleteCenterTree(id: string): Promise<void> {
+  await deleteDoc(doc(getDb(), "center_trees", id));
+}
+
+// ---------------------------------------------------------------------------
+// Tree-planting orders (`center_tree_orders`, written by Cloud Functions).
+// ---------------------------------------------------------------------------
+export type CenterTreeOrder = {
+  id: string;
+  buyer_uid: string;
+  buyer_name: string;
+  tree_name: string;
+  label_name: string;
+  qty: number;
+  amount: number;
+  status: string;
+  planting_status: "pending" | "planted" | string;
+  planted_by_name: string;
+  planted_at: Timestamp | null;
+  created_at: Timestamp | null;
+};
+
+export async function fetchTreeOrders(): Promise<CenterTreeOrder[]> {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(getDb(), "center_tree_orders"),
+        orderBy("created_at", "desc")
+      )
+    );
+    return snap.docs.map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        buyer_uid: String(x.buyer_uid ?? ""),
+        buyer_name: String(x.buyer_name ?? ""),
+        tree_name: String(x.tree_name ?? ""),
+        label_name: String(x.label_name ?? ""),
+        qty: Number(x.qty ?? 1),
+        amount: Number(x.amount ?? 0),
+        status: String(x.status ?? "pending"),
+        planting_status: String(x.planting_status ?? "pending"),
+        planted_by_name: String(x.planted_by_name ?? ""),
+        planted_at: x.planted_at ?? null,
+        created_at: x.created_at ?? null,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Admin marks a tree order as physically planted (шошготойгоо). */
+export async function markTreePlanted(
+  id: string,
+  admin: { uid: string; name: string }
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_tree_orders", id), {
+    planting_status: "planted",
+    planted_at: serverTimestamp(),
+    planted_by: admin.uid,
+    planted_by_name: admin.name,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Donations + stats (top donors, total raised)
 // ---------------------------------------------------------------------------
 function mapDonation(id: string, raw: DocumentData): CenterDonation {
