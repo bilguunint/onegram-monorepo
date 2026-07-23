@@ -236,31 +236,72 @@ export async function deleteCenterProduct(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Trees (мод тарих) — same shape as products, stored in `center_trees`.
+// Trees (мод тарих) — product shape + botanical fields, in `center_trees`.
+// Categories (Шилмүүст мод, Навчит мод…) live in `center_tree_categories`.
 // ---------------------------------------------------------------------------
+export type CenterTreeCategory = {
+  id: string;
+  name: string;
+  order: number; // display order in the app (ascending)
+};
+
+export type CenterTree = CenterProduct & {
+  category_id: string | null;
+  mature_height: string; // Нас бие хүрсэн өндөр, e.g. "20–35 м"
+  lifespan: string; // Насжилт, e.g. "300–500 жил"
+  features: string; // Онцлог
+};
+
+export type CenterTreeDraft = CenterProductDraft & {
+  category_id: string | null;
+  mature_height: string;
+  lifespan: string;
+  features: string;
+};
+
+function mapTree(id: string, raw: DocumentData): CenterTree {
+  return {
+    ...mapProduct(id, raw),
+    category_id: raw.category_id == null ? null : String(raw.category_id),
+    mature_height: String(raw.mature_height ?? ""),
+    lifespan: String(raw.lifespan ?? ""),
+    features: String(raw.features ?? ""),
+  };
+}
+
 export function newCenterTreeRef() {
   return doc(collection(getDb(), "center_trees"));
 }
 
-export async function fetchCenterTrees(): Promise<CenterProduct[]> {
+export async function fetchCenterTrees(): Promise<CenterTree[]> {
   const snap = await getDocs(
     query(collection(getDb(), "center_trees"), orderBy("created_at", "desc"))
   );
-  return snap.docs.map((d) => mapProduct(d.id, d.data()));
+  return snap.docs.map((d) => mapTree(d.id, d.data()));
 }
 
-export async function createCenterTree(
-  id: string,
-  draft: CenterProductDraft
-): Promise<void> {
-  const uid = adminUid();
-  await setDoc(doc(getDb(), "center_trees", id), {
+function treeDraftData(draft: CenterTreeDraft) {
+  return {
     name: draft.name.trim(),
     description: draft.description.trim(),
     images: draft.images,
     price: Math.round(draft.price),
-    stock: draft.stock,
     status: draft.status,
+    category_id: draft.category_id,
+    mature_height: draft.mature_height.trim(),
+    lifespan: draft.lifespan.trim(),
+    features: draft.features.trim(),
+  };
+}
+
+export async function createCenterTree(
+  id: string,
+  draft: CenterTreeDraft
+): Promise<void> {
+  const uid = adminUid();
+  await setDoc(doc(getDb(), "center_trees", id), {
+    ...treeDraftData(draft),
+    stock: draft.stock,
     sold_count: 0,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
@@ -268,19 +309,68 @@ export async function createCenterTree(
   });
 }
 
+/**
+ * Cloud Functions decrement `stock` as trees sell, so an edit form loaded
+ * minutes ago holds a stale value. Only write stock back when the admin
+ * actually changed it (`stockChanged`), otherwise leave the live count alone.
+ */
 export async function updateCenterTree(
   id: string,
-  draft: CenterProductDraft
+  draft: CenterTreeDraft,
+  opts: { stockChanged: boolean } = { stockChanged: true }
 ): Promise<void> {
   await updateDoc(doc(getDb(), "center_trees", id), {
-    name: draft.name.trim(),
-    description: draft.description.trim(),
-    images: draft.images,
-    price: Math.round(draft.price),
-    stock: draft.stock,
-    status: draft.status,
+    ...treeDraftData(draft),
+    ...(opts.stockChanged ? { stock: draft.stock } : {}),
     updated_at: serverTimestamp(),
   });
+}
+
+export async function fetchTreeCategories(): Promise<CenterTreeCategory[]> {
+  try {
+    const snap = await getDocs(collection(getDb(), "center_tree_categories"));
+    return snap.docs
+      .map((d) => {
+        const x = d.data();
+        return {
+          id: d.id,
+          name: String(x.name ?? ""),
+          order: Number(x.order ?? 0),
+        };
+      })
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+}
+
+export async function createTreeCategory(
+  name: string,
+  order: number
+): Promise<void> {
+  const uid = adminUid();
+  await setDoc(doc(collection(getDb(), "center_tree_categories")), {
+    name: name.trim(),
+    order: Math.round(order),
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+    created_by: uid,
+  });
+}
+
+export async function updateTreeCategory(
+  id: string,
+  data: { name: string; order: number }
+): Promise<void> {
+  await updateDoc(doc(getDb(), "center_tree_categories", id), {
+    name: data.name.trim(),
+    order: Math.round(data.order),
+    updated_at: serverTimestamp(),
+  });
+}
+
+export async function deleteTreeCategory(id: string): Promise<void> {
+  await deleteDoc(doc(getDb(), "center_tree_categories", id));
 }
 
 export async function setCenterTreeStatus(
@@ -422,13 +512,39 @@ export type CenterStats = {
   topDonors: TopDonor[];
 };
 
+/**
+ * Campaign totals. Tree-planting orders count toward the same campaign as
+ * product donations (the Cloud Function credits both into
+ * `center_campaign/main.total_raised`), so they must be included here or the
+ * admin dashboard under-reports what the app shows users.
+ */
 export function computeCenterStats(
   donations: CenterDonation[],
-  topCount = 99
+  topCount = 99,
+  treeOrders: CenterTreeOrder[] = []
 ): CenterStats {
   const byBuyer = new Map<string, TopDonor>();
   let totalRaised = 0;
   let donationCount = 0;
+
+  for (const t of treeOrders) {
+    if (t.status !== "completed") continue;
+    totalRaised += t.amount;
+    donationCount += 1;
+    const at = t.created_at?.toMillis?.() ?? Number.MAX_SAFE_INTEGER;
+    const entry = byBuyer.get(t.buyer_uid) ?? {
+      buyer_uid: t.buyer_uid,
+      engrave_name: t.buyer_name,
+      anonymous: false,
+      amount: 0,
+      count: 0,
+      first_at: at,
+    };
+    entry.amount += t.amount;
+    entry.count += 1;
+    entry.first_at = Math.min(entry.first_at, at);
+    byBuyer.set(t.buyer_uid, entry);
+  }
 
   for (const d of donations) {
     if (d.status !== "completed") continue;

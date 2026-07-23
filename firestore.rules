@@ -126,6 +126,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if isAdmin();
     }
+    // Tree categories (Шилмүүст, Навчит, Гоёлын бут сөөг…): admin manages.
+    match /center_tree_categories/{categoryId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
     // Tree-planting orders: created only by Cloud Functions (QPay callback);
     // buyer reads their own; admins review + mark planted.
     match /center_tree_orders/{orderId} {

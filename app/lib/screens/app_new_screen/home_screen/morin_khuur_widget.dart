@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:rainbow_edge_lighting/rainbow_edge_lighting.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lease_gold_widget.dart';
-import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// Users for whom the donation campaign is hidden (they see the loan service).
 const Set<String> _kHiddenCampaignUids = {'user_3380'};
+
+/// Leaf-green accent for the planted-tree stat.
+const Color _kTreeGreen = Color(0xFF66BB6A);
 
 /// Burning-fire palette for the animated card edge (loops seamlessly).
 const List<Color> _kFireColors = [
@@ -27,8 +29,8 @@ const List<Color> _kFireColors = [
 ///
 /// While loading or when no campaign is `active`, it transparently renders the
 /// original [LeaseGoldWidget] (the loan service), so the slot is never empty.
-/// When a campaign is active it shows the campaign cover with title, progress,
-/// product count and donor count.
+/// When a campaign is active it shows the campaign cover with title, the total
+/// raised, the number of trees planted and the donor count.
 class MorinKhuurWidget extends StatefulWidget {
   const MorinKhuurWidget({super.key});
 
@@ -42,10 +44,8 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
 
   String _name = '';
   String? _coverImage;
-  num _targetAmount = 0;
-  num _totalRaised = 0;
   int _donorCount = 0;
-  int _productCount = 0;
+  int _treeCount = 0;
 
   @override
   void initState() {
@@ -73,25 +73,13 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
         return;
       }
 
-      int productCount = 0;
-      try {
-        final agg = await FirebaseFirestore.instance
-            .collection('center_products')
-            .where('status', isEqualTo: 'active')
-            .count()
-            .get();
-        productCount = agg.count ?? 0;
-      } catch (_) {}
-
       if (!mounted) return;
       setState(() {
         _name =
             (data['name'] as String?) ?? 'Дэлхийн морин хуурын төв цогцолбор';
         _coverImage = data['cover_image'] as String?;
-        _targetAmount = (data['target_amount'] as num?) ?? 0;
-        _totalRaised = (data['total_raised'] as num?) ?? 0;
         _donorCount = (data['donor_count'] as num?)?.toInt() ?? 0;
-        _productCount = productCount;
+        _treeCount = (data['tree_count'] as num?)?.toInt() ?? 0;
         _active = true;
         _loading = false;
       });
@@ -111,9 +99,6 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
     }
 
     final double cardWidth = MediaQuery.of(context).size.width / 2 - 24;
-    final double percent = _targetAmount > 0
-        ? (_totalRaised / _targetAmount * 100).clamp(0, 100).toDouble()
-        : 0;
 
     return Padding(
       padding: const EdgeInsets.only(left: 16),
@@ -205,8 +190,6 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          _progress(percent),
-                          const SizedBox(height: 8),
                           _stats(),
                         ],
                       ),
@@ -260,43 +243,6 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
     );
   }
 
-  Widget _progress(double percent) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          formatMNT(_totalRaised),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: CustomColors.mainColor,
-            fontFamily: 'RubikBold',
-            fontSize: 10.5,
-          ),
-        ),
-        const SizedBox(height: 5),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: percent / 100,
-            minHeight: 5,
-            backgroundColor: Colors.white.withOpacity(0.22),
-            valueColor: AlwaysStoppedAnimation<Color>(CustomColors.mainColor),
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          '${percent.toStringAsFixed(percent < 10 ? 1 : 0)}% биелсэн',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 9.0,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _stats() {
     return FittedBox(
       fit: BoxFit.scaleDown,
@@ -304,7 +250,8 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _stat(Icons.workspace_premium_rounded, '$_productCount', 'бараа'),
+          _stat(Icons.park_rounded, '$_treeCount', 'мод',
+              iconColor: _kTreeGreen),
           const SizedBox(width: 12),
           _stat(Icons.volunteer_activism_rounded, '$_donorCount', 'дэмжигч'),
         ],
@@ -312,11 +259,11 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
     );
   }
 
-  Widget _stat(IconData icon, String value, String label) {
+  Widget _stat(IconData icon, String value, String label, {Color? iconColor}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: CustomColors.mainColor),
+        Icon(icon, size: 12, color: iconColor ?? CustomColors.mainColor),
         const SizedBox(width: 4),
         Text(
           value,

@@ -43,6 +43,10 @@ import {
   markDonationDelivered,
   fetchCenterTrees,
   fetchTreeOrders,
+  fetchTreeCategories,
+  createTreeCategory,
+  updateTreeCategory,
+  deleteTreeCategory,
   setCenterTreeStatus,
   deleteCenterTree,
   markTreePlanted,
@@ -50,8 +54,17 @@ import {
   type CenterCampaign,
   type CenterProduct,
   type CenterDonation,
+  type CenterTree,
+  type CenterTreeCategory,
   type CenterTreeOrder,
 } from "@/lib/firestore/center";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Tab = "overview" | "orders" | "products" | "trees" | "gallery" | "settings";
 const TABS: { key: Tab; label: string }[] = [
@@ -77,8 +90,9 @@ export default function CenterPage() {
   const [campaign, setCampaign] = useState<CenterCampaign | null>(null);
   const [products, setProducts] = useState<CenterProduct[]>([]);
   const [donations, setDonations] = useState<CenterDonation[]>([]);
-  const [trees, setTrees] = useState<CenterProduct[]>([]);
+  const [trees, setTrees] = useState<CenterTree[]>([]);
   const [treeOrders, setTreeOrders] = useState<CenterTreeOrder[]>([]);
+  const [treeCategories, setTreeCategories] = useState<CenterTreeCategory[]>([]);
 
   const [productDialog, setProductDialog] = useState<{ open: boolean; product: CenterProduct | null }>({
     open: false,
@@ -89,18 +103,20 @@ export default function CenterPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, p, d, t, to] = await Promise.all([
+      const [c, p, d, t, to, tc] = await Promise.all([
         fetchCampaign(),
         fetchCenterProducts(),
         fetchCenterDonations(),
         fetchCenterTrees(),
         fetchTreeOrders(),
+        fetchTreeCategories(),
       ]);
       setCampaign(c);
       setProducts(p);
       setDonations(d);
       setTrees(t);
       setTreeOrders(to);
+      setTreeCategories(tc);
     } catch (err) {
       console.error(err);
       toast.error("Ачааллахад алдаа гарлаа.");
@@ -114,8 +130,8 @@ export default function CenterPage() {
   }, [load]);
 
   const stats = useMemo(
-    () => computeCenterStats(donations, campaign?.top_count ?? 99),
-    [donations, campaign?.top_count]
+    () => computeCenterStats(donations, campaign?.top_count ?? 99, treeOrders),
+    [donations, campaign?.top_count, treeOrders]
   );
   const progress =
     campaign && campaign.target_amount > 0
@@ -240,7 +256,12 @@ export default function CenterPage() {
           )}
 
           {tab === "trees" && (
-            <TreesTab trees={trees} orders={treeOrders} onReload={() => void load()} />
+            <TreesTab
+              trees={trees}
+              orders={treeOrders}
+              categories={treeCategories}
+              onReload={() => void load()}
+            />
           )}
 
           {tab === "gallery" && <GalleryTab campaign={campaign} onSaved={() => void load()} />}
@@ -765,23 +786,45 @@ function SettingsTab({
 function TreesTab({
   trees,
   orders,
+  categories,
   onReload,
 }: {
-  trees: CenterProduct[];
+  trees: CenterTree[];
   orders: CenterTreeOrder[];
+  categories: CenterTreeCategory[];
   onReload: () => void;
 }) {
   const { adminData } = useAuth();
-  const [dialog, setDialog] = useState<{ open: boolean; tree: CenterProduct | null }>({
+  const [dialog, setDialog] = useState<{ open: boolean; tree: CenterTree | null }>({
     open: false,
     tree: null,
   });
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [plantTarget, setPlantTarget] = useState<CenterTreeOrder | null>(null);
+  const [catDialog, setCatDialog] = useState<{
+    open: boolean;
+    category: CenterTreeCategory | null;
+  }>({ open: false, category: null });
+  const [catDelete, setCatDelete] = useState<CenterTreeCategory | null>(null);
 
-  const toggleTree = async (t: CenterProduct) => {
+  const catName = (id: string | null) =>
+    categories.find((c) => c.id === id)?.name ?? "Ангилалгүй";
+
+  const toggleTree = async (t: CenterTree) => {
     await setCenterTreeStatus(t.id, t.status === "active" ? "inactive" : "active");
     onReload();
+  };
+
+  const confirmCatDelete = async () => {
+    if (!catDelete) return;
+    try {
+      await deleteTreeCategory(catDelete.id);
+      toast.success("Ангилал устгагдлаа.");
+      setCatDelete(null);
+      onReload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Устгахад алдаа гарлаа.");
+    }
   };
 
   const confirmDelete = async () => {
@@ -820,6 +863,57 @@ function TreesTab({
 
   return (
     <div className="space-y-5">
+      {/* Category management */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold text-foreground">
+            Ангилал ({categories.length})
+          </h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCatDialog({ open: true, category: null })}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Шинэ ангилал
+          </Button>
+        </div>
+        {categories.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border-light py-6 text-center text-[13px] text-muted-foreground">
+            Ангилал бүртгэгдээгүй байна.
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {categories.map((c) => {
+              const count = trees.filter((t) => t.category_id === c.id).length;
+              return (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-1.5 rounded-lg border border-border-light bg-card px-2.5 py-1.5 text-[12.5px]"
+                >
+                  <span className="font-medium text-foreground">{c.name}</span>
+                  <span className="text-muted-foreground">({count})</span>
+                  <button
+                    type="button"
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setCatDialog({ open: true, category: c })}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-red-600"
+                    onClick={() => setCatDelete(c)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Trees CRUD */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -843,7 +937,7 @@ function TreesTab({
                 key={t.id}
                 image={t.images[0] ?? null}
                 name={t.name}
-                meta={`${formatPriceMNT(t.price)} · ${stockLabel(t.stock)} · ${t.sold_count} захиалагдсан`}
+                meta={`${catName(t.category_id)} · ${formatPriceMNT(t.price)} · ${stockLabel(t.stock)} · ${t.sold_count} захиалагдсан`}
                 active={t.status === "active"}
                 onEdit={() => setDialog({ open: true, tree: t })}
                 onToggle={() => void toggleTree(t)}
@@ -918,8 +1012,37 @@ function TreesTab({
       <CenterTreeDialog
         open={dialog.open}
         tree={dialog.tree}
+        categories={categories}
         onOpenChange={(o) => setDialog((s) => ({ ...s, open: o }))}
         onSaved={onReload}
+      />
+      <TreeCategoryDialog
+        open={catDialog.open}
+        category={catDialog.category}
+        nextOrder={
+          categories.length > 0
+            ? Math.max(...categories.map((c) => c.order)) + 1
+            : 1
+        }
+        onOpenChange={(o) => setCatDialog((s) => ({ ...s, open: o }))}
+        onSaved={onReload}
+      />
+      <ConfirmDialog
+        open={!!catDelete}
+        title="Ангилал устгах уу?"
+        description={
+          catDelete
+            ? `"${catDelete.name}" ангилалыг устгах уу?${
+                trees.some((t) => t.category_id === catDelete.id)
+                  ? ` Энэ ангилалд ${trees.filter((t) => t.category_id === catDelete.id).length} мод байна — устгавал тэдгээр нь ангилалгүй болно.`
+                  : ""
+              }`
+            : ""
+        }
+        confirmLabel="Устгах"
+        destructive
+        onOpenChange={(o) => !o && setCatDelete(null)}
+        onConfirm={() => void confirmCatDelete()}
       />
       <ConfirmDialog
         open={!!deleteTarget}
@@ -943,5 +1066,110 @@ function TreesTab({
         onConfirm={() => void confirmPlanted()}
       />
     </div>
+  );
+}
+
+function TreeCategoryDialog({
+  open,
+  category,
+  nextOrder,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean;
+  category: CenterTreeCategory | null; // null = create
+  nextOrder: number;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{category ? "Ангилал засах" : "Шинэ ангилал"}</DialogTitle>
+        </DialogHeader>
+        {open && (
+          <TreeCategoryBody
+            key={category?.id ?? "new"}
+            category={category}
+            nextOrder={nextOrder}
+            onCancel={() => onOpenChange(false)}
+            onSaved={() => {
+              onOpenChange(false);
+              onSaved();
+            }}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TreeCategoryBody({
+  category,
+  nextOrder,
+  onCancel,
+  onSaved,
+}: {
+  category: CenterTreeCategory | null;
+  nextOrder: number;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(category?.name ?? "");
+  const [order, setOrder] = useState(
+    category ? String(category.order) : String(nextOrder)
+  );
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    const orderNum = Number(order);
+    if (!name.trim()) return toast.error("Нэр оруулна уу.");
+    if (!Number.isFinite(orderNum)) return toast.error("Эрэмбэ зөв оруулна уу.");
+    setSaving(true);
+    try {
+      if (category) await updateTreeCategory(category.id, { name, order: orderNum });
+      else await createTreeCategory(name, orderNum);
+      toast.success("Хадгалагдлаа.");
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Хадгалахад алдаа гарлаа.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="tc-name">Ангилалын нэр</Label>
+          <Input
+            id="tc-name"
+            placeholder="Жишээ: Шилмүүст мод"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="tc-order">Эрэмбэ (апп дээр харагдах дараалал)</Label>
+          <Input
+            id="tc-order"
+            inputMode="numeric"
+            value={order}
+            onChange={(e) => setOrder(e.target.value)}
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel} disabled={saving}>
+          Болих
+        </Button>
+        <Button onClick={() => void submit()} disabled={saving}>
+          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          Хадгалах
+        </Button>
+      </DialogFooter>
+    </>
   );
 }

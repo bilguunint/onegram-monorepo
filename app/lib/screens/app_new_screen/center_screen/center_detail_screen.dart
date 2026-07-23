@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:onegrgold/models/center_models.dart';
@@ -5,6 +7,7 @@ import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_orders_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_tree_orders_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -54,6 +57,18 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
           ),
           centerTitle: false,
           actions: [
+            IconButton(
+              tooltip: 'Миний тарьсан мод',
+              icon:
+                  const Icon(Icons.forest_rounded, color: kLeafGreen, size: 22),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CenterMyTreeOrdersScreen(repo: repo),
+                  ),
+                );
+              },
+            ),
             IconButton(
               tooltip: 'Миний захиалга',
               icon: SvgPicture.asset(
@@ -160,7 +175,6 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct = campaign.progress * 100;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -191,75 +205,155 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        // Slim campaign progress strip (scrolls away with the header).
+        // Below-banner strip swaps with the active tab: the "Мод тарих" tab
+        // gets a green planting panel, every other tab shows the fundraising
+        // progress. Scrolls away with the header.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: _TabAwareBody(
+            treeInfo: _treeInfo(),
+            progress: _campaignProgress(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Fundraising progress — shown on every tab except "Мод тарих".
+  Widget _campaignProgress() {
+    final pct = campaign.progress * 100;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              formatMNT(campaign.totalRaised),
+              style: TextStyle(
+                color: CustomColors.mainColor,
+                fontFamily: 'RubikBold',
+                fontSize: 13,
+              ),
+            ),
+            Text(
+              '${pct.toStringAsFixed(pct < 10 ? 1 : 0)}% · ${formatMNT(campaign.targetAmount)}',
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: campaign.progress,
+            minHeight: 6,
+            backgroundColor: Colors.white.withOpacity(0.18),
+            valueColor: AlwaysStoppedAnimation<Color>(CustomColors.mainColor),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(Icons.volunteer_activism_rounded,
+                size: 13, color: Colors.white54),
+            const SizedBox(width: 5),
+            Text('${campaign.donorCount} дэмжигч',
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: CustomColors.mainColor.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CustomColors.mainColor.withOpacity(0.25)),
+          ),
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    formatMNT(campaign.totalRaised),
-                    style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontFamily: 'RubikBold',
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    '${pct.toStringAsFixed(pct < 10 ? 1 : 0)}% · ${formatMNT(campaign.targetAmount)}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: campaign.progress,
-                  minHeight: 6,
-                  backgroundColor: Colors.white.withOpacity(0.18),
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(CustomColors.mainColor),
+              Icon(Icons.favorite_rounded,
+                  size: 14, color: CustomColors.mainColor),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Таны худалдан авалт Дэлхийн морин хуурын төв '
+                  'цогцолборыг бүтээн байгуулах үйл хэрэгт дэмжлэг болно.',
+                  style: TextStyle(
+                      color: Colors.white70, fontSize: 11.5, height: 1.4),
                 ),
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.volunteer_activism_rounded,
-                      size: 13, color: Colors.white54),
-                  const SizedBox(width: 5),
-                  Text('${campaign.donorCount} дэмжигч',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: CustomColors.mainColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: CustomColors.mainColor.withOpacity(0.25)),
-                ),
-                child: Row(
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Green planting panel — shown on the "Мод тарих" tab in place of the
+  /// fundraising progress. Leads with how many people have joined.
+  Widget _treeInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Replaces the progress bar: how many people joined the planting drive.
+        Row(
+          children: [
+            const Icon(Icons.forest_rounded, size: 16, color: kLeafGreen),
+            const SizedBox(width: 8),
+            Expanded(
+              child: RichText(
+                text: TextSpan(
                   children: [
-                    Icon(Icons.favorite_rounded,
-                        size: 14, color: CustomColors.mainColor),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Таны худалдан авалт Дэлхийн морин хуурын төв '
-                        'цогцолборыг бүтээн байгуулах үйл хэрэгт дэмжлэг болно.',
-                        style: TextStyle(
-                            color: Colors.white70, fontSize: 11.5, height: 1.4),
+                    TextSpan(
+                      text: '${campaign.treeDonorCount}',
+                      style: const TextStyle(
+                        color: kLeafGreen,
+                        fontFamily: 'RubikBold',
+                        fontSize: 15,
+                      ),
+                    ),
+                    const TextSpan(
+                      text: ' хүн мод тарих аянд нэгдлээ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(Icons.park_rounded, size: 13, color: Colors.white54),
+            const SizedBox(width: 5),
+            Text('Нийт ${campaign.treeCount} мод таригдлаа',
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: kForestGreen.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: kForestGreen.withOpacity(0.30)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Мод тарьж, ногоон өв үлдээгээрэй. Тарьсан мод бүр таны '
+                  'нэрийн шошготойгоор цогцолборын хотхонд ургана.',
+                  style: TextStyle(
+                      color: Colors.white70, fontSize: 11.5, height: 1.4),
                 ),
               ),
             ],
@@ -311,6 +405,30 @@ class _Header extends StatelessWidget {
                       Shadow(blurRadius: 6, color: Colors.black87)
                     ],
                   ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.park_rounded,
+                      size: 13,
+                      color: kLeafGreen,
+                      shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Таны тарьсан мод: ${s.treeCount}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: kLeafGreen,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -372,6 +490,30 @@ class _Header extends StatelessWidget {
         child: Icon(Icons.account_balance_rounded,
             size: 48, color: CustomColors.mainColor.withOpacity(0.4)),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+/// Swaps the header's below-banner content based on the active tab: the tree
+/// tab (index 0) shows [treeInfo], every other tab shows [progress]. Follows
+/// the swipe so the panel flips at the halfway point of the gesture.
+class _TabAwareBody extends StatelessWidget {
+  final Widget treeInfo;
+  final Widget progress;
+  const _TabAwareBody({required this.treeInfo, required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = DefaultTabController.of(context);
+    final Listenable anim = controller.animation ?? controller;
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, _) {
+        final value =
+            controller.animation?.value ?? controller.index.toDouble();
+        return value < 0.5 ? treeInfo : progress;
+      },
     );
   }
 }
@@ -879,121 +1021,181 @@ class _GalleryViewer extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-/// "Мод тарих" — tree-planting storefront with a forest vibe. Each tree is
-/// ordered with a plaque name via [TreeOrderScreen].
+/// "Мод тарих" — tree-planting storefront with a forest vibe. Trees are
+/// grouped by admin-managed categories (Шилмүүст, Навчит, Гоёлын бут сөөг…),
+/// each rendered as a horizontal card rail. A card opens [TreeOrderScreen].
 class _TreesTab extends StatelessWidget {
   final CenterRepository repo;
   const _TreesTab({required this.repo});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<CenterProductItem>>(
-      stream: repo.watchActiveTrees(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.white24),
-          );
-        }
-        final trees = snapshot.data!;
-        return ListView(
-          padding: const EdgeInsets.all(12),
-          children: [
-            // Forest intro banner.
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    kForestGreen.withOpacity(0.25),
-                    kForestGreen.withOpacity(0.08),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kForestGreen.withOpacity(0.45)),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.forest_rounded, size: 30, color: kLeafGreen),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Мод тарьж, ногоон өв үлдээгээрэй',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'InterBold',
-                            fontSize: 14,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Таны тарьсан мод цогцолборын хотхонд ургаж, '
-                          'шошгон дээр таны нэр мөнхөрнө.',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11.5,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
+    return StreamBuilder<List<CenterTreeCategoryItem>>(
+      stream: repo.watchTreeCategories(),
+      builder: (context, catSnap) {
+        return StreamBuilder<List<CenterTreeItem>>(
+          stream: repo.watchActiveTrees(),
+          builder: (context, treeSnap) {
+            if (treeSnap.hasError) {
+              return const Center(
+                child: Text('Модны жагсаалт ачаалагдсангүй.',
+                    style: TextStyle(color: Colors.white54, fontSize: 13)),
+              );
+            }
+            // Categories only supply section headers, so a failure there must
+            // not block the storefront — fall back to an unnamed section.
+            if (!treeSnap.hasData || !(catSnap.hasData || catSnap.hasError)) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white24),
+              );
+            }
+            final trees = treeSnap.data!;
+            if (trees.isEmpty) {
+              return const Center(
+                child: Text('Мод удахгүй нэмэгдэнэ.',
+                    style: TextStyle(color: Colors.white54, fontSize: 13)),
+              );
+            }
+            // Group trees into sections following the category order; trees
+            // whose category is missing/deleted fall into "Бусад мод".
+            final byCat = <String?, List<CenterTreeItem>>{};
+            for (final t in trees) {
+              (byCat[t.categoryId] ??= []).add(t);
+            }
+            final sections = <MapEntry<String, List<CenterTreeItem>>>[];
+            for (final c in catSnap.data ?? const <CenterTreeCategoryItem>[]) {
+              final list = byCat.remove(c.id);
+              if (list != null && list.isNotEmpty) {
+                sections.add(MapEntry(c.name, list));
+              }
+            }
+            // Trees whose category is missing/deleted. When they are the only
+            // thing on screen they ARE the catalogue, so don't call them "Бусад".
+            final leftovers = byCat.values.expand((e) => e).toList();
+            if (leftovers.isNotEmpty) {
+              sections.add(MapEntry(
+                sections.isEmpty ? 'Бүх мод' : 'Бусад мод',
+                leftovers,
+              ));
+            }
+            // The rail is a fixed-height box, so it has to grow with the
+            // user's text-scale setting or the cards overflow.
+            final railHeight = _railHeight(context);
+            return ListView(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              children: [
+                for (final s in sections) ...[
+                  _sectionHeader(s.key, s.value.length),
+                  SizedBox(
+                    height: railHeight,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: s.value.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, i) => _TreeCard(tree: s.value[i]),
                     ),
                   ),
+                  const SizedBox(height: 18),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (trees.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(
-                  child: Text('Мод удахгүй нэмэгдэнэ.',
-                      style: TextStyle(color: Colors.white54, fontSize: 13)),
-                ),
-              )
-            else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.62,
-                ),
-                itemCount: trees.length,
-                itemBuilder: (context, i) => _TreeGridCard(tree: trees[i]),
-              ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
   }
+
+  /// Height of one card: a fixed 4:3 image plus a text block that scales with
+  /// the user's font-size setting (name ×2 lines, price, plant button).
+  static double _railHeight(BuildContext context) {
+    const cardWidth = _TreeCard.width;
+    final ts = MediaQuery.textScalerOf(context);
+    final image = cardWidth * 3 / 4;
+    // The price row also carries the stock pill, which out-measures the price
+    // text once its padding counts — budget for whichever is taller.
+    final priceRow = math.max(ts.scale(12) * 1.35, ts.scale(9.5) * 1.3 + 4);
+    final text = ts.scale(11.5) * 1.2 * 2 // name, 2 lines
+        +
+        3 // gap
+        +
+        priceRow +
+        8 // breathing room above the button
+        +
+        _PlantControl.height +
+        14; // card padding (6 top + 8 bottom)
+    return image + text;
+  }
+
+  Widget _sectionHeader(String name, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 14,
+            decoration: BoxDecoration(
+              color: kLeafGreen,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'InterBold',
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '($count)',
+            style: const TextStyle(color: Colors.white38, fontSize: 11.5),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _TreeGridCard extends StatelessWidget {
-  final CenterProductItem tree;
-  const _TreeGridCard({required this.tree});
+/// Compact tree card for the horizontal category rails. Tapping anywhere on
+/// the card opens the order screen, where the tree's details live — even when
+/// it is out of stock, so the botanical facts stay reachable.
+class _TreeCard extends StatelessWidget {
+  static const double width = 150;
+
+  final CenterTreeItem tree;
+  const _TreeCard({required this.tree});
 
   @override
   Widget build(BuildContext context) {
     final cover = tree.coverImage;
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => TreeOrderScreen(tree: tree)),
+        );
+      },
+      child: _card(cover),
+    );
+  }
+
+  Widget _card(String? cover) {
     return Container(
+      width: width,
       decoration: BoxDecoration(
         color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: kForestGreen.withOpacity(0.35)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
+          AspectRatio(
+            aspectRatio: 4 / 3,
             child: Container(
               color: const Color(0xFF223022),
               child: cover != null
@@ -1005,8 +1207,8 @@ class _TreeGridCard extends StatelessWidget {
                               ? child
                               : const Center(
                                   child: SizedBox(
-                                    width: 18,
-                                    height: 18,
+                                    width: 16,
+                                    height: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: Colors.white24,
@@ -1015,87 +1217,147 @@ class _TreeGridCard extends StatelessWidget {
                                 ),
                       errorBuilder: (_, __, ___) => const Center(
                         child: Icon(Icons.forest_rounded,
-                            color: kLeafGreen, size: 34),
+                            color: kLeafGreen, size: 30),
                       ),
                     )
                   : const Center(
                       child: Icon(Icons.forest_rounded,
-                          color: kLeafGreen, size: 34),
+                          color: kLeafGreen, size: 30),
                     ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tree.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatMNT(tree.price),
-                  style: const TextStyle(
-                    color: kLeafGreen,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: tree.inStock
-                      ? () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => TreeOrderScreen(tree: tree),
-                            ),
-                          );
-                        }
-                      : null,
-                  child: Container(
-                    height: 32,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: tree.inStock
-                          ? const LinearGradient(
-                              colors: [kForestGreen, kLeafGreen])
-                          : null,
-                      color:
-                          tree.inStock ? null : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tree.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11.5,
+                      height: 1.2,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.park_rounded,
-                            size: 15,
-                            color:
-                                tree.inStock ? Colors.white : Colors.white38),
-                        const SizedBox(width: 5),
-                        Text(
-                          tree.inStock ? 'Мод тарих' : 'Дууссан',
-                          style: TextStyle(
-                              color:
-                                  tree.inStock ? Colors.white : Colors.white38,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          formatMNT(tree.price),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: kLeafGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
+                      ),
+                      if (tree.stock != null) ...[
+                        const SizedBox(width: 4),
+                        _StockChip(stock: tree.stock!),
                       ],
-                    ),
+                    ],
                   ),
-                ),
-              ],
+                  const Spacer(),
+                  _PlantControl(tree: tree),
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Remaining-stock pill on a tree card. Turns amber once the tree is nearly
+/// gone so scarcity is visible before the user reaches the order screen.
+class _StockChip extends StatelessWidget {
+  final int stock;
+  const _StockChip({required this.stock});
+
+  @override
+  Widget build(BuildContext context) {
+    final low = stock <= 20;
+    final color = stock <= 0
+        ? Colors.white38
+        : low
+            ? const Color(0xFFFFB300)
+            : Colors.white60;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        stock <= 0 ? 'Дууссан' : '$stock ш',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Green "Мод тарих" button shared by the tree cards. Opens the order form.
+class _PlantControl extends StatelessWidget {
+  static const double height = 30;
+
+  final CenterTreeItem tree;
+  const _PlantControl({required this.tree});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!tree.inStock) {
+      return Container(
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text('Дууссан',
+            style: TextStyle(color: Colors.white38, fontSize: 10.5)),
+      );
+    }
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TreeOrderScreen(tree: tree),
+          ),
+        );
+      },
+      child: Container(
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [kForestGreen, kLeafGreen]),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.park_rounded, size: 14, color: Colors.white),
+            SizedBox(width: 4),
+            Text('Мод тарих',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }

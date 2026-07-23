@@ -70,6 +70,10 @@ async function recordTreeOrderPaid(db, pendingRef, pendingData) {
       const campaignRef = db.collection("center_campaign").doc("main");
       const donorRef = campaignRef.collection("donors").doc(uid);
       const donorSnap = await donorRef.get();
+      const donorData = donorSnap.exists ? donorSnap.data() : {};
+      // First tree order from this buyer → one more person joined the
+      // planting campaign (tree_donor_count powers the app header).
+      const firstTreeOrder = !(Number(donorData.tree_count || 0) > 0);
       const batch = db.batch();
       batch.set(
         campaignRef,
@@ -77,6 +81,7 @@ async function recordTreeOrderPaid(db, pendingRef, pendingData) {
           total_raised: inc(amount),
           donation_count: inc(1),
           tree_count: inc(qty),
+          ...(firstTreeOrder ? { tree_donor_count: inc(1) } : {}),
           ...(donorSnap.exists ? {} : { donor_count: inc(1) }),
           updated_at: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -89,6 +94,7 @@ async function recordTreeOrderPaid(db, pendingRef, pendingData) {
         {
           amount: inc(amount),
           count: inc(1),
+          tree_count: inc(qty),
           updated_at: admin.firestore.FieldValue.serverTimestamp(),
           ...(donorSnap.exists ?
             {} :
@@ -100,14 +106,31 @@ async function recordTreeOrderPaid(db, pendingRef, pendingData) {
         },
         { merge: true },
       );
-      const treeUpdate = { sold_count: inc(qty) };
-      if (pendingData.had_stock) treeUpdate.stock = inc(-qty);
-      batch.update(db.collection("center_trees").doc(pendingData.tree_id), treeUpdate);
       await batch.commit();
     } catch (aggErr) {
       logger.error("Tree aggregate update failed (non-fatal)", {
         pendingId,
         error: aggErr.message,
+      });
+    }
+
+    // Tree counters are kept OUT of the batch above: an admin can delete a
+    // tree while its invoice is still open, and batch.update() on a missing
+    // doc fails the whole commit — which would silently void the buyer's
+    // campaign credit and donor-wall entry with no retry path.
+    try {
+      const inc = admin.firestore.FieldValue.increment;
+      const treeUpdate = { sold_count: inc(qty) };
+      if (pendingData.had_stock) treeUpdate.stock = inc(-qty);
+      await db
+        .collection("center_trees")
+        .doc(pendingData.tree_id)
+        .update(treeUpdate);
+    } catch (treeErr) {
+      logger.warn("Tree counter update skipped (tree missing?)", {
+        pendingId,
+        treeId: pendingData.tree_id,
+        error: treeErr.message,
       });
     }
   }

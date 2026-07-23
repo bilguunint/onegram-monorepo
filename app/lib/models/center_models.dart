@@ -12,6 +12,8 @@ class CenterCampaignInfo {
   final num totalRaised;
   final int donorCount;
   final int topCount;
+  final int treeCount;
+  final int treeDonorCount;
   final String status;
 
   const CenterCampaignInfo({
@@ -24,6 +26,8 @@ class CenterCampaignInfo {
     required this.totalRaised,
     required this.donorCount,
     required this.topCount,
+    required this.treeCount,
+    required this.treeDonorCount,
     required this.status,
   });
 
@@ -47,6 +51,8 @@ class CenterCampaignInfo {
       totalRaised: (d['total_raised'] as num?) ?? 0,
       donorCount: (d['donor_count'] as num?)?.toInt() ?? 0,
       topCount: (d['top_count'] as num?)?.toInt() ?? 99,
+      treeCount: (d['tree_count'] as num?)?.toInt() ?? 0,
+      treeDonorCount: (d['tree_donor_count'] as num?)?.toInt() ?? 0,
       status: (d['status'] as String?) ?? 'active',
     );
   }
@@ -88,6 +94,86 @@ class CenterProductItem {
       price: (d['price'] as num?)?.toInt() ?? 0,
       stock: d['stock'] == null ? null : (d['stock'] as num).toInt(),
       status: (d['status'] as String?) ?? 'active',
+    );
+  }
+}
+
+/// A tree-category header (Шилмүүст мод, Навчит мод…), managed from admin.
+class CenterTreeCategoryItem {
+  final String id;
+  final String name;
+  final int order;
+
+  const CenterTreeCategoryItem({
+    required this.id,
+    required this.name,
+    required this.order,
+  });
+
+  factory CenterTreeCategoryItem.fromDoc(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final d = doc.data();
+    return CenterTreeCategoryItem(
+      id: doc.id,
+      name: (d['name'] as String?) ?? '',
+      order: (d['order'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// A plantable tree (product shape + botanical facts) from `center_trees`.
+class CenterTreeItem {
+  final String id;
+  final String name;
+  final String description;
+  final List<String> images;
+  final int price;
+  final int? stock; // null = unlimited
+  final String status;
+  final String? categoryId;
+  final String matureHeight; // Нас бие хүрсэн өндөр, ж: "20–35 м"
+  final String lifespan; // Насжилт, ж: "300–500 жил"
+  final String features; // Онцлог
+  final DateTime? createdAt;
+
+  const CenterTreeItem({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.images,
+    required this.price,
+    required this.stock,
+    required this.status,
+    required this.categoryId,
+    required this.matureHeight,
+    required this.lifespan,
+    required this.features,
+    required this.createdAt,
+  });
+
+  String? get coverImage => images.isNotEmpty ? images.first : null;
+  bool get inStock => stock == null || stock! > 0;
+
+  factory CenterTreeItem.fromDoc(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final d = doc.data();
+    return CenterTreeItem(
+      id: doc.id,
+      name: (d['name'] as String?) ?? '',
+      description: (d['description'] as String?) ?? '',
+      images: (d['images'] is List)
+          ? List<String>.from((d['images'] as List).whereType<String>())
+          : const [],
+      price: (d['price'] as num?)?.toInt() ?? 0,
+      stock: d['stock'] == null ? null : (d['stock'] as num).toInt(),
+      status: (d['status'] as String?) ?? 'active',
+      categoryId: d['category_id'] as String?,
+      matureHeight: (d['mature_height'] as String?) ?? '',
+      lifespan: (d['lifespan'] as String?) ?? '',
+      features: (d['features'] as String?) ?? '',
+      createdAt: (d['created_at'] as Timestamp?)?.toDate(),
     );
   }
 }
@@ -152,6 +238,50 @@ class CenterDonationOrder {
   }
 }
 
+/// A user's tree-planting order (from `center_tree_orders`).
+class CenterTreeOrder {
+  final String id;
+  final String treeName;
+  final String? treeImage;
+  final String labelName;
+  final int qty;
+  final int amount;
+  final String plantingStatus; // 'pending' | 'planted'
+  final DateTime? createdAt;
+  final DateTime? plantedAt;
+
+  const CenterTreeOrder({
+    required this.id,
+    required this.treeName,
+    required this.treeImage,
+    required this.labelName,
+    required this.qty,
+    required this.amount,
+    required this.plantingStatus,
+    required this.createdAt,
+    required this.plantedAt,
+  });
+
+  bool get isPlanted => plantingStatus == 'planted';
+
+  factory CenterTreeOrder.fromDoc(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final d = doc.data();
+    return CenterTreeOrder(
+      id: doc.id,
+      treeName: (d['tree_name'] as String?) ?? '',
+      treeImage: d['tree_image'] as String?,
+      labelName: (d['label_name'] as String?) ?? '',
+      qty: (d['qty'] as num?)?.toInt() ?? 1,
+      amount: (d['amount'] as num?)?.toInt() ?? 0,
+      plantingStatus: (d['planting_status'] as String?) ?? 'pending',
+      createdAt: (d['created_at'] as Timestamp?)?.toDate(),
+      plantedAt: (d['planted_at'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
 class CenterTopDonor {
   final String engraveName;
   final bool anonymous;
@@ -204,11 +334,13 @@ class CenterUserHeaderStat {
   final String name;
   final int donatedAmount;
   final int? rank;
+  final int treeCount;
 
   const CenterUserHeaderStat({
     required this.name,
     required this.donatedAmount,
     required this.rank,
+    this.treeCount = 0,
   });
 
   bool get hasDonated => donatedAmount > 0;

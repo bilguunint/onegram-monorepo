@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -42,13 +43,48 @@ class CenterRepository {
         .map((s) => s.docs.map(CenterProductItem.fromDoc).toList());
   }
 
-  /// Active trees for the planting campaign (same shape as products).
-  Stream<List<CenterProductItem>> watchActiveTrees() {
+  /// Active trees for the planting campaign, oldest first so the curated
+  /// order inside each category stays stable.
+  Stream<List<CenterTreeItem>> watchActiveTrees() {
     return _db
         .collection('center_trees')
         .where('status', isEqualTo: 'active')
         .snapshots()
-        .map((s) => s.docs.map(CenterProductItem.fromDoc).toList());
+        .map((s) {
+      final list = s.docs.map(CenterTreeItem.fromDoc).toList();
+      list.sort((a, b) {
+        final ad = a.createdAt;
+        final bd = b.createdAt;
+        if (ad == null && bd == null) return 0;
+        if (ad == null) return 1;
+        if (bd == null) return -1;
+        return ad.compareTo(bd);
+      });
+      return list;
+    });
+  }
+
+  /// Tree categories (Шилмүүст мод…), sorted client-side by display order so
+  /// docs missing the `order` field are never dropped by a Firestore orderBy.
+  ///
+  /// Categories are decorative — they only supply section headers — so a read
+  /// failure (e.g. rules not yet deployed) degrades to an empty list instead of
+  /// erroring the stream, which would otherwise strand the tab on a spinner.
+  Stream<List<CenterTreeCategoryItem>> watchTreeCategories() {
+    return _db.collection('center_tree_categories').snapshots().map((s) {
+      final list = s.docs.map(CenterTreeCategoryItem.fromDoc).toList();
+      list.sort((a, b) {
+        final byOrder = a.order.compareTo(b.order);
+        return byOrder != 0 ? byOrder : a.name.compareTo(b.name);
+      });
+      return list;
+    }).transform(
+      StreamTransformer<List<CenterTreeCategoryItem>,
+          List<CenterTreeCategoryItem>>.fromHandlers(
+        handleError: (error, stack, sink) =>
+            sink.add(const <CenterTreeCategoryItem>[]),
+      ),
+    );
   }
 
   /// Public donor-wall leaderboard, highest cumulative first.
@@ -72,6 +108,27 @@ class CenterRepository {
         .snapshots()
         .map((s) {
       final list = s.docs.map(CenterDonationOrder.fromDoc).toList();
+      list.sort((a, b) {
+        final ad = a.createdAt;
+        final bd = b.createdAt;
+        if (ad == null && bd == null) return 0;
+        if (ad == null) return 1;
+        if (bd == null) return -1;
+        return bd.compareTo(ad);
+      });
+      return list;
+    });
+  }
+
+  /// The current user's tree-planting orders (sorted client-side to avoid a
+  /// composite index on buyer_uid + created_at).
+  Stream<List<CenterTreeOrder>> watchMyTreeOrders(String uid) {
+    return _db
+        .collection('center_tree_orders')
+        .where('buyer_uid', isEqualTo: uid)
+        .snapshots()
+        .map((s) {
+      final list = s.docs.map(CenterTreeOrder.fromDoc).toList();
       list.sort((a, b) {
         final ad = a.createdAt;
         final bd = b.createdAt;
@@ -118,6 +175,7 @@ class CenterRepository {
       return CenterUserHeaderStat(name: name, donatedAmount: 0, rank: null);
     }
     final myAmount = (donorSnap.data()?['amount'] as num?)?.toInt() ?? 0;
+    final myTreeCount = (donorSnap.data()?['tree_count'] as num?)?.toInt() ?? 0;
     int? rank;
     try {
       final ahead = await _db
@@ -130,7 +188,10 @@ class CenterRepository {
       rank = (ahead.count ?? 0) + 1;
     } catch (_) {}
     return CenterUserHeaderStat(
-        name: name, donatedAmount: myAmount, rank: rank);
+        name: name,
+        donatedAmount: myAmount,
+        rank: rank,
+        treeCount: myTreeCount);
   }
 
   static const _createTreeOrderUrl =
