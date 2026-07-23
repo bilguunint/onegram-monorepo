@@ -217,7 +217,8 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
                 ),
-                if (tree.matureHeight.trim().isNotEmpty ||
+                if (tree.seedlingHeight.trim().isNotEmpty ||
+                    tree.matureHeight.trim().isNotEmpty ||
                     tree.lifespan.trim().isNotEmpty ||
                     tree.features.trim().isNotEmpty) ...[
                   const SizedBox(height: 10),
@@ -261,6 +262,9 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (tree.seedlingHeight.trim().isNotEmpty)
+            _specRow(
+                Icons.grass_rounded, 'Суулгацын өндөр', tree.seedlingHeight),
           if (tree.matureHeight.trim().isNotEmpty)
             _specRow(Icons.height_rounded, 'Нас биенд хүрсэн өндөр',
                 tree.matureHeight),

@@ -77,6 +77,9 @@ function TreeBody({
   const treeId = useMemo(() => tree?.id ?? newCenterTreeRef().id, [tree?.id]);
   const [name, setName] = useState(tree?.name ?? "");
   const [categoryId, setCategoryId] = useState(tree?.category_id ?? "");
+  const [seedlingHeight, setSeedlingHeight] = useState(
+    tree?.seedling_height ?? ""
+  );
   const [matureHeight, setMatureHeight] = useState(tree?.mature_height ?? "");
   const [lifespan, setLifespan] = useState(tree?.lifespan ?? "");
   const [features, setFeatures] = useState(tree?.features ?? "");
@@ -117,6 +120,7 @@ function TreeBody({
         stock: stockVal,
         status,
         category_id: categoryId || null,
+        seedling_height: seedlingHeight,
         mature_height: matureHeight,
         lifespan,
         features,
@@ -156,6 +160,15 @@ function TreeBody({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
+            <Label htmlFor="ct-seedling">Суулгацын өндөр</Label>
+            <Input
+              id="ct-seedling"
+              placeholder="Жишээ: 80–120 см"
+              value={seedlingHeight}
+              onChange={(e) => setSeedlingHeight(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="ct-height">Нас биенд хүрсэн өндөр</Label>
             <Input
               id="ct-height"
@@ -164,15 +177,15 @@ function TreeBody({
               onChange={(e) => setMatureHeight(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ct-lifespan">Насжилт</Label>
-            <Input
-              id="ct-lifespan"
-              placeholder="Жишээ: 300–500 жил"
-              value={lifespan}
-              onChange={(e) => setLifespan(e.target.value)}
-            />
-          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ct-lifespan">Насжилт</Label>
+          <Input
+            id="ct-lifespan"
+            placeholder="Жишээ: 300–500 жил"
+            value={lifespan}
+            onChange={(e) => setLifespan(e.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ct-features">Онцлог</Label>

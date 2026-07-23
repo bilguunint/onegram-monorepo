@@ -98,30 +98,6 @@ class CenterProductItem {
   }
 }
 
-/// A tree-category header (Шилмүүст мод, Навчит мод…), managed from admin.
-class CenterTreeCategoryItem {
-  final String id;
-  final String name;
-  final int order;
-
-  const CenterTreeCategoryItem({
-    required this.id,
-    required this.name,
-    required this.order,
-  });
-
-  factory CenterTreeCategoryItem.fromDoc(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final d = doc.data();
-    return CenterTreeCategoryItem(
-      id: doc.id,
-      name: (d['name'] as String?) ?? '',
-      order: (d['order'] as num?)?.toInt() ?? 0,
-    );
-  }
-}
-
 /// A plantable tree (product shape + botanical facts) from `center_trees`.
 class CenterTreeItem {
   final String id;
@@ -132,7 +108,8 @@ class CenterTreeItem {
   final int? stock; // null = unlimited
   final String status;
   final String? categoryId;
-  final String matureHeight; // Нас бие хүрсэн өндөр, ж: "20–35 м"
+  final String seedlingHeight; // Суулгацын өндөр, ж: "80–120 см"
+  final String matureHeight; // Нас биенд хүрсэн өндөр, ж: "20–35 м"
   final String lifespan; // Насжилт, ж: "300–500 жил"
   final String features; // Онцлог
   final DateTime? createdAt;
@@ -146,6 +123,7 @@ class CenterTreeItem {
     required this.stock,
     required this.status,
     required this.categoryId,
+    required this.seedlingHeight,
     required this.matureHeight,
     required this.lifespan,
     required this.features,
@@ -170,6 +148,7 @@ class CenterTreeItem {
       stock: d['stock'] == null ? null : (d['stock'] as num).toInt(),
       status: (d['status'] as String?) ?? 'active',
       categoryId: d['category_id'] as String?,
+      seedlingHeight: (d['seedling_height'] as String?) ?? '',
       matureHeight: (d['mature_height'] as String?) ?? '',
       lifespan: (d['lifespan'] as String?) ?? '',
       features: (d['features'] as String?) ?? '',

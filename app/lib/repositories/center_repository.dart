@@ -64,29 +64,6 @@ class CenterRepository {
     });
   }
 
-  /// Tree categories (Шилмүүст мод…), sorted client-side by display order so
-  /// docs missing the `order` field are never dropped by a Firestore orderBy.
-  ///
-  /// Categories are decorative — they only supply section headers — so a read
-  /// failure (e.g. rules not yet deployed) degrades to an empty list instead of
-  /// erroring the stream, which would otherwise strand the tab on a spinner.
-  Stream<List<CenterTreeCategoryItem>> watchTreeCategories() {
-    return _db.collection('center_tree_categories').snapshots().map((s) {
-      final list = s.docs.map(CenterTreeCategoryItem.fromDoc).toList();
-      list.sort((a, b) {
-        final byOrder = a.order.compareTo(b.order);
-        return byOrder != 0 ? byOrder : a.name.compareTo(b.name);
-      });
-      return list;
-    }).transform(
-      StreamTransformer<List<CenterTreeCategoryItem>,
-          List<CenterTreeCategoryItem>>.fromHandlers(
-        handleError: (error, stack, sink) =>
-            sink.add(const <CenterTreeCategoryItem>[]),
-      ),
-    );
-  }
-
   /// Public donor-wall leaderboard, highest cumulative first.
   Stream<List<CenterTopDonor>> watchTopDonors({int limit = 99}) {
     return _db

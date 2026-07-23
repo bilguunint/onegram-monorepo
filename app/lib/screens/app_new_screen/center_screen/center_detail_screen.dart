@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:onegrgold/models/center_models.dart';
@@ -128,6 +126,9 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
                 ),
               ],
               body: TabBarView(
+                // Tabs switch only by tapping the TabBar — swiping the
+                // storefront grids should never change tab.
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _TreesTab(repo: repo),
                   _ProductsTab(repo: repo),
@@ -1021,153 +1022,58 @@ class _GalleryViewer extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-/// "Мод тарих" — tree-planting storefront with a forest vibe. Trees are
-/// grouped by admin-managed categories (Шилмүүст, Навчит, Гоёлын бут сөөг…),
-/// each rendered as a horizontal card rail. A card opens [TreeOrderScreen].
+/// "Мод тарих" — tree-planting storefront with a forest vibe. Every active
+/// tree is shown in one grid (categories are an admin-side concept only).
+/// A card opens [TreeOrderScreen].
 class _TreesTab extends StatelessWidget {
   final CenterRepository repo;
   const _TreesTab({required this.repo});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<CenterTreeCategoryItem>>(
-      stream: repo.watchTreeCategories(),
-      builder: (context, catSnap) {
-        return StreamBuilder<List<CenterTreeItem>>(
-          stream: repo.watchActiveTrees(),
-          builder: (context, treeSnap) {
-            if (treeSnap.hasError) {
-              return const Center(
-                child: Text('Модны жагсаалт ачаалагдсангүй.',
-                    style: TextStyle(color: Colors.white54, fontSize: 13)),
-              );
-            }
-            // Categories only supply section headers, so a failure there must
-            // not block the storefront — fall back to an unnamed section.
-            if (!treeSnap.hasData || !(catSnap.hasData || catSnap.hasError)) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white24),
-              );
-            }
-            final trees = treeSnap.data!;
-            if (trees.isEmpty) {
-              return const Center(
-                child: Text('Мод удахгүй нэмэгдэнэ.',
-                    style: TextStyle(color: Colors.white54, fontSize: 13)),
-              );
-            }
-            // Group trees into sections following the category order; trees
-            // whose category is missing/deleted fall into "Бусад мод".
-            final byCat = <String?, List<CenterTreeItem>>{};
-            for (final t in trees) {
-              (byCat[t.categoryId] ??= []).add(t);
-            }
-            final sections = <MapEntry<String, List<CenterTreeItem>>>[];
-            for (final c in catSnap.data ?? const <CenterTreeCategoryItem>[]) {
-              final list = byCat.remove(c.id);
-              if (list != null && list.isNotEmpty) {
-                sections.add(MapEntry(c.name, list));
-              }
-            }
-            // Trees whose category is missing/deleted. When they are the only
-            // thing on screen they ARE the catalogue, so don't call them "Бусад".
-            final leftovers = byCat.values.expand((e) => e).toList();
-            if (leftovers.isNotEmpty) {
-              sections.add(MapEntry(
-                sections.isEmpty ? 'Бүх мод' : 'Бусад мод',
-                leftovers,
-              ));
-            }
-            // The rail is a fixed-height box, so it has to grow with the
-            // user's text-scale setting or the cards overflow.
-            final railHeight = _railHeight(context);
-            return ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              children: [
-                for (final s in sections) ...[
-                  _sectionHeader(s.key, s.value.length),
-                  SizedBox(
-                    height: railHeight,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: s.value.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (context, i) => _TreeCard(tree: s.value[i]),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                ],
-              ],
-            );
-          },
+    return StreamBuilder<List<CenterTreeItem>>(
+      stream: repo.watchActiveTrees(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text('Модны жагсаалт ачаалагдсангүй.',
+                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white24),
+          );
+        }
+        final trees = snapshot.data!;
+        if (trees.isEmpty) {
+          return const Center(
+            child: Text('Мод удахгүй нэмэгдэнэ.',
+                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          );
+        }
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.62,
+          ),
+          itemCount: trees.length,
+          itemBuilder: (context, i) => _TreeGridCard(tree: trees[i]),
         );
       },
     );
   }
-
-  /// Height of one card: a fixed 4:3 image plus a text block that scales with
-  /// the user's font-size setting (name ×2 lines, price, plant button).
-  static double _railHeight(BuildContext context) {
-    const cardWidth = _TreeCard.width;
-    final ts = MediaQuery.textScalerOf(context);
-    final image = cardWidth * 3 / 4;
-    // The price row also carries the stock pill, which out-measures the price
-    // text once its padding counts — budget for whichever is taller.
-    final priceRow = math.max(ts.scale(12) * 1.35, ts.scale(9.5) * 1.3 + 4);
-    final text = ts.scale(11.5) * 1.2 * 2 // name, 2 lines
-        +
-        3 // gap
-        +
-        priceRow +
-        8 // breathing room above the button
-        +
-        _PlantControl.height +
-        14; // card padding (6 top + 8 bottom)
-    return image + text;
-  }
-
-  Widget _sectionHeader(String name, int count) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 14,
-            decoration: BoxDecoration(
-              color: kLeafGreen,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 7),
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'InterBold',
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '($count)',
-            style: const TextStyle(color: Colors.white38, fontSize: 11.5),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-/// Compact tree card for the horizontal category rails. Tapping anywhere on
-/// the card opens the order screen, where the tree's details live — even when
-/// it is out of stock, so the botanical facts stay reachable.
-class _TreeCard extends StatelessWidget {
-  static const double width = 150;
-
+/// Tree card in the storefront grid — same geometry as the products grid,
+/// tinted green. Tapping anywhere opens the order screen, so the botanical
+/// details stay reachable even when the tree is out of stock.
+class _TreeGridCard extends StatelessWidget {
   final CenterTreeItem tree;
-  const _TreeCard({required this.tree});
+  const _TreeGridCard({required this.tree});
 
   @override
   Widget build(BuildContext context) {
@@ -1178,57 +1084,51 @@ class _TreeCard extends StatelessWidget {
           MaterialPageRoute(builder: (_) => TreeOrderScreen(tree: tree)),
         );
       },
-      child: _card(cover),
-    );
-  }
-
-  Widget _card(String? cover) {
-    return Container(
-      width: width,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kForestGreen.withOpacity(0.35)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AspectRatio(
-            aspectRatio: 4 / 3,
-            child: Container(
-              color: const Color(0xFF223022),
-              child: cover != null
-                  ? Image.network(
-                      cover,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) =>
-                          progress == null
-                              ? child
-                              : const Center(
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white24,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F1F22),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: kForestGreen.withOpacity(0.35)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Expanded (not a fixed ratio) so the image yields space when the
+            // user's font-size setting grows the text block.
+            Expanded(
+              child: Container(
+                color: const Color(0xFF223022),
+                child: cover != null
+                    ? Image.network(
+                        cover,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null
+                                ? child
+                                : const Center(
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white24,
+                                      ),
                                     ),
                                   ),
-                                ),
-                      errorBuilder: (_, __, ___) => const Center(
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.forest_rounded,
+                              color: kLeafGreen, size: 34),
+                        ),
+                      )
+                    : const Center(
                         child: Icon(Icons.forest_rounded,
-                            color: kLeafGreen, size: 30),
+                            color: kLeafGreen, size: 34),
                       ),
-                    )
-                  : const Center(
-                      child: Icon(Icons.forest_rounded,
-                          color: kLeafGreen, size: 30),
-                    ),
+              ),
             ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1239,11 +1139,11 @@ class _TreeCard extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
@@ -1254,7 +1154,7 @@ class _TreeCard extends StatelessWidget {
                           style: const TextStyle(
                             color: kLeafGreen,
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 13.5,
                           ),
                         ),
                       ),
@@ -1264,13 +1164,13 @@ class _TreeCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 8),
                   _PlantControl(tree: tree),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

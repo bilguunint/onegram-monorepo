@@ -247,13 +247,15 @@ export type CenterTreeCategory = {
 
 export type CenterTree = CenterProduct & {
   category_id: string | null;
-  mature_height: string; // Нас бие хүрсэн өндөр, e.g. "20–35 м"
+  seedling_height: string; // Суулгацын өндөр — what the buyer receives, e.g. "80–120 см"
+  mature_height: string; // Нас биенд хүрсэн өндөр, e.g. "20–35 м"
   lifespan: string; // Насжилт, e.g. "300–500 жил"
   features: string; // Онцлог
 };
 
 export type CenterTreeDraft = CenterProductDraft & {
   category_id: string | null;
+  seedling_height: string;
   mature_height: string;
   lifespan: string;
   features: string;
@@ -263,6 +265,7 @@ function mapTree(id: string, raw: DocumentData): CenterTree {
   return {
     ...mapProduct(id, raw),
     category_id: raw.category_id == null ? null : String(raw.category_id),
+    seedling_height: String(raw.seedling_height ?? ""),
     mature_height: String(raw.mature_height ?? ""),
     lifespan: String(raw.lifespan ?? ""),
     features: String(raw.features ?? ""),
@@ -288,6 +291,7 @@ function treeDraftData(draft: CenterTreeDraft) {
     price: Math.round(draft.price),
     status: draft.status,
     category_id: draft.category_id,
+    seedling_height: draft.seedling_height.trim(),
     mature_height: draft.mature_height.trim(),
     lifespan: draft.lifespan.trim(),
     features: draft.features.trim(),
