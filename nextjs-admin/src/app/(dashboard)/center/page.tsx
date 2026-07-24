@@ -36,6 +36,9 @@ import {
   fetchCampaign,
   saveCampaign,
   saveGallery,
+  savePopup,
+  EMPTY_POPUP,
+  type CenterPopup,
   fetchCenterProducts,
   fetchCenterDonations,
   setCenterProductStatus,
@@ -266,7 +269,12 @@ export default function CenterPage() {
 
           {tab === "gallery" && <GalleryTab campaign={campaign} onSaved={() => void load()} />}
 
-          {tab === "settings" && <SettingsTab campaign={campaign} onSaved={() => void load()} />}
+          {tab === "settings" && (
+            <div className="space-y-5">
+              <SettingsTab campaign={campaign} onSaved={() => void load()} />
+              <PopupCard campaign={campaign} onSaved={() => void load()} />
+            </div>
+          )}
         </>
       )}
 
@@ -770,6 +778,103 @@ function SettingsTab({
       <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
         <Target className="h-3.5 w-3.5" />
         Эдгээр бараанаас худалдан авалт хийсэн хэрэглэгч хандивын аянд оролцсонд тооцогдоно.
+      </div>
+      <div>
+        <Button onClick={() => void submit()} disabled={saving}>
+          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          Хадгалах
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Promo popup shown when the app opens the campaign screen. One 16:9 image,
+// a title and a body. Toggle "Идэвхтэй" off to hide it without deleting it.
+function PopupCard({
+  campaign,
+  onSaved,
+}: {
+  campaign: CenterCampaign | null;
+  onSaved: () => void;
+}) {
+  const popup: CenterPopup = campaign?.popup ?? EMPTY_POPUP;
+  const [enabled, setEnabled] = useState(popup.enabled);
+  const [title, setTitle] = useState(popup.title);
+  const [body, setBody] = useState(popup.body);
+  const [image, setImage] = useState<string[]>(popup.image ? [popup.image] : []);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (enabled && !title.trim() && !body.trim() && image.length === 0) {
+      return toast.error("Идэвхжүүлэхийн тулд гарчиг, текст эсвэл зураг оруулна уу.");
+    }
+    setSaving(true);
+    try {
+      await savePopup({
+        enabled,
+        image: image[0] ?? null,
+        title,
+        body,
+      });
+      toast.success("Popup хадгалагдлаа.");
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Хадгалахад алдаа гарлаа.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl space-y-3 rounded-xl border border-border-light bg-card p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-[14px] font-semibold text-foreground">
+            Нээх үеийн popup
+          </h3>
+          <p className="text-[11px] text-muted-foreground">
+            Апп дээр кампанит дэлгэц нээгдэхэд харагдана. Хоосон бол гарахгүй.
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          Идэвхтэй
+        </label>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Зураг (16:9)</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Өргөн (16:9) зураг тохиромжтой — жишээ 1280×720.
+        </p>
+        <ImageGalleryInput
+          productId="campaign-popup"
+          value={image}
+          onChange={setImage}
+          max={1}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="p-title">Гарчиг</Label>
+        <Input
+          id="p-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="p-body">Текст</Label>
+        <Textarea
+          id="p-body"
+          rows={4}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
       </div>
       <div>
         <Button onClick={() => void submit()} disabled={saving}>

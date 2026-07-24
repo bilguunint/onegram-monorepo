@@ -24,6 +24,21 @@ import { getDb, getFirebaseAuth } from "@/lib/firebase/client";
 export type CampaignStatus = "active" | "ended";
 export type CenterItemStatus = "active" | "inactive";
 
+/** Optional promo modal shown when the app opens the campaign detail screen. */
+export type CenterPopup = {
+  enabled: boolean;
+  image: string | null; // 16:9
+  title: string;
+  body: string;
+};
+
+export const EMPTY_POPUP: CenterPopup = {
+  enabled: false,
+  image: null,
+  title: "",
+  body: "",
+};
+
 export type CenterCampaign = {
   name: string;
   description: string;
@@ -33,6 +48,7 @@ export type CenterCampaign = {
   target_amount: number; // MNT
   top_count: number; // donors engraved (e.g. 99)
   status: CampaignStatus;
+  popup: CenterPopup;
   updated_at: Timestamp | null;
 };
 
@@ -106,8 +122,19 @@ const DEFAULT_CAMPAIGN: CenterCampaign = {
   target_amount: 10_000_000_000, // 10 тэрбум төгрөг
   top_count: 99,
   status: "active",
+  popup: EMPTY_POPUP,
   updated_at: null,
 };
+
+function mapPopup(raw: unknown): CenterPopup {
+  const p = (raw ?? {}) as Partial<CenterPopup>;
+  return {
+    enabled: !!p.enabled,
+    image: p.image ?? null,
+    title: String(p.title ?? ""),
+    body: String(p.body ?? ""),
+  };
+}
 
 export async function fetchCampaign(): Promise<CenterCampaign> {
   const snap = await getDoc(CAMPAIGN_DOC());
@@ -122,8 +149,26 @@ export async function fetchCampaign(): Promise<CenterCampaign> {
     target_amount: Number(d.target_amount ?? 0),
     top_count: Number(d.top_count ?? 99),
     status: d.status === "ended" ? "ended" : "active",
+    popup: mapPopup((d as { popup?: unknown }).popup),
     updated_at: d.updated_at ?? null,
   };
+}
+
+/** Persist only the promo popup, leaving other campaign config untouched. */
+export async function savePopup(popup: CenterPopup): Promise<void> {
+  await setDoc(
+    CAMPAIGN_DOC(),
+    {
+      popup: {
+        enabled: !!popup.enabled,
+        image: popup.image,
+        title: popup.title.trim(),
+        body: popup.body.trim(),
+      },
+      updated_at: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 /** Persist only the gallery photos, leaving other campaign config untouched. */

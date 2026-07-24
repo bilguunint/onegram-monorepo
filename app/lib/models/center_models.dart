@@ -2,6 +2,42 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Models for the "Дэлхийн морин хуурын төв цогцолбор" donation campaign.
 
+/// Optional promo modal shown when the campaign detail screen opens.
+class CenterPopupInfo {
+  final bool enabled;
+  final String? image;
+  final String title;
+  final String body;
+
+  const CenterPopupInfo({
+    required this.enabled,
+    required this.image,
+    required this.title,
+    required this.body,
+  });
+
+  static const empty =
+      CenterPopupInfo(enabled: false, image: null, title: '', body: '');
+
+  /// Worth showing only when switched on and carrying at least one of the
+  /// three content slots.
+  bool get hasContent =>
+      enabled &&
+      ((image != null && image!.isNotEmpty) ||
+          title.trim().isNotEmpty ||
+          body.trim().isNotEmpty);
+
+  factory CenterPopupInfo.fromMap(Map<String, dynamic>? data) {
+    final d = data ?? const {};
+    return CenterPopupInfo(
+      enabled: d['enabled'] == true,
+      image: d['image'] as String?,
+      title: (d['title'] as String?) ?? '',
+      body: (d['body'] as String?) ?? '',
+    );
+  }
+}
+
 class CenterCampaignInfo {
   final String name;
   final String description;
@@ -15,6 +51,7 @@ class CenterCampaignInfo {
   final int treeCount;
   final int treeDonorCount;
   final String status;
+  final CenterPopupInfo popup;
 
   const CenterCampaignInfo({
     required this.name,
@@ -29,6 +66,7 @@ class CenterCampaignInfo {
     required this.treeCount,
     required this.treeDonorCount,
     required this.status,
+    required this.popup,
   });
 
   bool get isActive => status == 'active';
@@ -54,6 +92,9 @@ class CenterCampaignInfo {
       treeCount: (d['tree_count'] as num?)?.toInt() ?? 0,
       treeDonorCount: (d['tree_donor_count'] as num?)?.toInt() ?? 0,
       status: (d['status'] as String?) ?? 'active',
+      popup: CenterPopupInfo.fromMap(
+        (d['popup'] as Map<String, dynamic>?),
+      ),
     );
   }
 }

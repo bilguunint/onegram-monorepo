@@ -6,6 +6,7 @@ import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart'
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_orders_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_tree_orders_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/center_screen/center_promo_popup.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -20,6 +21,7 @@ class CenterDetailScreen extends StatefulWidget {
 class _CenterDetailScreenState extends State<CenterDetailScreen> {
   final CenterRepository repo = CenterRepository();
   CenterUserHeaderStat? _stat;
+  bool _popupShown = false;
 
   @override
   void initState() {
@@ -32,6 +34,15 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
       final s = await repo.fetchMyHeaderStat();
       if (mounted) setState(() => _stat = s);
     } catch (_) {}
+  }
+
+  /// Show the campaign promo modal once, the first time the campaign loads.
+  void _maybeShowPopup(CenterCampaignInfo campaign) {
+    if (_popupShown || !campaign.popup.hasContent) return;
+    _popupShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showCenterPromoPopup(context, campaign.popup);
+    });
   }
 
   @override
@@ -97,6 +108,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
                 child: CircularProgressIndicator(color: Colors.white24),
               );
             }
+            _maybeShowPopup(campaign);
             return NestedScrollView(
               headerSliverBuilder: (context, _) => [
                 SliverToBoxAdapter(
