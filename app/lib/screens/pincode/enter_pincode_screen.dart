@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
 import 'package:onegrgold/bloc/auth_bloc/auth_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/l10n/language_switcher.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/main_screen.dart';
@@ -70,7 +72,8 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
     final fn = (u.firstName).trim();
     final initial = ln.isNotEmpty ? ln[0] : '';
     if (initial.isEmpty && fn.isEmpty) return '';
-    return 'Сайн байна уу? ${initial.isNotEmpty ? '$initial. ' : ''}$fn';
+    return tr('auth.greeting',
+        {'name': '${initial.isNotEmpty ? '$initial. ' : ''}$fn'});
   }
 
   void _onKeyboardTap(String value) {
@@ -114,7 +117,7 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
         ),
       );
     } else {
-      showAlertPopUpDialog(context, 'Пинкод буруу байна', 75.0);
+      showAlertPopUpDialog(context, tr('auth.pin_incorrect'), 75.0);
       _codeController.text = '';
       setState(() {});
     }
@@ -125,108 +128,132 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
     return Scaffold(
       backgroundColor: CustomColors.scaffoldDarkBack,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 70.0,
-                child: Image.asset('assets/images/logo_white_horizontal.png'),
+        child: Stack(
+          children: [
+            // Language switcher floated over the top-right corner so the
+            // centred PIN layout below is untouched.
+            const Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: EdgeInsets.only(top: 4, right: 16),
+                child: LanguageSwitcherButton(),
               ),
-              const SizedBox(height: 32.0),
-              FutureBuilder<UserModel>(
-                future: _userFuture,
-                builder: (context, snapshot) {
-                  final user = snapshot.data ?? UserModel.empty;
-                  final text = _formatGreeting(user);
-                  if (text.isEmpty) return const SizedBox.shrink();
-                  return Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 14.0,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 70.0,
+                    child:
+                        Image.asset('assets/images/logo_white_horizontal.png'),
+                  ),
+                  const SizedBox(height: 32.0),
+                  FutureBuilder<UserModel>(
+                    future: _userFuture,
+                    builder: (context, snapshot) {
+                      final user = snapshot.data ?? UserModel.empty;
+                      final text = _formatGreeting(user);
+                      if (text.isEmpty) return const SizedBox.shrink();
+                      return Text(
+                        text,
+                        style: const TextStyle(
+                          fontSize: 14.0,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16.0),
+                  Text(
+                    tr('auth.enter_your_pin'),
+                    style:
+                        const TextStyle(fontSize: 10.0, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 16.0),
+                  IgnorePointer(
+                    ignoring: true, // prevent opening system keyboard
+                    child: PinCodeTextField(
+                      controller: _codeController,
+                      maxLength: 6,
+                      autofocus: false,
+                      isCupertino: true,
+                      hideCharacter: true,
+                      highlightColor: CustomColors.mainColor,
+                      defaultBorderColor: Colors.white12,
+                      pinBoxColor: CustomColors.inputDarkColor,
+                      pinBoxRadius: 8.0,
+                      pinBoxBorderWidth: 1.0,
+                      hasTextBorderColor: CustomColors.mainColor,
+                      pinBoxWidth: 40.0,
+                      pinBoxHeight: 40.0,
+                      onDone: (text) {
+                        // handled by on-screen keyboard
+                      },
+                      wrapAlignment: WrapAlignment.spaceAround,
+                      pinBoxDecoration:
+                          ProvidedPinBoxDecoration.defaultPinBoxDecoration,
                     ),
-                    textAlign: TextAlign.center,
-                  );
-                },
+                  ),
+                  const SizedBox(height: 16.0),
+                  TextButton(
+                      onPressed: _showForgotPinDialog,
+                      child: Text(
+                        tr('auth.forgot_pin'),
+                        style: const TextStyle(fontSize: 12.0),
+                      )),
+                  const SizedBox(height: 16.0),
+                  Divider(
+                    color: Colors.white30,
+                    height: 1.0,
+                  ),
+                  NumericKeyboard(
+                    onKeyboardTap: _onKeyboardTap,
+                    textStyle:
+                        const TextStyle(fontSize: 24.0, color: Colors.white),
+                    rightButtonFn: _onBackspace,
+                    rightButtonLongPressFn: _onClear,
+                    rightIcon:
+                        const Icon(Icons.backspace, color: Colors.white70),
+                    leftButtonFn: _verify,
+                    leftIcon: _loading
+                        ? CupertinoActivityIndicator(
+                            color: CustomColors.mainColor,
+                          )
+                        : Icon(FluentIcons.lock_closed_28_regular,
+                            color: CustomColors.mainColor),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ),
+                  SizedBox(height: 16.0),
+                  Divider(
+                    color: Colors.white30,
+                    height: 1.0,
+                  ),
+                  const SizedBox(height: 16.0),
+                  TextButton(
+                      onPressed: () {
+                        // Logout and navigate to GenerateScreen
+                        context.read<AuthBloc>().add(LoggedOut());
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => GenerateScreen(
+                                authenticationRepository:
+                                    widget.authRepository),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: Text(
+                        tr('auth.sign_in_other_user'),
+                        style: const TextStyle(fontSize: 12.0),
+                      )),
+                ],
               ),
-              const SizedBox(height: 16.0),
-              const Text(
-                'Та пинкодоо оруулна уу',
-                style: TextStyle(fontSize: 10.0, color: Colors.white70),
-              ),
-              const SizedBox(height: 16.0),
-              IgnorePointer(
-                ignoring: true, // prevent opening system keyboard
-                child: PinCodeTextField(
-                  controller: _codeController,
-                  maxLength: 6,
-                  autofocus: false,
-                  isCupertino: true,
-                  hideCharacter: true,
-                  highlightColor: CustomColors.mainColor,
-                  defaultBorderColor: Colors.white12,
-                  pinBoxColor: CustomColors.inputDarkColor,
-                  pinBoxRadius: 8.0,
-                  pinBoxBorderWidth: 1.0,
-                  hasTextBorderColor: CustomColors.mainColor,
-                  pinBoxWidth: 40.0,
-                  pinBoxHeight: 40.0,
-                  onDone: (text) {
-                    // handled by on-screen keyboard
-                  },
-                  wrapAlignment: WrapAlignment.spaceAround,
-                  pinBoxDecoration:
-                      ProvidedPinBoxDecoration.defaultPinBoxDecoration,
-                ),
-              ),
-              const SizedBox(height: 16.0),
-              TextButton(onPressed: _showForgotPinDialog, child: const Text('PIN код мартсан уу?', style: TextStyle(
-                fontSize: 12.0
-              ),)),
-              const SizedBox(height: 16.0),
-              Divider(
-                color: Colors.white30,
-                height: 1.0,
-              ),
-              NumericKeyboard(
-                onKeyboardTap: _onKeyboardTap,
-                textStyle: const TextStyle(fontSize: 24.0, color: Colors.white),
-                rightButtonFn: _onBackspace,
-                rightButtonLongPressFn: _onClear,
-                rightIcon: const Icon(Icons.backspace, color: Colors.white70),
-                leftButtonFn: _verify,
-                leftIcon:_loading
-                  ?  CupertinoActivityIndicator(
-                      color: CustomColors.mainColor,
-                    ) : Icon(FluentIcons.lock_closed_28_regular, color: CustomColors.mainColor),
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              ),
-              SizedBox(height: 16.0),
-              Divider(
-                color: Colors.white30,
-                height: 1.0,
-              ),
-              const SizedBox(height: 16.0),
-              TextButton(
-                onPressed: () {
-                  // Logout and navigate to GenerateScreen
-                  context.read<AuthBloc>().add(LoggedOut());
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (_) => GenerateScreen(authenticationRepository: widget.authRepository),
-                    ),
-                    (route) => false,
-                  );
-                }, 
-                child: const Text('Өөр хэрэглэгчээр нэвтрэх', style: TextStyle(
-                  fontSize: 12.0
-                ),)
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

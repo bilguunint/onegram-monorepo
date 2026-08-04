@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import '../../repositories/auth_repository.dart';
 
 part 'user_reset_pin_event.dart';
@@ -25,9 +26,10 @@ class UserResetPinBloc extends Bloc<UserResetPinEvent, UserResetPinState> {
       input: event.input
     );
     if (result['status'] == 'success') {
-      emit(UserResetPinSuccess(msg: result['msg'] ?? 'PIN амжилттай шинэчлэгдлээ'));
+      emit(UserResetPinSuccess(
+          msg: result['msg'] ?? tr('auth.pin_updated_success')));
     } else {
-      emit(UserResetPinFailure(msg: result['msg'] ?? 'Алдаа гарлаа'));
+      emit(UserResetPinFailure(msg: result['msg'] ?? tr('common.error')));
     }
   }
 }

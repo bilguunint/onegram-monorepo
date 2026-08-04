@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'received_gift_orders_widget.dart';
 import 'sent_gift_orders_widget.dart';
@@ -19,9 +20,9 @@ class GiftListScreen extends StatefulWidget {
 class _OrdersListScreenState extends State<GiftListScreen> with SingleTickerProviderStateMixin{
 
   late TabController _tabController;
-  List<String> tabs = [
-    "Ирсэн",
-    "Илгээсэн",
+  late List<String> tabs = [
+    tr('order.gift_received_tab'),
+    tr('order.gift_sent_tab'),
   ];
 
   @override
@@ -35,7 +36,7 @@ class _OrdersListScreenState extends State<GiftListScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Бэлэг"),
+        title: Text(tr('order.gift')),
         centerTitle: false,
       ),
       body: Column(

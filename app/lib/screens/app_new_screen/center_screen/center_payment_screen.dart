@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -78,9 +79,9 @@ class _CenterPaymentScreenState extends State<CenterPaymentScreen> {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Дэмжлэгийн төлбөр',
-          style: TextStyle(
+        title: Text(
+          tr('center.support_payment_title'),
+          style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
             color: Colors.white,
@@ -162,7 +163,7 @@ class _PendingView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Төлөх дүн',
+              Text(tr('common.amount_due'),
                   style: TextStyle(
                       color: Colors.white.withOpacity(0.55), fontSize: 11)),
               const SizedBox(height: 4),
@@ -192,7 +193,7 @@ class _PendingView extends StatelessWidget {
           ),
         const SizedBox(height: 16),
         Text(
-          'Банкны апп',
+          tr('common.bank_app'),
           style: TextStyle(
             color: Colors.white.withOpacity(0.7),
             fontSize: 12,
@@ -201,11 +202,11 @@ class _PendingView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (invoice.links.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'QR кодыг QPay апп-аар уншуулна уу.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+              tr('common.scan_qr_hint'),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           )
@@ -274,15 +275,15 @@ class _PendingView extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.amber.withOpacity(0.25)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.info_outline, size: 14, color: Colors.amberAccent),
-              SizedBox(width: 8),
+              const Icon(Icons.info_outline,
+                  size: 14, color: Colors.amberAccent),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Төлбөр амжилттай төлөгдмөгц дэлгэц автоматаар шинэчлэгдэнэ. '
-                  'QR кодыг QPay эсвэл банкны апп-аар уншуулна уу.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  tr('center.payment_auto_refresh_note'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ),
             ],
@@ -305,7 +306,7 @@ class _PendingView extends StatelessWidget {
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: Colors.white),
                 )
-              : Text('Төлбөр шалгах',
+              : Text(tr('center.check_payment'),
                   style: TextStyle(
                       color: CustomColors.mainColor,
                       fontWeight: FontWeight.bold,
@@ -354,10 +355,10 @@ class _PaidView extends StatelessWidget {
                         color: CustomColors.mainColor, size: 52),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Танд баярлалаа',
+                  Text(
+                    tr('center.thank_you'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontFamily: 'InterBold',
                       fontWeight: FontWeight.w800,
@@ -366,7 +367,7 @@ class _PaidView extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${formatMNT(amount)} дэмжлэг',
+                    tr('center.support_amount', {'amount': formatMNT(amount)}),
                     style: TextStyle(
                       color: CustomColors.mainColor,
                       fontFamily: 'RubikBold',
@@ -374,19 +375,17 @@ class _PaidView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Дэлхийн Морин Хуурын Төв Цогцолборыг бүтээн байгуулах эрхэм '
-                    'үйлсэд дэмжлэг үзүүлсэн Танд гүн талархал илэрхийлье.',
+                  Text(
+                    tr('center.thanks_body_1'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white70, fontSize: 13, height: 1.55),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Таны сэтгэлийн дэмжлэг Монголын өв соёл, морин хуурын аялгууг '
-                    'дэлхий дахинд түгээн дэлгэрүүлэх үнэт хувь нэмэр болж байна.',
+                  Text(
+                    tr('center.thanks_body_2'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white60, fontSize: 12.5, height: 1.55),
                   ),
                   const SizedBox(height: 28),
@@ -395,9 +394,9 @@ class _PaidView extends StatelessWidget {
                     child: MainButton(
                       isLoading: false,
                       onPress: onClose,
-                      title: const Text(
-                        'Болсон',
-                        style: TextStyle(
+                      title: Text(
+                        tr('common.ok'),
+                        style: const TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
                             fontSize: 14),

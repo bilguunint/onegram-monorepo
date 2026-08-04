@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/news_item_model.dart';
 import 'package:onegrgold/screens/app_new_screen/news_screen/news_detail_screen.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -58,12 +59,12 @@ class _RecentNewsWidgetState extends State<RecentNewsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-                    padding: EdgeInsets.only(
+        Padding(
+                    padding: const EdgeInsets.only(
                         top: 16.0, bottom: 16.0),
                     child: Text(
-                      "Алт барьцаалсан зээл",
-                      style: TextStyle(
+                      tr('home.gold_backed_loan'),
+                      style: const TextStyle(
                         fontFamily: "InterBold",
                         fontSize: 14.0,
                       ),
@@ -86,10 +87,10 @@ class _RecentNewsWidgetState extends State<RecentNewsWidget> {
                       ),
                     )
                   : _news.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'Мэдээ олдсонгүй',
-                            style: TextStyle(
+                            tr('home.no_news_found'),
+                            style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 14,
                               fontFamily: "Inter",
@@ -150,7 +151,9 @@ class _RecentNewsWidgetState extends State<RecentNewsWidget> {
   }
 
   Widget _buildNewsItem(NewsItem newsItem) {
-    final String title = newsItem.titleMn.isNotEmpty ? newsItem.titleMn : 'Гарчиггүй мэдээ';
+    final String title = newsItem.titleMn.isNotEmpty
+        ? newsItem.titleMn
+        : tr('home.untitled_news');
     final String imageUrl = newsItem.imageUrl;
     
     return GestureDetector(

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
@@ -39,7 +40,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _hasShownRegistrationDialog = false;
-  
+
   void _showRegistrationNumberDialog(BuildContext context, UserModel user) {
     showDialog(
       context: context,
@@ -47,13 +48,14 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: CustomColors.darkContainerColor,
-          title: const Text(
-            'Бүртгэлээ бүрэн зөв бүртгүүлнэ үү.',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: Text(
+            tr('home.registration_incomplete_title'),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          content: const Text(
-            'Та өөрийн бүртгэлийг бүрэн бөглөнө үү. Энэ нь таны нэвтрэх болон алтаа баталгаажуулахад шаардлагатай.',
-            style: TextStyle(color: Colors.white70),
+          content: Text(
+            tr('home.registration_incomplete_body'),
+            style: const TextStyle(color: Colors.white70),
           ),
           actions: [
             TextButton(
@@ -62,8 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 _navigateToRegistrationUpdate(context, user);
               },
               child: Text(
-                'Бүртгэл шинэчлэх',
-                style: TextStyle(color: CustomColors.mainColor, fontWeight: FontWeight.bold),
+                tr('home.update_registration'),
+                style: TextStyle(
+                    color: CustomColors.mainColor, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -86,9 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final updatedUser = await fetchUser();
       if (updatedUser != null) {
         final bool isComplete = updatedUser.firstName.isNotEmpty &&
-                                updatedUser.lastName.isNotEmpty &&
-                                updatedUser.registrationNumber.isNotEmpty;
-        
+            updatedUser.lastName.isNotEmpty &&
+            updatedUser.registrationNumber.isNotEmpty;
+
         if (isComplete) {
           // All fields are filled, don't show dialog again
           _hasShownRegistrationDialog = true;
@@ -100,27 +103,53 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {});
     });
   }
-  
+
   Future<int> _getPendingGiftCount() async {
     try {
       // Debug auth status
       print('Current user ID: ${widget.uid}');
-      print('FirebaseAuth current user: ${FirebaseAuth.instance.currentUser?.uid}');
-      
+      print(
+          'FirebaseAuth current user: ${FirebaseAuth.instance.currentUser?.uid}');
+
       final querySnapshot = await FirebaseFirestore.instance
           .collection('gift_orders')
           .where('receiver_id', isEqualTo: widget.uid)
           .where('status', isEqualTo: 'pending')
           .get();
-      
+
       print('Found ${querySnapshot.docs.length} pending gifts');
       return querySnapshot.docs.length;
     } catch (e) {
       print('Error fetching pending gifts: $e');
       print('User ID: ${widget.uid}');
-      print('FirebaseAuth current user: ${FirebaseAuth.instance.currentUser?.uid}');
+      print(
+          'FirebaseAuth current user: ${FirebaseAuth.instance.currentUser?.uid}');
       return 0;
     }
+  }
+
+  /// Red count badge used by every app-bar icon, so notification and gift
+  /// badges stay pixel-identical.
+  Widget _countBadge({required int count, required String asset}) {
+    return badges.Badge(
+      showBadge: count > 0,
+      position: badges.BadgePosition.topEnd(top: -4, end: -4),
+      badgeContent: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 8,
+          height: 1,
+          fontFamily: "RubikBold",
+        ),
+      ),
+      badgeStyle: const badges.BadgeStyle(
+        badgeColor: Colors.red,
+        elevation: 0,
+        padding: EdgeInsets.all(3),
+      ),
+      child: SvgPicture.asset(asset, color: Colors.white),
+    );
   }
 
   @override
@@ -134,23 +163,23 @@ class _HomeScreenState extends State<HomeScreen> {
             return const Center(child: CupertinoActivityIndicator());
           }
           if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text("Мэдээлэл олдсонгүй."));
+            return Center(child: Text(tr('home.no_data')));
           }
 
           final user = snapshot.data!;
-          
+
           // Check if firstName, lastName, or registration_number is empty or null
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            final bool needsUpdate = user.firstName.isEmpty || 
-                                     user.lastName.isEmpty || 
-                                     user.registrationNumber.isEmpty;
-            
+            final bool needsUpdate = user.firstName.isEmpty ||
+                user.lastName.isEmpty ||
+                user.registrationNumber.isEmpty;
+
             if (needsUpdate && !_hasShownRegistrationDialog) {
               _hasShownRegistrationDialog = true;
               _showRegistrationNumberDialog(context, user);
             }
           });
-          
+
           return Scaffold(
             appBar: PreferredSize(
               preferredSize: const Size.fromHeight(45.0),
@@ -182,45 +211,43 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 actions: [
-                  IconButton(
-                    icon: SvgPicture.asset(
-                      "assets/icons/notification.svg",
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        CupertinoPageRoute(
-                            builder: (_) => NotificationScreen(
-                                )));
+                  // Unread-notification count, live from Firestore. Docs
+                  // without a `read` field count as unread.
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(widget.uid)
+                        .collection('notifications')
+                        .snapshots(),
+                    builder: (context, snap) {
+                      final unread = snap.hasData
+                          ? snap.data!.docs
+                              .where((d) => d.data()['read'] != true)
+                              .length
+                          : 0;
+                      return IconButton(
+                        icon: _countBadge(
+                          count: unread,
+                          asset: "assets/icons/notification.svg",
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                  builder: (_) => NotificationScreen()));
+                        },
+                      );
                     },
                   ),
                   FutureBuilder<int>(
                     future: _getPendingGiftCount(),
                     builder: (context, badgeSnapshot) {
                       final pendingCount = badgeSnapshot.data ?? 0;
-                      
+
                       return IconButton(
-                        icon: badges.Badge(
-                          showBadge: pendingCount > 0,
-                          badgeContent: Text(
-                            pendingCount.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontFamily: "RubikBold",
-                            ),
-                          ),
-                          badgeStyle: badges.BadgeStyle(
-                            badgeColor: Colors.red,
-                            elevation: 0,
-                            borderRadius: BorderRadius.circular(8),
-                            padding: const EdgeInsets.all(5.5),
-                          ),
-                          child: SvgPicture.asset(
-                            "assets/icons/gift-line.svg",
-                            color: Colors.white,
-                          ),
+                        icon: _countBadge(
+                          count: pendingCount,
+                          asset: "assets/icons/gift-line.svg",
                         ),
                         onPressed: () {
                           Navigator.push(
@@ -242,12 +269,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white,
                       ),
                       onPressed: () {
-                        
-                    Navigator.push(
-                        context,
-                        CupertinoPageRoute(
-                            builder: (_) => const HelpScreen(
-                                )));
+                        Navigator.push(
+                            context,
+                            CupertinoPageRoute(
+                                builder: (_) => const HelpScreen()));
                       },
                     ),
                   ),
@@ -297,8 +322,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Padding(
-                                          padding: EdgeInsets.only(
+                                        Padding(
+                                          padding: const EdgeInsets.only(
                                               left: 16.0,
                                               right: 16.0,
                                               top: 16.0,
@@ -308,8 +333,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                "Миний үнэт эдлэл",
-                                                style: TextStyle(
+                                                tr('home.my_valuables'),
+                                                style: const TextStyle(
                                                     fontFamily: "InterBold",
                                                     shadows: <Shadow>[
                                                       Shadow(
@@ -408,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   // Title for Safebox and News
-                  
+
                   // Services row. The right slot shows the Морин хуур donation
                   // campaign while active, otherwise the loan service.
                   Row(
@@ -420,65 +445,60 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const Padding(
+                  Padding(
                     padding: const EdgeInsets.only(
                         left: 16.0, top: 16.0, bottom: 16.0),
                     child: Text(
-                      "Өнөөдрийн ханш",
-                      style: TextStyle(
+                      tr('home.todays_rate'),
+                      style: const TextStyle(
                         fontFamily: "InterBold",
                         fontSize: 14.0,
                       ),
                     ),
                   ),
                   const Padding(
-                padding: EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: GoldRateWidget(
-                    )),
-                  ],
-                ),
-              ),
-              const SizedBox(
-                height: 8.0,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Захиалга",
-                      style: TextStyle(
-                        fontFamily: "InterBold",
-                        fontSize: 14.0,
-                      ),
+                    padding: EdgeInsets.only(
+                      left: 16.0,
+                      right: 16.0,
                     ),
-                    TextButton(
-                        onPressed: () {
-                          
-                        },
-                        child: Text(
-                          "Бүгд",
-                          style: TextStyle(
-                              fontSize: 12.0,
-                              fontFamily: "Inter",
-                              fontWeight: FontWeight.bold,
-                              color: CustomColors.mainColor),
-                        ))
-                  ],
-                ),
-              ),
+                    child: Row(
+                      children: [
+                        Expanded(child: GoldRateWidget()),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 8.0,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          tr('home.orders'),
+                          style: const TextStyle(
+                            fontFamily: "InterBold",
+                            fontSize: 14.0,
+                          ),
+                        ),
+                        TextButton(
+                            onPressed: () {},
+                            child: Text(
+                              tr('home.see_all'),
+                              style: TextStyle(
+                                  fontSize: 12.0,
+                                  fontFamily: "Inter",
+                                  fontWeight: FontWeight.bold,
+                                  color: CustomColors.mainColor),
+                            ))
+                      ],
+                    ),
+                  ),
                   const Padding(
-                  padding:
-                       EdgeInsets.only(right: 16.0, left: 16.0, top: 16.0),
-                  child: OrderList(
-                  ))
+                      padding:
+                          EdgeInsets.only(right: 16.0, left: 16.0, top: 16.0),
+                      child: OrderList())
                 ],
               ),
             ),
@@ -491,15 +511,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String greeting() {
     var hour = DateTime.now().hour;
     if (hour < 12 && hour > 5) {
-      return 'Өглөөний мэнд';
+      return tr('home.greeting_morning');
     }
     if (hour < 17 && hour > 12) {
-      return 'Өдрийн мэнд';
+      return tr('home.greeting_afternoon');
     }
     if (hour < 5) {
-      return 'Оройн мэнд';
+      return tr('home.greeting_evening');
     }
-    return 'Оройн мэнд';
+    return tr('home.greeting_evening');
   }
 
   Future<UserModel?> fetchUser() async {

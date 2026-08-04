@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/news_item_model.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:share_plus/share_plus.dart';
@@ -126,7 +127,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                               DateTime.parse(widget
                                                   .news.publishedAt!
                                                   .toString()),
-                                              locale: 'mn'),
+                                              locale: AppLocale.current.timeagoLocale),
                                           style: TextStyle(
                                               fontSize: 9,
                                               fontWeight: FontWeight.bold,
@@ -289,7 +290,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                         ),
                                         SizedBox(width: 10),
                                         Text(
-                                          "Эх мэдээ",
+                                          tr('home.original_source'),
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
@@ -338,7 +339,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                         ),
                                         SizedBox(width: 10),
                                         Text(
-                                          "Хуваалцах",
+                                          tr('home.share'),
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
@@ -392,7 +393,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      throw 'URL нээж чадсангүй: $url';
+      throw tr('home.url_open_failed', {'url': url});
     }
   }
 
@@ -422,7 +423,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Эх сурвалж:",
+                      tr('home.source_label'),
                       style: TextStyle(
                           fontSize: 10,
                           color: appTheme == ThemeMode.dark
@@ -456,7 +457,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     try {
       final params = ShareParams(
         text:
-            '$title\n\n$content\n\nЭх сурвалж: ${widget.news.url}\nPowered by Swapp',
+            '$title\n\n$content\n\n${tr('home.source_label')} ${widget.news.url}\nPowered by Swapp',
       );
       final result = await SharePlus.instance.share(params);
       if (result.status == ShareResultStatus.success) {

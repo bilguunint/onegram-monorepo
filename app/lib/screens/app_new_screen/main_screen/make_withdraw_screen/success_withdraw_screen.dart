@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/withdraw_request_response.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -14,7 +15,7 @@ class SuccessWithdrawScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Хүсэлт амжилттай'),
+        title: Text(tr('order.withdraw_success_title')),
         backgroundColor: CustomColors.scaffoldDarkBack,
         automaticallyImplyLeading: false,
       ),
@@ -39,7 +40,7 @@ class SuccessWithdrawScreen extends StatelessWidget {
               Text(
                 withdrawResponse.message.isNotEmpty 
                     ? withdrawResponse.message
-                    : 'Таны хүсэлт хянагдаж байна. Баталгаажуулсны дараа таны дансанд орж ирнэ.',
+                    : tr('order.withdraw_success_message'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white54,
@@ -62,14 +63,17 @@ class SuccessWithdrawScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Хэмжээ:',
+                          tr('order.quantity_label'),
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 14.0,
                           ),
                         ),
                         Text(
-                          '${withdrawResponse.quantity.toStringAsFixed(0)} гр ${withdrawResponse.metalName.toLowerCase()}',
+                          tr('order.quantity_gram_metal', {
+                            'qty': withdrawResponse.quantity.toStringAsFixed(0),
+                            'metal': withdrawResponse.metalName.toLowerCase()
+                          }),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14.0,
@@ -83,7 +87,7 @@ class SuccessWithdrawScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Төлөв:',
+                          tr('order.status_label'),
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 14.0,
@@ -98,7 +102,7 @@ class SuccessWithdrawScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Хүлээгдэж байна',
+                              tr('common.pending'),
                               style: const TextStyle(
                                 color: Colors.orange,
                                 fontSize: 14.0,
@@ -131,7 +135,7 @@ class SuccessWithdrawScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Та баталгаажуулах кодыг бидэнд мэдэгдэн биетээр авах хүсэлтээ баталгаажуулна уу.',
+                        tr('order.withdraw_confirm_code_note'),
                         style: TextStyle(
                           color: Colors.blue.shade300,
                           fontSize: 14.0,
@@ -144,9 +148,9 @@ class SuccessWithdrawScreen extends StatelessWidget {
               const SizedBox(height: 40),
               // Done Button
               MainButton(
-                title: const Text(
-                  'Дуусгах',
-                  style: TextStyle(
+                title: Text(
+                  tr('order.finish'),
+                  style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w600,
                   ),

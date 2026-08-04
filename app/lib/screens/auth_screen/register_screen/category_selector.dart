@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class CategorySelector extends StatefulWidget {
@@ -61,7 +62,7 @@ class _CategorySelectorState extends State<CategorySelector> {
           favoriteCategories.add(category);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Зөвхөн 3 ангилал сонгож болно")),
+            SnackBar(content: Text(tr('reg.max_three_categories'))),
           );
         }
       }
@@ -106,7 +107,7 @@ class _CategorySelectorState extends State<CategorySelector> {
                 Row(
                   children: [
                     Text(
-                      '${category['total_news']} мэдээ',
+                      tr('reg.news_count', {'count': category['total_news']}),
                       style: const TextStyle(
                         fontSize: 10.0,
                         color: Colors.white,
@@ -123,7 +124,8 @@ class _CategorySelectorState extends State<CategorySelector> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${category['total_subscribers']} захиалагч',
+                      tr('reg.subscriber_count',
+                          {'count': category['total_subscribers']}),
                       style: const TextStyle(
                         fontSize: 10.0,
                         color: Colors.white,
@@ -143,7 +145,7 @@ class _CategorySelectorState extends State<CategorySelector> {
               child: TextButton(
                 onPressed: () => toggleCategory(category),
                 child: Text(
-                  isSelected ? 'Сонгосон' : 'Сонгох',
+                  isSelected ? tr('reg.selected') : tr('reg.select'),
                   style: TextStyle(
                     fontSize: 10.0,
                     color: isSelected ? Colors.white : Colors.black,

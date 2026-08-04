@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart'
@@ -21,17 +22,17 @@ class CenterMyTreeOrdersScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Миний тарьсан мод',
-          style: TextStyle(
+        title: Text(
+          tr('center.my_planted_trees'),
+          style: const TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
         centerTitle: false,
       ),
       body: uid == null
-          ? const Center(
-              child: Text('Нэвтрэх шаардлагатай.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ? Center(
+              child: Text(tr('common.sign_in_required'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
             )
           : StreamBuilder<List<CenterTreeOrder>>(
               stream: repo.watchMyTreeOrders(uid),
@@ -43,15 +44,16 @@ class CenterMyTreeOrdersScreen extends StatelessWidget {
                 }
                 final orders = snapshot.data!;
                 if (orders.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.forest_rounded, color: kLeafGreen, size: 48),
-                        SizedBox(height: 12),
-                        Text('Та одоогоор мод тараагүй байна.',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 13)),
+                        const Icon(Icons.forest_rounded,
+                            color: kLeafGreen, size: 48),
+                        const SizedBox(height: 12),
+                        Text(tr('center.no_trees_planted_yet'),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 13)),
                       ],
                     ),
                   );
@@ -93,21 +95,21 @@ class CenterMyTreeOrdersScreen extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 children: [
-                  const TextSpan(
-                    text: 'Та нийт ',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  TextSpan(
+                    text: tr('center.you_planted_prefix'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   TextSpan(
-                    text: '$totalTrees мод',
+                    text: tr('center.trees_count_value', {'count': totalTrees}),
                     style: const TextStyle(
                       color: kLeafGreen,
                       fontFamily: 'RubikBold',
                       fontSize: 16,
                     ),
                   ),
-                  const TextSpan(
-                    text: ' тарьсан байна 🌱',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  TextSpan(
+                    text: tr('center.you_planted_suffix'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),
@@ -258,7 +260,7 @@ class _TreeOrderTile extends StatelessWidget {
               size: 12, color: color),
           const SizedBox(width: 4),
           Text(
-            planted ? 'Таригдсан' : 'Тарихаар хүлээгдэж буй',
+            planted ? tr('center.planted') : tr('center.awaiting_planting'),
             style: TextStyle(
                 color: color, fontSize: 10.5, fontWeight: FontWeight.w600),
           ),

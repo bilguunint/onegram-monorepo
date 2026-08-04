@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
@@ -111,7 +112,7 @@ class ProductRepository {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw StateError('Нэвтрээгүй байна.');
+      throw StateError(tr('common.not_signed_in'));
     }
     final idToken = await user.getIdToken();
 
@@ -129,22 +130,24 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+          tr('common.unexpected_response', {'code': res.statusCode}));
     }
 
     if (res.statusCode != 200) {
-      final msg = (body['error'] as String?) ??
-          'Хуваан төлөлт эхлүүлэх амжилтгүй (${res.statusCode}).';
+      final rawError = body['error'] as String?;
+      final msg = rawError != null
+          ? trServer(rawError)
+          : tr('purchase.err_installment_init', {'code': res.statusCode});
       throw StateError(msg);
     }
 
     final invoice = body['qpay_invoice'];
     if (invoice is! Map<String, dynamic>) {
-      throw StateError('QPay invoice олдсонгүй.');
+      throw StateError(tr('purchase.err_no_qpay_invoice'));
     }
     final pendingId = body['pending_id'] as String?;
     if (pendingId == null || pendingId.isEmpty) {
-      throw StateError('pending_id олдсонгүй.');
+      throw StateError(tr('purchase.err_no_pending_id'));
     }
     final amount = (body['amount'] as num?)?.toInt() ??
         (body['daily_payment'] as num?)?.toInt() ??
@@ -172,7 +175,7 @@ class ProductRepository {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw StateError('Нэвтрээгүй байна.');
+      throw StateError(tr('common.not_signed_in'));
     }
     final idToken = await user.getIdToken();
 
@@ -190,18 +193,20 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+          tr('common.unexpected_response', {'code': res.statusCode}));
     }
 
     if (res.statusCode != 200) {
-      final msg = (body['error'] as String?) ??
-          'Төлбөрийн нэхэмжлэх үүсгэх амжилтгүй (${res.statusCode}).';
+      final rawError = body['error'] as String?;
+      final msg = rawError != null
+          ? trServer(rawError)
+          : tr('purchase.err_create_invoice', {'code': res.statusCode});
       throw StateError(msg);
     }
 
     final invoice = body['qpay_invoice'];
     if (invoice is! Map<String, dynamic>) {
-      throw StateError('QPay invoice олдсонгүй.');
+      throw StateError(tr('purchase.err_no_qpay_invoice'));
     }
     final dayFrom = (body['day_from'] as num?)?.toInt() ??
         (body['day_no'] as num?)?.toInt() ??
@@ -235,7 +240,7 @@ class ProductRepository {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw StateError('Нэвтрээгүй байна.');
+      throw StateError(tr('common.not_signed_in'));
     }
     final idToken = await user.getIdToken();
 
@@ -258,12 +263,14 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+          tr('common.unexpected_response', {'code': res.statusCode}));
     }
 
     if (res.statusCode != 200) {
-      final msg = (body['error'] as String?) ??
-          'Цуцлах хүсэлт илгээх амжилтгүй (${res.statusCode}).';
+      final rawError = body['error'] as String?;
+      final msg = rawError != null
+          ? trServer(rawError)
+          : tr('purchase.err_cancel_request', {'code': res.statusCode});
       throw StateError(msg);
     }
 
@@ -288,7 +295,7 @@ class ProductRepository {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw StateError('Нэвтрээгүй байна.');
+      throw StateError(tr('common.not_signed_in'));
     }
     final idToken = await user.getIdToken();
 
@@ -306,22 +313,24 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          'Сервэрээс хүлээгдэхгүй хариу ирлээ (${res.statusCode}).');
+          tr('common.unexpected_response', {'code': res.statusCode}));
     }
 
     if (res.statusCode != 200) {
-      final msg = (body['error'] as String?) ??
-          'Төлбөрийн нэхэмжлэх үүсгэх амжилтгүй (${res.statusCode}).';
+      final rawError = body['error'] as String?;
+      final msg = rawError != null
+          ? trServer(rawError)
+          : tr('purchase.err_create_invoice', {'code': res.statusCode});
       throw StateError(msg);
     }
 
     final invoice = body['qpay_invoice'];
     if (invoice is! Map<String, dynamic>) {
-      throw StateError('QPay invoice олдсонгүй.');
+      throw StateError(tr('purchase.err_no_qpay_invoice'));
     }
     final pendingId = body['pending_id'] as String?;
     if (pendingId == null || pendingId.isEmpty) {
-      throw StateError('pending_id олдсонгүй.');
+      throw StateError(tr('purchase.err_no_pending_id'));
     }
     return (invoice: MakeOrder.fromJson(invoice), pendingId: pendingId);
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class LeaseGoldWidget extends StatelessWidget {
@@ -10,12 +11,12 @@ class LeaseGoldWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-                    padding: EdgeInsets.only(
+        Padding(
+                    padding: const EdgeInsets.only(
                         top: 16.0, bottom: 16.0),
                     child: Text(
-                      "Зээлийн үйлчилгээ",
-                      style: TextStyle(
+                      tr('home.loan_service'),
+                      style: const TextStyle(
                         fontFamily: "InterBold",
                         fontSize: 14.0,
                       ),
@@ -27,17 +28,17 @@ class LeaseGoldWidget extends StatelessWidget {
               context: context,
               builder: (_) => AlertDialog(
                 backgroundColor: CustomColors.darkContainerColor,
-                title: const Text(
-                  'Зээлийн үйлчилгээ',
-                  style: TextStyle(
+                title: Text(
+                  tr('home.loan_service'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'InterBold',
                   ),
                 ),
-                content: const Text(
-                  'Алтаа барьцаалаад зээл авах боломж тун удахгүй нээгдэнэ. Манай шинэ үйлчилгээг хүлээж байгаарай!',
-                  style: TextStyle(
+                content: Text(
+                  tr('home.loan_coming_soon_body'),
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13.0,
                   ),
@@ -46,7 +47,7 @@ class LeaseGoldWidget extends StatelessWidget {
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(
-                      'Ойлголоо',
+                      tr('home.got_it'),
                       style: TextStyle(
                         color: CustomColors.mainColor,
                         fontWeight: FontWeight.bold,
@@ -169,7 +170,7 @@ class LeaseGoldWidget extends StatelessWidget {
                     ],
                   ),
             SizedBox(height: 4.0),
-                  Text("Алтаа барьцаалаад зээлээ ав", style: TextStyle(
+                  Text(tr('home.loan_card_subtitle'), style: TextStyle(
                   fontSize: 12.0,
                   fontWeight: FontWeight.bold,
                   color: Colors.white

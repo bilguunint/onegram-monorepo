@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/generate_bloc/generate_bloc.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/screens/auth_screen/user_reset_pin_screen/user_reset_pin_view.dart';
 
@@ -21,9 +22,9 @@ class _UserResetPinScreenState extends State<UserResetPinScreen> {
       appBar: AppBar(
         elevation: 0,
         centerTitle: false,
-        title:  const Text(
-          "Пинкод сэргээх",
-          style: TextStyle(
+        title: Text(
+          tr('auth.reset_pin_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 14.0,
             fontWeight: FontWeight.bold,

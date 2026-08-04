@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/installment_day_select_sheet.dart';
@@ -78,7 +79,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Алдаа: $e')),
+        SnackBar(content: Text(tr('product.error_with', {'error': e}))),
       );
     } finally {
       if (mounted) setState(() => _requestingInvoice = false);
@@ -90,26 +91,27 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: const Color(0xFF1F1F22),
-        title: const Text(
-          'Цуцлахдаа итгэлтэй байна уу?',
-          style: TextStyle(color: Colors.white, fontSize: 15),
+        title: Text(
+          tr('product.cancel_confirm_title'),
+          style: const TextStyle(color: Colors.white, fontSize: 15),
         ),
         content: Text(
-          'Хуваан төлөлтийг цуцалснаар нийт төлсөн дүнгээс цуцлалтын шимтгэл '
-          '(${purchase.productSnapshot.cancelFeePercent}%) хасагдаж, үлдэгдэл '
-          'таны данс руу буцаан шилжинэ.',
+          tr('product.cancel_confirm_body', {
+            'percent': purchase.productSnapshot.cancelFeePercent,
+          }),
           style: const TextStyle(color: Colors.white70, fontSize: 12.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Үгүй', style: TextStyle(color: Colors.white54)),
+            child: Text(tr('product.no'),
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: const Text(
-              'Тийм',
-              style: TextStyle(
+            child: Text(
+              tr('product.yes'),
+              style: const TextStyle(
                   color: Color(0xFFE57373), fontWeight: FontWeight.bold),
             ),
           ),
@@ -199,9 +201,9 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
               ),
             ],
             const SizedBox(height: 18),
-            const Text(
-              'Төлбөрийн түүх',
-              style: TextStyle(
+            Text(
+              tr('product.payment_history'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -210,7 +212,11 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
             if (isInstallment) ...[
               const SizedBox(height: 4),
               Text(
-                'Нийт ${purchase.totalDays} өдөр × ${formatMNT(purchase.dailyPayment)} (${purchase.months} сар)',
+                tr('product.schedule_summary', {
+                  'days': purchase.totalDays,
+                  'amount': formatMNT(purchase.dailyPayment),
+                  'months': purchase.months,
+                }),
                 style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
             ],
@@ -223,9 +229,9 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white.withOpacity(0.06)),
                 ),
-                child: const Text(
-                  'Төлбөрийн түүх алга.',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                child: Text(
+                  tr('product.no_payment_history'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               )
             else
@@ -255,9 +261,9 @@ class PurchaseDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Худалдан авалт',
-          style: TextStyle(
+        title: Text(
+          tr('product.purchase_title'),
+          style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
             color: Colors.white,
@@ -310,8 +316,11 @@ class _PayDayButton extends StatelessWidget {
             : const Icon(Icons.qr_code, size: 18),
         label: Text(
           busy
-              ? 'Нэхэмжлэх үүсгэж байна…'
-              : 'Төлбөр төлөх ($nextDay-р өдрөөс, $remainingDays үлдсэн)',
+              ? tr('product.creating_invoice')
+              : tr('product.pay_from_day', {
+                  'day': nextDay,
+                  'remaining': remainingDays,
+                }),
         ),
       ),
     );
@@ -354,7 +363,7 @@ class _HistoryRowCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${row.dayNo}-р өдрийн төлбөр',
+                  tr('product.day_payment', {'day': row.dayNo}),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -444,8 +453,11 @@ class _HeaderCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   purchase.purchaseType == PurchaseType.installment
-                      ? '${purchase.months} сар (${purchase.totalDays} өдөр) хуваан төлөх'
-                      : 'Шууд худалдан авалт',
+                      ? tr('product.installment_summary', {
+                          'months': purchase.months,
+                          'days': purchase.totalDays,
+                        })
+                      : tr('product.direct_purchase'),
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
@@ -470,22 +482,22 @@ class _StatusBadge extends StatelessWidget {
       case ProductPurchaseStatus.active:
         bg = const Color(0x331E88E5);
         fg = const Color(0xFF7CC2FF);
-        text = 'Идэвхтэй';
+        text = tr('product.status_active');
         break;
       case ProductPurchaseStatus.completed:
         bg = const Color(0x3343A047);
         fg = const Color(0xFF7BD389);
-        text = 'Бүрэн төлөгдсөн';
+        text = tr('product.status_fully_paid');
         break;
       case ProductPurchaseStatus.delivered:
         bg = const Color(0x33FCD535);
         fg = CustomColors.mainColor;
-        text = 'Хүлээлгэн өгсөн';
+        text = tr('product.status_delivered');
         break;
       case ProductPurchaseStatus.cancelled:
         bg = const Color(0x33C2240B);
         fg = const Color(0xFFE57373);
-        text = 'Цуцалсан';
+        text = tr('product.status_cancelled');
         break;
     }
     return Container(
@@ -516,14 +528,14 @@ class _StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCell(
-            label: 'Нийт',
+            label: tr('product.stat_total'),
             value: formatMNT(purchase.totalPrice),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: _StatCell(
-            label: 'Төлсөн',
+            label: tr('product.stat_paid'),
             value: formatMNT(purchase.paidAmount),
             valueColor: CustomColors.mainColor,
           ),
@@ -531,7 +543,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: _StatCell(
-            label: 'Үлдсэн',
+            label: tr('product.stat_remaining'),
             value: formatMNT(purchase.remainingAmount),
           ),
         ),
@@ -598,7 +610,10 @@ class _ProgressCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${purchase.paidDays}/${purchase.totalDays} өдөр төлөгдсөн',
+                  tr('product.days_paid_of', {
+                    'paid': purchase.paidDays,
+                    'total': purchase.totalDays,
+                  }),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -634,7 +649,8 @@ class _ProgressCard extends StatelessWidget {
                     size: 12, color: Colors.white38),
                 const SizedBox(width: 4),
                 Text(
-                  'Дуусах хугацаа: ${_fmtDate(purchase.deadline!)}',
+                  tr('product.deadline_with',
+                      {'date': _fmtDate(purchase.deadline!)}),
                   style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 10.5,
@@ -644,8 +660,8 @@ class _ProgressCard extends StatelessWidget {
                 if (daysLeft != null)
                   Text(
                     daysLeft < 0
-                        ? '${-daysLeft} өдөр хоцорсон'
-                        : 'Үлдсэн: $daysLeft өдөр',
+                        ? tr('product.days_overdue', {'days': -daysLeft})
+                        : tr('product.days_left', {'days': daysLeft}),
                     style: TextStyle(
                       color: daysLeft < 0
                           ? const Color(0xFFE57373)
@@ -680,13 +696,14 @@ class _CancelledCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.cancel_outlined, color: Color(0xFFE57373), size: 16),
-              SizedBox(width: 6),
+              const Icon(Icons.cancel_outlined,
+                  color: Color(0xFFE57373), size: 16),
+              const SizedBox(width: 6),
               Text(
-                'Цуцалсан',
-                style: TextStyle(
+                tr('product.status_cancelled'),
+                style: const TextStyle(
                   color: Color(0xFFE57373),
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
@@ -698,17 +715,19 @@ class _CancelledCard extends StatelessWidget {
           if (purchase.cancelReason != null &&
               purchase.cancelReason!.isNotEmpty)
             Text(
-              'Шалтгаан: ${purchase.cancelReason}',
+              tr('product.cancel_reason', {'reason': purchase.cancelReason}),
               style: const TextStyle(color: Colors.white70, fontSize: 11),
             ),
           if (purchase.refundAmount != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Шимтгэл: ${formatMNT(purchase.refundFee ?? 0)}',
+              tr('product.fee_amount',
+                  {'amount': formatMNT(purchase.refundFee ?? 0)}),
               style: const TextStyle(color: Colors.white70, fontSize: 11),
             ),
             Text(
-              'Буцаасан дүн: ${formatMNT(purchase.refundAmount!)}',
+              tr('product.refunded_amount',
+                  {'amount': formatMNT(purchase.refundAmount!)}),
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
@@ -743,14 +762,14 @@ class _PaymentLapseWarning extends StatelessWidget {
         critical ? const Color(0x55C2240B) : Colors.amber.withOpacity(0.25);
 
     final String body = critical
-        ? 'Та $gap хоног төлбөр хийгээгүй байна. Хуваан төлөлт цуцлагдах '
-            'эрсдэлтэй боллоо. Цуцлагдвал төлсөн дүнгээс цуцлах шимтгэл '
-            'хасагдана. Төлбөрөө яаралтай хийнэ үү.'
-        : 'Та $gap хоног төлбөр хийгээгүй байна. Дараалсан '
-            '${ProductPurchase.installmentCancelGapDays} хоног төлбөр хийхгүй '
-            'бол хуваан төлөлт цуцлагдаж болзошгүй'
-            '${remaining > 0 ? ' (та дахин $remaining хоногтой)' : ''}. '
-            'Төлбөрөө хийж үргэлжлүүлээрэй.';
+        ? tr('product.lapse_critical_body', {'gap': gap})
+        : tr('product.lapse_warning_body', {
+            'gap': gap,
+            'threshold': ProductPurchase.installmentCancelGapDays,
+            'extra': remaining > 0
+                ? tr('product.lapse_extra_days', {'days': remaining})
+                : '',
+          });
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -773,7 +792,9 @@ class _PaymentLapseWarning extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  critical ? 'Цуцлагдах эрсдэлтэй' : 'Төлбөрийн анхааруулга',
+                  critical
+                      ? tr('product.lapse_critical_title')
+                      : tr('product.lapse_warning_title'),
                   style: TextStyle(
                     color: accent,
                     fontWeight: FontWeight.bold,
@@ -819,19 +840,17 @@ class _CancelPendingBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.amber.withOpacity(0.25)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.hourglass_top_rounded,
+          const Icon(Icons.hourglass_top_rounded,
               size: 16, color: Colors.amberAccent),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Цуцлах хүсэлт илгээгдсэн. Админ шалгаж баталгаажуулсны дараа '
-              'хуваан төлөлт цуцлагдаж, буцаан олгох дүн таны данс руу '
-              'шилжинэ. Энэ хооронд төлбөр хийх боломжгүй.',
-              style:
-                  TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.4),
+              tr('product.cancel_pending_banner'),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 11.5, height: 1.4),
             ),
           ),
         ],
@@ -855,9 +874,9 @@ class _CancelInstallmentButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-      child: const Text(
-        'Хуваан төлөлт цуцлах',
-        style: TextStyle(
+      child: Text(
+        tr('product.cancel_installment'),
+        style: const TextStyle(
           color: Color(0xFFE57373),
           fontWeight: FontWeight.bold,
           fontSize: 13,

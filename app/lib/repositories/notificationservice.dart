@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:http/http.dart' as http;
+import 'package:onegrgold/l10n/app_locale.dart';
 
 class NotificationService {
   static final NotificationService _notificationService =
@@ -77,8 +78,8 @@ class NotificationService {
         await _downloadAndSaveFile(imageUrl, 'notifimage.jpg');
     await flutterLocalNotificationsPlugin.zonedSchedule(
         id,
-        "Алтан хуримтлал - $title",
-        "Та алтан хуримтлал үүсгэхээ мартаагүй биз?",
+        tr('home.savings_reminder_title', {'title': title}),
+        tr('home.savings_reminder_body'),
         tz.TZDateTime.now(tz.local).add(duration),
         NotificationDetails(
           // Android details

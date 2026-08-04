@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/style/colors.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 class LotteryDetailScreen extends StatefulWidget {
   final String name;
@@ -64,7 +65,8 @@ class _LotteryDetailScreenState extends State<LotteryDetailScreen> {
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         backgroundColor: const Color(0xFF121212),
-        title: const Text("Урамшуулал", style: TextStyle(fontFamily: "InterBold", fontSize: 16)),
+        title: Text(tr('home.promotion'),
+            style: const TextStyle(fontFamily: "InterBold", fontSize: 16)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -99,7 +101,7 @@ class _LotteryDetailScreenState extends State<LotteryDetailScreen> {
                     Lottie.asset('assets/icons/clock.json', width: 20, height: 20),
                     const SizedBox(width: 4),
                     Text(
-                      "$daysLeft өдөр үлдсэн",
+                      tr('home.days_left', {'days': daysLeft}),
                       style: TextStyle(
                         fontSize: 13.0,
                         fontWeight: FontWeight.bold,
@@ -114,7 +116,10 @@ class _LotteryDetailScreenState extends State<LotteryDetailScreen> {
               const SizedBox(height: 4),
               Center(
                 child: Text(
-                  "Дуусах: ${widget.endDate!.year}.${widget.endDate!.month.toString().padLeft(2, '0')}.${widget.endDate!.day.toString().padLeft(2, '0')}",
+                  tr('home.lottery_ends_on', {
+                    'date':
+                        "${widget.endDate!.year}.${widget.endDate!.month.toString().padLeft(2, '0')}.${widget.endDate!.day.toString().padLeft(2, '0')}"
+                  }),
                   style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ),
@@ -146,9 +151,9 @@ class _LotteryDetailScreenState extends State<LotteryDetailScreen> {
             const SizedBox(height: 24),
             Row(
               children: [
-                const Text(
-                  "Миний сугалаанууд",
-                  style: TextStyle(
+                Text(
+                  tr('home.my_tickets'),
+                  style: const TextStyle(
                     fontFamily: "InterBold",
                     fontSize: 14.0,
                     color: Colors.white,
@@ -184,10 +189,10 @@ class _LotteryDetailScreenState extends State<LotteryDetailScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white12),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    "Танд одоогоор сугалаа байхгүй байна.",
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                    tr('home.no_tickets'),
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
                   ),
                 ),
               )

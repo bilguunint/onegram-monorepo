@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/register_bloc/register_bloc.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -29,7 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: CustomColors.scaffoldDarkBack,
-        title: const Text('Бүртгүүлэх'),
+        title: Text(tr('reg.sign_up')),
         centerTitle: false,
         elevation: 0,
       ),

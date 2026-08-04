@@ -2,6 +2,8 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/main_screen.dart';
 import 'package:onegrgold/screens/auth_screen/login_screen/login_screen.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/generate_screen.dart';
@@ -57,10 +59,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    // Rebuilds the whole tree when the user picks another language, so every
+    // tr() call re-evaluates without needing a restart.
+    return ValueListenableBuilder<AppLanguage>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, language, _) => MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: CustomTheme.darkTheme,
         themeMode: ThemeMode.dark,
+        locale: language.locale,
+        supportedLocales:
+            AppLanguage.values.map((l) => l.locale).toList(growable: false),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         navigatorObservers: [
           observer,
         ],
@@ -112,6 +126,7 @@ class MyApp extends StatelessWidget {
           ),
         },
         initialRoute: '/',
-        );
+        ),
+    );
   }
 }

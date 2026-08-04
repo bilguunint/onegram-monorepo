@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
@@ -105,11 +106,11 @@ class _LotteryWidgetState extends State<LotteryWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
+        Padding(
+          padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
           child: Text(
-            "Урамшуулал",
-            style: TextStyle(
+            tr('home.promotion'),
+            style: const TextStyle(
               fontFamily: "InterBold",
               fontSize: 14.0,
             ),
@@ -200,7 +201,11 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                           SizedBox(width: 4.0),
                           Text(
                             _endDate != null
-                                ? "${_endDate!.difference(DateTime.now()).inDays} өдөр үлдсэн"
+                                ? tr('home.days_left', {
+                                    'days': _endDate!
+                                        .difference(DateTime.now())
+                                        .inDays
+                                  })
                                 : "COMING SOON...",
                             style: const TextStyle(
                               fontSize: 9.0,
@@ -241,7 +246,7 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    'Нийт сугалаа: ',
+                                    tr('home.total_tickets'),
                                     style: TextStyle(
                                         color: CustomColors.mainColor,
                                         fontSize: 12,
@@ -321,11 +326,12 @@ class _ProductsPromo extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
+            Padding(
+              padding:
+                  const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
               child: Text(
-                'Хуваан төлөөд ав',
-                style: TextStyle(
+                tr('home.installment_title'),
+                style: const TextStyle(
                   fontFamily: 'InterBold',
                   fontSize: 14.0,
                 ),
@@ -354,12 +360,12 @@ class _ProductsPromo extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: products.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Padding(
-                          padding: EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
                           child: Text(
-                            'Бүтээгдэхүүн алга',
-                            style: TextStyle(
+                            tr('home.no_products'),
+                            style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 11,
                             ),
@@ -469,7 +475,7 @@ class _PromoSlide extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Өдөр бүр ${formatMNT(daily)}',
+                    tr('home.daily_amount', {'amount': formatMNT(daily)}),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -531,11 +537,11 @@ class _ActiveInstallmentPromo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
+        Padding(
+          padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
           child: Text(
-            'Миний хуваан төлөлт',
-            style: TextStyle(
+            tr('home.my_installment'),
+            style: const TextStyle(
               fontFamily: 'InterBold',
               fontSize: 14.0,
             ),
@@ -633,7 +639,10 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '${purchase.paidDays}/${purchase.totalDays} өдөр',
+                          tr('home.days_progress', {
+                            'paid': purchase.paidDays,
+                            'total': purchase.totalDays
+                          }),
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 9.5,
@@ -660,8 +669,8 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                       ),
                       child: Text(
                         purchase.hasPendingCancelRequest
-                            ? 'Дэлгэрэнгүй харах'
-                            : 'Дараагийн төлөлт хийх',
+                            ? tr('home.view_details')
+                            : tr('home.make_next_payment'),
                         style: const TextStyle(
                           color: Colors.black,
                           fontSize: 11,

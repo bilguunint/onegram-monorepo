@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 class SuccessScreen extends StatefulWidget {
   const SuccessScreen(
@@ -47,9 +48,9 @@ class _SuccessScreenState extends State<SuccessScreen> {
             children: [
               Expanded(
                 child: MainButton(
-                    title: const Text(
-                      "Эхлэх",
-                      style: TextStyle(
+                    title: Text(
+                      tr('reg.start'),
+                      style: const TextStyle(
                           fontWeight: FontWeight.bold, color: Colors.black),
                     ),
                     onPress: () {

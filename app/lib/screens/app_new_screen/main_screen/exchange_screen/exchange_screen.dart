@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:mrx_charts/mrx_charts.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/exchange_screen/latest_exchange_rate.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -57,7 +58,7 @@ class _DetailViewState extends State<DetailView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Ханшийн мэдээлэл"),
+        title: Text(tr('order.rate_info_title')),
         centerTitle: false,
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -72,19 +73,19 @@ class _DetailViewState extends State<DetailView> {
           }
           if (snapshot.hasError) {
             print(snapshot.error);
-            return const Center(
+            return Center(
               child: Text(
-                'Ханшийн мэдээллийг харахад алдаа гарлаа!',
-                style: TextStyle(color: Colors.black),
+                tr('order.rate_load_error'),
+                style: const TextStyle(color: Colors.black),
               ),
             );
           }
           final docs = snapshot.data?.docs ?? [];
           if (docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'Мэдээлэл олдсонгүй',
-                style: TextStyle(color: Colors.white70),
+                tr('order.no_data'),
+                style: const TextStyle(color: Colors.white70),
               ),
             );
           }
@@ -120,11 +121,12 @@ class _DetailViewState extends State<DetailView> {
                 metalId: widget.metalId,
                 userRepository: widget.userRepository,
               ),
-              const Padding(
-                padding: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+              Padding(
+                padding: const EdgeInsets.only(
+                    left: 16.0, right: 16.0, bottom: 16.0),
                 child: Text(
-                  'График',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  tr('order.chart'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               Padding(
@@ -144,11 +146,11 @@ class _DetailViewState extends State<DetailView> {
                   ),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.all(16.0),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  'Өдөр, өдрөөр',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  tr('order.daily'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               Column(

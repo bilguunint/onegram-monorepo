@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:onegrgold/bloc/make_order_bloc/make_order_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/elements/main_button.dart';
 import 'package:onegrgold/models/Item_model.dart';
 
@@ -41,12 +42,12 @@ class _MakeOrderViewState extends State<MakeOrderView> {
     
     if (widget.metalId == 1) {
       types.addAll([
-        ItemModel("gold", "Алтан ембүү", "assets/images/chinese.png",
-            "Алтан бүтээгдэхүүн захиалах", false, "ingot"),
-        ItemModel("gold", "Алтан зоос", "assets/images/coin.png",
-            "Алтан бүтээгдэхүүн захиалах", false, "coin"),
-        ItemModel("gold", "Алтан гулдмай", "assets/images/bars.png",
-            "100гр алтан гулдмай", false, "bar"),
+        ItemModel("gold", tr('order.type_gold_sycee'),
+            "assets/images/chinese.png", tr('order.type_gold_desc'), false, "ingot"),
+        ItemModel("gold", tr('order.type_gold_coin'), "assets/images/coin.png",
+            tr('order.type_gold_desc'), false, "coin"),
+        ItemModel("gold", tr('order.type_gold_bar'), "assets/images/bars.png",
+            tr('order.type_gold_bar_desc'), false, "bar"),
       ]);
     } else {
       print('Silver types');
@@ -122,9 +123,9 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                   monVal = !monVal;
                                 });
                               },
-                              child: const Text(
-                                "Үйлчилгээний нөхцөлийг хүлээн зөвшөөрч байна.",
-                                style: TextStyle(
+                              child: Text(
+                                tr('order.accept_terms_checkbox'),
+                                style: const TextStyle(
                                     fontSize: 12.0,
                                     fontWeight: FontWeight.bold),
                               ),
@@ -146,9 +147,9 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                       right: 32.0,
                                       left: 32.0),
                                   child: MainButton(
-                                      title: const Text(
-                                        "Үргэлжлүүлэх",
-                                        style: TextStyle(
+                                      title: Text(
+                                        tr('common.continue'),
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.black),
                                       ),
@@ -156,7 +157,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                         if (!monVal) {
                                           showAlertPopUpDialog(
                                               context,
-                                              "Үйлчилгээний нөхцөлтэй танилцаж зөвшөөрнө үү.",
+                                              tr('order.must_accept_terms'),
                                               85);
                                         } else {
                                           pageController.animateToPage(
@@ -188,15 +189,15 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                     const SizedBox(
                       height: 16.0,
                     ),
-                    const Column(
+                    Column(
                       children: [
                         Padding(
                           padding:
                               const EdgeInsets.only(left: 32.0, right: 32.0),
                           child: Text(
-                            "Таны захиалах төрлөө сонгоно уу?",
+                            tr('order.select_type_prompt'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 fontSize: 14.0,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white),
@@ -321,9 +322,9 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                           child: Padding(
                             padding: const EdgeInsets.all(32.0),
                             child: MainButton(
-                                title: const Text(
-                                  "Үргэлжлүүлэх",
-                                  style: TextStyle(
+                                title: Text(
+                                  tr('common.continue'),
+                                  style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black),
                                 ),
@@ -355,8 +356,8 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                             left: 32.0, right: 32.0, top: 16.0, bottom: 0.0),
                         child: Text(
                           selectedType.id == "gold"
-                              ? "Та авах гэж буюу алтны граммын хэмжээгээ оруулна уу."
-                              : "Та авах гэж буй мөнгөний лангийн хэмжээгээ оруулна уу.",
+                              ? tr('order.enter_gold_grams_prompt')
+                              : tr('order.enter_silver_lan_prompt'),
                           textAlign: TextAlign.center,
                           style:
                               TextStyle(color: Colors.white54, fontSize: 14.0),
@@ -365,7 +366,9 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
-                          selectedType.id == "gold" ? "$textгр" : "$textлан",
+                          selectedType.id == "gold"
+                              ? tr('order.quantity_gram', {'qty': text})
+                              : tr('order.quantity_lan', {'qty': text}),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontFamily: "InterBold",
@@ -454,12 +457,12 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                       children: [
                         Expanded(
                           child: MainButton(
-                              title: const Row(
+                              title: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "Үргэлжлүүлэх",
-                                    style: TextStyle(
+                                    tr('common.continue'),
+                                    style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: Colors.black),
                                   ),
@@ -473,7 +476,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                   if (parsedValue > 10000) {
                                     showAlertPopUpDialog(
                                         context,
-                                        "1 удаагийн авах хэмжээнээс хэтэрсэн байна.",
+                                        tr('order.max_per_order_exceeded'),
                                         85.0);
                                   } else {
                                     final num quantity = selectedType.id == "gold"
@@ -503,7 +506,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                     if (price == 0) {
                                       showAlertPopUpDialog(
                                           context,
-                                          "Ханшийн мэдээлэл олдсонгүй. Дахин оролдоно уу.",
+                                          tr('order.rate_not_found_retry'),
                                           85.0);
                                       return;
                                     }
@@ -519,7 +522,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                   }
                                 } else {
                                   showAlertPopUpDialog(context,
-                                      "Та авах хэмжээгээ оруулна уу", 65.0);
+                                      tr('order.enter_quantity_prompt'), 65.0);
                                 }
                               },
                               isLoading: state is MakeOrderLoading),

@@ -5,6 +5,7 @@ import 'package:onegrgold/bloc/auth_bloc/auth_bloc.dart';
 import 'package:onegrgold/bloc/verify_bloc/verify_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
@@ -118,8 +119,8 @@ class _VerifyViewState extends State<VerifyView> {
                   isClicked = false;
                   isLoading = false;
                 });
-                showAlertPopUpDialog(
-                    context, 'Нэвтрэхэд алдаа гарлаа: ${state.message}', 65.0);
+                showAlertPopUpDialog(context,
+                    tr('reg.sign_in_error', {'error': state.message}), 65.0);
               }
             } else if (state is AuthNeedsRegistration) {
               // Use pushNamedAndRemoveUntil to completely reset navigation stack
@@ -170,19 +171,20 @@ class _VerifyViewState extends State<VerifyView> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(
+                      Padding(
+                        padding: const EdgeInsets.only(
                             bottom: 8.0, top: 16.0, right: 32.0),
                         child: Text(
-                          "Баталгаажуулах код",
-                          style: TextStyle(
+                          tr('reg.verification_code'),
+                          style: const TextStyle(
                               fontSize: 18.0, fontFamily: "InterBold"),
                         ),
                       ),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          "Бид таны ${widget.phoneNum} дугаарт баталгаажуулах код мессежээр илгээлээ. Кодоо оруулан нэвтрэх эрхээ баталгаажуулна уу.",
+                          tr('reg.verification_code_sent',
+                              {'phone': widget.phoneNum}),
                           style: const TextStyle(
                               fontSize: 14.0, color: Colors.white60),
                         ),
@@ -228,20 +230,21 @@ class _VerifyViewState extends State<VerifyView> {
                   const SizedBox(
                     height: 16.0,
                   ),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Text(
-                        "OTP код ирээгүй юу?",
-                        style: TextStyle(fontSize: 14.0, color: Colors.white54),
+                        tr('reg.otp_not_received'),
+                        style: const TextStyle(
+                            fontSize: 14.0, color: Colors.white54),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 4.0,
                       ),
                       Text(
-                        "Код дахин авах",
-                        style: TextStyle(
+                        tr('reg.resend_code'),
+                        style: const TextStyle(
                             fontSize: 14.0,
                             decoration: TextDecoration.underline,
                             fontWeight: FontWeight.bold,
@@ -258,7 +261,7 @@ class _VerifyViewState extends State<VerifyView> {
                         child: MainButton(
                             isLoading: isLoading || isClicked,
                             title: Text(
-                              "Баталгаажуулах",
+                              tr('common.confirm'),
                               style: TextStyle(
                                   color: CustomColors.scaffoldDarkBack,
                                   fontWeight: FontWeight.bold,

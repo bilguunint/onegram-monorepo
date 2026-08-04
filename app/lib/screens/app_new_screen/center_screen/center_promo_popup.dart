@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart'
     show kForestGreen, kLeafGreen;
@@ -112,9 +113,9 @@ class _CenterPromoDialog extends StatelessWidget {
                               ),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text(
-                              'Мод тарих',
-                              style: TextStyle(
+                            child: Text(
+                              tr('center.plant_tree'),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,

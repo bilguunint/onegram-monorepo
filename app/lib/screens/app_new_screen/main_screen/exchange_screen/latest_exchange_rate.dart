@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -49,7 +50,9 @@ class DetailView extends StatelessWidget {
           print(snapshot.error);
           return Center(
             child: Text(
-              metalId == 1 ? 'Алтны ханш харахад алдаа гарлаа!' : 'Мөнгөний ханш харахад алдаа гарлаа!',
+              metalId == 1
+                  ? tr('order.gold_rate_error')
+                  : tr('order.silver_rate_error'),
               style: const TextStyle(color: Colors.black),
             ),
           );
@@ -81,7 +84,7 @@ class DetailView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            metalId == 1 ? 'Алт' : 'Мөнгө',
+                            metalId == 1 ? tr('order.gold') : tr('order.silver'),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16.0,

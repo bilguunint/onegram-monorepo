@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:onegrgold/models/notification_model.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -62,7 +63,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     if (user == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text("Мэдэгдлүүд"),
+          title: Text(tr('home.notifications_title')),
           centerTitle: false,
         ),
         body: const Center(
@@ -73,7 +74,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Мэдэгдлүүд"),
+        title: Text(tr('home.notifications_title')),
         centerTitle: false,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -139,11 +140,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
             height: 80.0,
             child: SvgPicture.asset("assets/icons/empty-notif.svg"),
           ),
-          const Padding(
-            padding: EdgeInsets.only(top: 16.0),
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
             child: Text(
-              "Мэдэгдэл байхгүй байна.",
-              style: TextStyle(
+              tr('home.no_notifications'),
+              style: const TextStyle(
                 fontSize: 12.0,
                 color: Colors.white38,
                 fontWeight: FontWeight.bold,

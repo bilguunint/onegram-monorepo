@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
@@ -54,11 +55,11 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
         appBar: AppBar(
           backgroundColor: CustomColors.darkContainerColor,
           iconTheme: const IconThemeData(color: Colors.white),
-          title: const Text(
-            'Дэлхийн морин хуурын төв цогцолбор',
+          title: Text(
+            tr('center.complex_title'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'InterBold',
               fontSize: 13,
               color: Colors.white,
@@ -67,7 +68,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
           centerTitle: false,
           actions: [
             IconButton(
-              tooltip: 'Миний тарьсан мод',
+              tooltip: tr('center.my_planted_trees'),
               icon:
                   const Icon(Icons.forest_rounded, color: kLeafGreen, size: 22),
               onPressed: () {
@@ -79,7 +80,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
               },
             ),
             IconButton(
-              tooltip: 'Миний захиалга',
+              tooltip: tr('center.my_orders'),
               icon: SvgPicture.asset(
                 'assets/icons/document-list-check.svg',
                 width: 22,
@@ -128,10 +129,12 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
                         fontSize: 12,
                       ),
                       tabs: [
-                        const Tab(text: 'Мод тарих'),
-                        const Tab(text: 'Бүтээгдэхүүн'),
-                        const Tab(text: 'Төслийн тухай'),
-                        Tab(text: 'Шилдэг ${campaign.topCount}'),
+                        Tab(text: tr('center.plant_tree')),
+                        Tab(text: tr('center.products')),
+                        Tab(text: tr('center.about_project')),
+                        Tab(
+                            text: tr(
+                                'center.top_n', {'count': campaign.topCount})),
                       ],
                     ),
                   ),
@@ -233,49 +236,12 @@ class _Header extends StatelessWidget {
   }
 
   /// Fundraising progress — shown on every tab except "Мод тарих".
+  /// Campaign totals, progress bar and supporter counts are intentionally not
+  /// shown — only the supporting message remains.
   Widget _campaignProgress() {
-    final pct = campaign.progress * 100;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              formatMNT(campaign.totalRaised),
-              style: TextStyle(
-                color: CustomColors.mainColor,
-                fontFamily: 'RubikBold',
-                fontSize: 13,
-              ),
-            ),
-            Text(
-              '${pct.toStringAsFixed(pct < 10 ? 1 : 0)}% · ${formatMNT(campaign.targetAmount)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: campaign.progress,
-            minHeight: 6,
-            backgroundColor: Colors.white.withOpacity(0.18),
-            valueColor: AlwaysStoppedAnimation<Color>(CustomColors.mainColor),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Icon(Icons.volunteer_activism_rounded,
-                size: 13, color: Colors.white54),
-            const SizedBox(width: 5),
-            Text('${campaign.donorCount} дэмжигч',
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          ],
-        ),
-        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
@@ -288,11 +254,10 @@ class _Header extends StatelessWidget {
               Icon(Icons.favorite_rounded,
                   size: 14, color: CustomColors.mainColor),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Таны худалдан авалт Дэлхийн морин хуурын төв '
-                  'цогцолборыг бүтээн байгуулах үйл хэрэгт дэмжлэг болно.',
-                  style: TextStyle(
+                  tr('center.purchase_supports_note'),
+                  style: const TextStyle(
                       color: Colors.white70, fontSize: 11.5, height: 1.4),
                 ),
               ),
@@ -303,53 +268,12 @@ class _Header extends StatelessWidget {
     );
   }
 
-  /// Green planting panel — shown on the "Мод тарих" tab in place of the
-  /// fundraising progress. Leads with how many people have joined.
+  /// Green planting panel — shown on the "Мод тарих" tab. Tree/participant
+  /// counts are intentionally not shown; only the legacy message remains.
   Widget _treeInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Replaces the progress bar: how many people joined the planting drive.
-        Row(
-          children: [
-            const Icon(Icons.forest_rounded, size: 16, color: kLeafGreen),
-            const SizedBox(width: 8),
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${campaign.treeDonorCount}',
-                      style: const TextStyle(
-                        color: kLeafGreen,
-                        fontFamily: 'RubikBold',
-                        fontSize: 15,
-                      ),
-                    ),
-                    const TextSpan(
-                      text: ' хүн мод тарих аянд нэгдлээ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Icon(Icons.park_rounded, size: 13, color: Colors.white54),
-            const SizedBox(width: 5),
-            Text('Нийт ${campaign.treeCount} мод таригдлаа',
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          ],
-        ),
-        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
@@ -357,15 +281,14 @@ class _Header extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: kForestGreen.withOpacity(0.30)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
-              SizedBox(width: 8),
+              const Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Мод тарьж, ногоон өв үлдээгээрэй. Тарьсан мод бүр таны '
-                  'нэрийн шошготойгоор цогцолборын хотхонд ургана.',
-                  style: TextStyle(
+                  tr('center.plant_legacy_note'),
+                  style: const TextStyle(
                       color: Colors.white70, fontSize: 11.5, height: 1.4),
                 ),
               ),
@@ -389,24 +312,24 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (s.name.isNotEmpty)
-                  Text(
-                    s.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'InterBold',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
-                    ),
+                Text(
+                  s.name.isNotEmpty ? s.name : tr('center.user_fallback_name'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'InterBold',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
                   ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   s.hasDonated
-                      ? 'Таны дэмжлэг: ${formatMNT(s.donatedAmount)}'
-                      : 'Та хараахан дэмжлэг үзүүлээгүй байна',
+                      ? tr('center.your_support_amount',
+                          {'amount': formatMNT(s.donatedAmount)})
+                      : tr('center.no_support_yet'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -431,7 +354,7 @@ class _Header extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Таны тарьсан мод: ${s.treeCount}',
+                      tr('center.your_trees_count', {'count': s.treeCount}),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -543,7 +466,7 @@ class _CartAction extends StatelessWidget {
       builder: (context, _) {
         final count = CenterCart.instance.count;
         return IconButton(
-          tooltip: 'Сагс',
+          tooltip: tr('center.cart'),
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -614,9 +537,9 @@ class _ProductsTab extends StatelessWidget {
         }
         final products = snapshot.data!;
         if (products.isEmpty) {
-          return const Center(
-            child: Text('Бараа алга.',
-                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          return Center(
+            child: Text(tr('center.no_products'),
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
           );
         }
         return GridView.builder(
@@ -736,8 +659,8 @@ class _AddToCartControl extends StatelessWidget {
           color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Text('Дууссан',
-            style: TextStyle(color: Colors.white38, fontSize: 11)),
+        child: Text(tr('center.out_of_stock'),
+            style: const TextStyle(color: Colors.white38, fontSize: 11)),
       );
     }
     return GestureDetector(
@@ -769,8 +692,8 @@ class _AddToCartControl extends StatelessWidget {
                   const ColorFilter.mode(Colors.black, BlendMode.srcIn),
             ),
             const SizedBox(width: 5),
-            const Text('Худалдан авах',
-                style: TextStyle(
+            Text(tr('center.buy'),
+                style: const TextStyle(
                     color: Colors.black,
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold)),
@@ -793,8 +716,8 @@ class _AboutTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         if (campaign.description.trim().isNotEmpty) ...[
-          const Text('Төслийн тухай',
-              style: TextStyle(
+          Text(tr('center.about_project'),
+              style: const TextStyle(
                   color: Colors.white, fontFamily: 'InterBold', fontSize: 14)),
           const SizedBox(height: 8),
           Text(
@@ -805,8 +728,8 @@ class _AboutTab extends StatelessWidget {
           const SizedBox(height: 20),
         ],
         if (gallery.isNotEmpty) ...[
-          const Text('Зургийн цомог',
-              style: TextStyle(
+          Text(tr('center.gallery'),
+              style: const TextStyle(
                   color: Colors.white, fontFamily: 'InterBold', fontSize: 14)),
           const SizedBox(height: 10),
           GridView.builder(
@@ -847,11 +770,11 @@ class _AboutTab extends StatelessWidget {
           ),
         ],
         if (campaign.description.trim().isEmpty && gallery.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 40),
+          Padding(
+            padding: const EdgeInsets.only(top: 40),
             child: Center(
-              child: Text('Мэдээлэл удахгүй нэмэгдэнэ.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+              child: Text(tr('center.info_coming_soon'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
             ),
           ),
       ],
@@ -881,10 +804,10 @@ class _DonorsTab extends StatelessWidget {
             _engraveInfo(),
             Expanded(
               child: donors.isEmpty
-                  ? const Center(
-                      child: Text('Дэмжигч одоогоор алга.',
-                          style:
-                              TextStyle(color: Colors.white54, fontSize: 13)),
+                  ? Center(
+                      child: Text(tr('center.no_supporters_yet'),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 13)),
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
@@ -926,15 +849,8 @@ class _DonorsTab extends StatelessWidget {
                                     fontWeight: FontWeight.w600),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              formatMNT(d.amount),
-                              style: TextStyle(
-                                color: CustomColors.mainColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
+                            // Donated amounts are intentionally not shown on
+                            // the wall — names only.
                           ],
                         );
                       },
@@ -962,8 +878,7 @@ class _DonorsTab extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Та шилдэг $topCount дэмжигчийн нэг болбол таны нэрийг алтан '
-              'үсгээр сийлэн төв цогцолбортоо мөнхөлнө.',
+              tr('center.engrave_note', {'count': topCount}),
               style: const TextStyle(
                   color: Colors.white70, fontSize: 12, height: 1.45),
             ),
@@ -1047,9 +962,9 @@ class _TreesTab extends StatelessWidget {
       stream: repo.watchActiveTrees(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(
-            child: Text('Модны жагсаалт ачаалагдсангүй.',
-                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          return Center(
+            child: Text(tr('center.trees_load_failed'),
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
           );
         }
         if (!snapshot.hasData) {
@@ -1059,9 +974,9 @@ class _TreesTab extends StatelessWidget {
         }
         final trees = snapshot.data!;
         if (trees.isEmpty) {
-          return const Center(
-            child: Text('Мод удахгүй нэмэгдэнэ.',
-                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          return Center(
+            child: Text(tr('center.trees_coming_soon'),
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
           );
         }
         return GridView.builder(
@@ -1209,7 +1124,9 @@ class _StockChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        stock <= 0 ? 'Дууссан' : '$stock ш',
+        stock <= 0
+            ? tr('center.out_of_stock')
+            : tr('center.stock_pcs_short', {'stock': stock}),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
@@ -1239,8 +1156,8 @@ class _PlantControl extends StatelessWidget {
           color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Text('Дууссан',
-            style: TextStyle(color: Colors.white38, fontSize: 10.5)),
+        child: Text(tr('center.out_of_stock'),
+            style: const TextStyle(color: Colors.white38, fontSize: 10.5)),
       );
     }
     return GestureDetector(
@@ -1258,13 +1175,13 @@ class _PlantControl extends StatelessWidget {
           gradient: const LinearGradient(colors: [kForestGreen, kLeafGreen]),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.park_rounded, size: 14, color: Colors.white),
-            SizedBox(width: 4),
-            Text('Мод тарих',
-                style: TextStyle(
+            const Icon(Icons.park_rounded, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(tr('center.plant_tree'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.bold)),

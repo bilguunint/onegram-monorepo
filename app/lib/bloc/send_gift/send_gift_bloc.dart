@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'send_gift_event.dart';
 import 'send_gift_state.dart';
@@ -35,7 +36,7 @@ class SendGiftBloc extends Bloc<SendGiftEvent, SendGiftState> {
       emit(SendGiftFailure(e.message));
     } catch (e) {
       print('SendGiftBloc: General exception caught: $e'); // Debug
-      emit(SendGiftFailure('Алдаа гарлаа: ${e.toString()}'));
+      emit(SendGiftFailure(tr('common.error_with', {'error': e.toString()})));
     }
   }
 }

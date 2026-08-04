@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 
@@ -138,7 +139,9 @@ class CenterRepository {
       } else if (last.isNotEmpty) {
         name = last;
       } else {
-        name = (ud['name'] as String?) ?? 'Хэрэглэгч';
+        // Left untranslated here; the screen applies the localised
+        // fallback so it tracks a live language switch.
+        name = (ud['name'] as String?) ?? '';
       }
     } catch (_) {}
 
@@ -183,7 +186,7 @@ class CenterRepository {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw Exception('Нэвтрэх шаардлагатай.');
+      throw Exception(tr('common.sign_in_required'));
     }
     final idToken = await user.getIdToken();
 
@@ -202,8 +205,10 @@ class CenterRepository {
 
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode != 200) {
-      throw Exception(
-          body['error']?.toString() ?? 'Захиалга үүсгэхэд алдаа гарлаа.');
+      final rawError = body['error']?.toString();
+      throw Exception(rawError != null
+          ? trServer(rawError)
+          : tr('center.order_create_failed'));
     }
 
     final invoice =
@@ -223,7 +228,7 @@ class CenterRepository {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw Exception('Нэвтрэх шаардлагатай.');
+      throw Exception(tr('common.sign_in_required'));
     }
     final idToken = await user.getIdToken();
 
@@ -242,8 +247,10 @@ class CenterRepository {
 
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode != 200) {
-      throw Exception(
-          body['error']?.toString() ?? 'Төлбөр үүсгэхэд алдаа гарлаа.');
+      final rawError = body['error']?.toString();
+      throw Exception(rawError != null
+          ? trServer(rawError)
+          : tr('center.payment_create_failed'));
     }
 
     final invoice =

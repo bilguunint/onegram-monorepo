@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -99,7 +100,10 @@ class ProductCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 2.0),
                   Text(
-                    'Өдөр бүр ${formatMNT(daily)} (${product.maxMonths} сар)',
+                    tr('purchase.daily_with_months', {
+                      'amount': formatMNT(daily),
+                      'months': product.maxMonths,
+                    }),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

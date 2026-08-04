@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -17,17 +18,17 @@ class CenterMyOrdersScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Миний дэмжлэг',
-          style: TextStyle(
+        title: Text(
+          tr('center.my_support_title'),
+          style: const TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
         centerTitle: false,
       ),
       body: uid == null
-          ? const Center(
-              child: Text('Нэвтрэх шаардлагатай.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ? Center(
+              child: Text(tr('common.sign_in_required'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
             )
           : StreamBuilder<List<CenterDonationOrder>>(
               stream: repo.watchMyDonations(uid),
@@ -39,16 +40,16 @@ class CenterMyOrdersScreen extends StatelessWidget {
                 }
                 final orders = snapshot.data!;
                 if (orders.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.receipt_long_outlined,
+                        const Icon(Icons.receipt_long_outlined,
                             color: Colors.white24, size: 48),
-                        SizedBox(height: 12),
-                        Text('Дэмжлэгийн захиалга алга.',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 13)),
+                        const SizedBox(height: 12),
+                        Text(tr('center.no_support_orders'),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 13)),
                       ],
                     ),
                   );
@@ -80,7 +81,7 @@ Widget _receivedBadge() => Container(
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        'Бараа хүлээн авсан',
+        tr('center.goods_received'),
         style: TextStyle(
             color: CustomColors.successGreen,
             fontSize: 10.5,
@@ -151,7 +152,9 @@ class _OrderTile extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      order.isDelivered ? 'Дэлгэрэнгүй' : 'Код харах',
+                      order.isDelivered
+                          ? tr('common.details')
+                          : tr('center.view_code'),
                       style: TextStyle(
                         color: CustomColors.mainColor,
                         fontSize: 11,
@@ -203,10 +206,10 @@ class _OrderDetailSheet extends StatelessWidget {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Захиалгын дэлгэрэнгүй',
-                      style: TextStyle(
+                      tr('center.order_details'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontFamily: 'InterBold',
                         fontSize: 16,
@@ -243,8 +246,9 @@ class _OrderDetailSheet extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Нийт дүн',
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text(tr('center.total_amount'),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13)),
                   Text(
                     formatMNT(order.amount),
                     style: TextStyle(
@@ -286,9 +290,9 @@ class _OrderDetailSheet extends StatelessWidget {
           Icon(Icons.qr_code_2_rounded,
               size: 30, color: CustomColors.mainColor),
           const SizedBox(height: 8),
-          const Text(
-            'Бараа авах код',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+          Text(
+            tr('center.pickup_code'),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 10),
           Text(
@@ -301,10 +305,10 @@ class _OrderDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Бараагаа авахдаа энэ кодыг ажилтанд үзүүлнэ үү.',
+          Text(
+            tr('center.pickup_code_hint'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 11.5),
+            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
           ),
         ],
       ),
@@ -325,9 +329,9 @@ class _OrderDetailSheet extends StatelessWidget {
           Icon(Icons.check_circle_rounded,
               size: 32, color: CustomColors.successGreen),
           const SizedBox(height: 8),
-          const Text(
-            'Бараа хүлээн авсан',
-            style: TextStyle(
+          Text(
+            tr('center.goods_received'),
+            style: const TextStyle(
               color: Colors.white,
               fontFamily: 'InterBold',
               fontSize: 15,
@@ -335,7 +339,7 @@ class _OrderDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${_fmtDay(order.deliveredAt)}-нд хүлээн авсан',
+            tr('center.received_on', {'date': _fmtDay(order.deliveredAt)}),
             style: TextStyle(
               color: CustomColors.successGreen,
               fontFamily: 'RubikBold',
@@ -343,11 +347,10 @@ class _OrderDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Та энэ захиалгын барааг амжилттай хүлээн авсан тул код '
-            'дахин шаардлагагүй.',
+          Text(
+            tr('center.received_note'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 11.5),
+            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
           ),
         ],
       ),

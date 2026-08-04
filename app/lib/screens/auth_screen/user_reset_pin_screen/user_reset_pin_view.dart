@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/generate_bloc/generate_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/elements/main_button.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/screens/auth_screen/user_reset_pin_screen/pincode_reset_screen.dart';
@@ -61,13 +62,13 @@ class _UserResetPinViewState extends State<UserResetPinView> {
                     padding: const EdgeInsets.only(left: 32.0, right: 32.0),
                     child: Column(
                       children: [
-                        const Align(
+                        Align(
                                   alignment: Alignment.topLeft,
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 8.0),
                                     child: Text(
-                                      "Пинкод сэргээх утасны дугаар эсвэл и-мэйл хаяг",
-                                      style: TextStyle(
+                                      tr('auth.reset_pin_input_label'),
+                                      style: const TextStyle(
                                         fontSize: 12.0,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -113,7 +114,7 @@ class _UserResetPinViewState extends State<UserResetPinView> {
                         Expanded(
                           child: MainButton(
                               title:  Text(
-                                "Баталгаажуулах код илгээх",
+                                tr('auth.send_verification_code'),
                                 style: TextStyle(color: CustomColors.scaffoldDarkBack, fontWeight: FontWeight.bold, fontSize: 14.0),
                               ),
                               onPress: () {
@@ -126,7 +127,7 @@ class _UserResetPinViewState extends State<UserResetPinView> {
                                 } else {
                                   showAlertPopUpDialog(
                                     context,
-                                    "Утасны дугаар эсвэл и-мэйлээ зөв оруулна уу",
+                                    tr('auth.phone_or_email_invalid'),
                                     60.0,
                                   );
                                 }

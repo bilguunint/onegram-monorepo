@@ -10,6 +10,7 @@ import 'package:onegrgold/bloc/register_bloc/register_event.dart';
 import 'package:onegrgold/bloc/register_bloc/register_state.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:simple_animation_progress_bar/simple_animation_progress_bar.dart';
@@ -173,27 +174,27 @@ class _RegisterViewState extends State<RegisterView> {
                               ),
                               child: ListView(
                                 children: [
-                                  const Align(
+                                  Align(
                                       alignment: Alignment.topLeft,
                                       child: Padding(
                                         padding: const EdgeInsets.only(
                                             bottom: 8.0, top: 16.0),
                                         child: Text(
-                                          "Хэрэглэгчийн бүртгэл",
-                                          style: TextStyle(
+                                          tr('reg.user_registration'),
+                                          style: const TextStyle(
                                             fontSize: 12.0,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       )),
-                                  const Align(
+                                  Align(
                                       alignment: Alignment.topLeft,
                                       child: Padding(
                                         padding: const EdgeInsets.only(
                                             bottom: 8.0, top: 16.0),
                                         child: Text(
-                                          "Овог",
-                                          style: TextStyle(
+                                          tr('reg.last_name'),
+                                          style: const TextStyle(
                                             fontSize: 12.0,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -248,15 +249,15 @@ class _RegisterViewState extends State<RegisterView> {
                                     ),
                                   ),
                                   const SizedBox(height: 16.0),
-                                  const Align(
+                                  Align(
                                       alignment: Alignment.topLeft,
                                       child: Padding(
                                         padding: const EdgeInsets.only(
                                           bottom: 8.0,
                                         ),
                                         child: Text(
-                                          "Нэр",
-                                          style: TextStyle(
+                                          tr('reg.first_name'),
+                                          style: const TextStyle(
                                             fontSize: 12.0,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -326,7 +327,7 @@ class _RegisterViewState extends State<RegisterView> {
                                           MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          "Үргэлжлүүлэх",
+                                          tr('common.continue'),
                                           style: TextStyle(
                                             color:
                                                 CustomColors.scaffoldDarkBack,
@@ -351,7 +352,7 @@ class _RegisterViewState extends State<RegisterView> {
                                           _lastNameController.text.trim().isEmpty) {
                                         showAlertPopUpDialog(
                                           context,
-                                          "Бүх талбарыг бөглөнө үү.",
+                                          tr('reg.fill_all_fields'),
                                           65,
                                         );
                                         return;
@@ -360,7 +361,7 @@ class _RegisterViewState extends State<RegisterView> {
                                       if (!_isValidName(_firstNameController.text)) {
                                         showAlertPopUpDialog(
                                           context,
-                                          "Нэр зөвхөн үсэг агуулж, хамгийн багадаа 2 тэмдэгт байх ёстой.",
+                                          tr('reg.invalid_first_name'),
                                           75,
                                         );
                                         return;
@@ -369,7 +370,7 @@ class _RegisterViewState extends State<RegisterView> {
                                       if (!_isValidName(_lastNameController.text)) {
                                         showAlertPopUpDialog(
                                           context,
-                                          "Овог зөвхөн үсэг агуулж, хамгийн багадаа 2 тэмдэгт байх ёстой.",
+                                          tr('reg.invalid_last_name'),
                                           75,
                                         );
                                         return;
@@ -397,17 +398,17 @@ class _RegisterViewState extends State<RegisterView> {
                       Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.all(16.0),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
                             child: Column(
                               children: [
                                 Align(
                                   alignment: Alignment.topLeft,
                                   child: Padding(
-                                    padding: EdgeInsets.only(bottom: 8.0),
+                                    padding: const EdgeInsets.only(bottom: 8.0),
                                     child: Text(
-                                      "Та хэдэн настай вэ?",
-                                      style: TextStyle(
+                                      tr('reg.age_question'),
+                                      style: const TextStyle(
                                         fontSize: 20.0,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -415,8 +416,8 @@ class _RegisterViewState extends State<RegisterView> {
                                   ),
                                 ),
                                 Text(
-                                  "Таны насанд тохирох мэдээллийг хүргэх учир та өөрийн насыг үнэн зөв оруулна уу.",
-                                  style: TextStyle(
+                                  tr('reg.age_hint'),
+                                  style: const TextStyle(
                                     fontSize: 12.0,
                                     color: Colors.white38,
                                   ),
@@ -467,9 +468,10 @@ class _RegisterViewState extends State<RegisterView> {
                                         curve: Curves.easeIn,
                                       );
                                     },
-                                    child: const Text(
-                                      "Буцах",
-                                      style: TextStyle(color: Colors.white54),
+                                    child: Text(
+                                      tr('common.back'),
+                                      style: const TextStyle(
+                                          color: Colors.white54),
                                     ),
                                   ),
                                 ),
@@ -480,7 +482,7 @@ class _RegisterViewState extends State<RegisterView> {
                                           MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          "Үргэлжлүүлэх",
+                                          tr('common.continue'),
                                           style: TextStyle(
                                             color:
                                                 CustomColors.scaffoldDarkBack,
@@ -502,7 +504,7 @@ class _RegisterViewState extends State<RegisterView> {
                                       if (!_isValidAge(_currentValue)) {
                                         showAlertPopUpDialog(
                                           context,
-                                          "Бүртгүүлэхэд 18-80 насны хооронд байх ёстой.",
+                                          tr('reg.age_range_error'),
                                           65,
                                         );
                                         return;
@@ -537,17 +539,18 @@ class _RegisterViewState extends State<RegisterView> {
                                   bottom: 8.0,
                                 ),
                                 child: ListView(children: [
-                                  const Padding(
-                            padding: EdgeInsets.only(top: 16.0, bottom: 16.0),
+                                  Padding(
+                            padding: const EdgeInsets.only(
+                                top: 16.0, bottom: 16.0),
                             child: Column(
                               children: [
                                 Align(
                                   alignment: Alignment.topLeft,
                                   child: Padding(
-                                    padding: EdgeInsets.only(bottom: 8.0),
+                                    padding: const EdgeInsets.only(bottom: 8.0),
                                     child: Text(
-                                      "Та регистрийн дугаараа оруулна уу.",
-                                      style: TextStyle(
+                                      tr('reg.enter_national_id_title'),
+                                      style: const TextStyle(
                                         fontSize: 20.0,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -555,8 +558,8 @@ class _RegisterViewState extends State<RegisterView> {
                                   ),
                                 ),
                                 Text(
-                                  "Таны регистрийн дугаараар таныг баталгаажуулах тул та өөрийн регистрийн дугаарыг үнэн зөв оруулна уу.",
-                                  style: TextStyle(
+                                  tr('reg.national_id_hint'),
+                                  style: const TextStyle(
                                     fontSize: 12.0,
                                     color: Colors.white38,
                                   ),
@@ -799,7 +802,7 @@ class _RegisterViewState extends State<RegisterView> {
                                           MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          "Дуусгах",
+                                          tr('reg.finish'),
                                           style: TextStyle(
                                             color:
                                                 CustomColors.scaffoldDarkBack,
@@ -820,7 +823,7 @@ class _RegisterViewState extends State<RegisterView> {
                                             if (!_isValidRegistrationNumber(_registerNumberController.text)) {
                                               showAlertPopUpDialog(
                                                 context,
-                                                'Регистрийн дугаар 8 оронтой тоо байх ёстой.',
+                                                tr('reg.national_id_8_digits'),
                                                 75,
                                               );
                                               return;
@@ -830,7 +833,7 @@ class _RegisterViewState extends State<RegisterView> {
                                             if (letterA.trim().isEmpty || letterB.trim().isEmpty) {
                                               showAlertPopUpDialog(
                                                 context,
-                                                'Регистрийн дугаарын үсгүүдийг сонгоно уу.',
+                                                tr('reg.select_national_id_letters'),
                                                 75,
                                               );
                                               return;
@@ -849,7 +852,7 @@ class _RegisterViewState extends State<RegisterView> {
                                                 !_isValidAge(_currentValue)) {
                                               showAlertPopUpDialog(
                                                 context,
-                                                'Бүх мэдээлэл зөв бөглөгдөөгүй байна. Дахин шалгана уу.',
+                                                tr('reg.check_all_fields'),
                                                 75,
                                               );
                                               return;

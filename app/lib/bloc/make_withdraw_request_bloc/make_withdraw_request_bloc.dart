@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_event.dart';
 import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_state.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 
 class MakeWithdrawRequestBloc extends Bloc<MakeWithdrawRequestEvent, MakeWithdrawRequestState> {
@@ -21,7 +22,7 @@ class MakeWithdrawRequestBloc extends Bloc<MakeWithdrawRequestEvent, MakeWithdra
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print('MakeWithdrawRequestBloc: User not authenticated'); // Debug
-        emit(MakeWithdrawRequestFailure(message: 'Нэвтэрч орно уу'));
+        emit(MakeWithdrawRequestFailure(message: tr('order.please_sign_in')));
         return;
       }
 

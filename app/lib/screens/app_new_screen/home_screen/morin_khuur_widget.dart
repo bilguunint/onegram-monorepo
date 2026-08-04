@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rainbow_edge_lighting/rainbow_edge_lighting.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lease_gold_widget.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -42,7 +43,9 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
   bool _loading = true;
   bool _active = false;
 
-  String _name = '';
+  /// Firestore-supplied name; null means fall back to the translated
+  /// default at build time rather than freezing it here.
+  String? _name;
   String? _coverImage;
   int _donorCount = 0;
   int _treeCount = 0;
@@ -75,8 +78,7 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
 
       if (!mounted) return;
       setState(() {
-        _name =
-            (data['name'] as String?) ?? 'Дэлхийн морин хуурын төв цогцолбор';
+        _name = data['name'] as String?;
         _coverImage = data['cover_image'] as String?;
         _donorCount = (data['donor_count'] as num?)?.toInt() ?? 0;
         _treeCount = (data['tree_count'] as num?)?.toInt() ?? 0;
@@ -105,11 +107,11 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 16.0, bottom: 16.0),
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
             child: Text(
-              'Дэмжлэгт аян',
-              style: TextStyle(
+              tr('home.support_campaign'),
+              style: const TextStyle(
                 fontFamily: 'InterBold',
                 fontSize: 14.0,
               ),
@@ -175,7 +177,7 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            _name,
+                            _name ?? tr('home.morin_khuur_center_name'),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -250,10 +252,11 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _stat(Icons.park_rounded, '$_treeCount', 'мод',
+          _stat(Icons.park_rounded, '$_treeCount', tr('home.trees_label'),
               iconColor: _kTreeGreen),
           const SizedBox(width: 12),
-          _stat(Icons.volunteer_activism_rounded, '$_donorCount', 'дэмжигч'),
+          _stat(Icons.volunteer_activism_rounded, '$_donorCount',
+              tr('home.supporters_label')),
         ],
       ),
     );

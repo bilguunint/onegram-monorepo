@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/news_item_model.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:onegrgold/screens/app_new_screen/news_screen/news_detail_screen.dart';
@@ -19,13 +20,13 @@ class _NewsItemWidgetState extends State<NewsItemWidget> {
     final difference = now.difference(dateTime);
     
     if (difference.inDays > 0) {
-      return '${difference.inDays} өдрийн өмнө';
+      return tr('home.days_ago', {'count': difference.inDays});
     } else if (difference.inHours > 0) {
-      return '${difference.inHours} цагийн өмнө';
+      return tr('home.hours_ago', {'count': difference.inHours});
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} минутын өмнө';
+      return tr('home.minutes_ago', {'count': difference.inMinutes});
     } else {
-      return 'Саяхан';
+      return tr('home.just_now');
     }
   }
 

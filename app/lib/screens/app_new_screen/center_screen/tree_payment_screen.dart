@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart'
     show kForestGreen, kLeafGreen;
@@ -73,9 +74,9 @@ class _TreePaymentScreenState extends State<TreePaymentScreen> {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Мод тарих төлбөр',
-          style: TextStyle(
+        title: Text(
+          tr('center.tree_payment_title'),
+          style: const TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
         centerTitle: false,
@@ -144,7 +145,7 @@ class _PendingView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Төлөх дүн',
+              Text(tr('common.amount_due'),
                   style: TextStyle(
                       color: Colors.white.withOpacity(0.55), fontSize: 11)),
               const SizedBox(height: 4),
@@ -174,7 +175,7 @@ class _PendingView extends StatelessWidget {
           ),
         const SizedBox(height: 16),
         Text(
-          'Банкны апп',
+          tr('common.bank_app'),
           style: TextStyle(
             color: Colors.white.withOpacity(0.7),
             fontSize: 12,
@@ -183,11 +184,11 @@ class _PendingView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (invoice.links.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'QR кодыг QPay апп-аар уншуулна уу.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+              tr('common.scan_qr_hint'),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           )
@@ -256,15 +257,14 @@ class _PendingView extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: kForestGreen.withOpacity(0.35)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
-              SizedBox(width: 8),
+              const Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Төлбөр амжилттай төлөгдмөгц таны модны захиалга баталгаажиж, '
-                  'дэлгэц автоматаар шинэчлэгдэнэ.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  tr('center.tree_payment_auto_note'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ),
             ],
@@ -319,10 +319,10 @@ class _PlantedView extends StatelessWidget {
                         color: kLeafGreen, size: 52),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Таны мод таригдана! 🌱',
+                  Text(
+                    tr('center.tree_will_be_planted'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontFamily: 'InterBold',
                       fontWeight: FontWeight.w800,
@@ -366,12 +366,10 @@ class _PlantedView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Дэлхийн Морин Хуурын Төв Цогцолборын хотхонд таны мод '
-                    'дээрх нэрийн шошготойгоо таригдана. Ногоон ирээдүйг '
-                    'бүтээлцсэн Танд баярлалаа!',
+                  Text(
+                    tr('center.tree_planted_body'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white70, fontSize: 12.5, height: 1.55),
                   ),
                   const SizedBox(height: 26),
@@ -388,9 +386,9 @@ class _PlantedView extends StatelessWidget {
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          'Болсон',
-                          style: TextStyle(
+                        child: Text(
+                          tr('common.ok'),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 14),

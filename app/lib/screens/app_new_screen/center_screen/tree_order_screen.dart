@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_payment_screen.dart';
@@ -46,7 +47,7 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
     if (label.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Шошгон дээр хэвлэгдэх нэрээ оруулна уу.'),
+          content: Text(tr('center.enter_plaque_name')),
           backgroundColor: CustomColors.alerRed,
         ),
       );
@@ -93,9 +94,9 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Мод тарих захиалга',
-          style: TextStyle(
+        title: Text(
+          tr('center.tree_order_title'),
+          style: const TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
         centerTitle: false,
@@ -154,8 +155,9 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
                             const SizedBox(width: 8),
                             Text(
                               tree.inStock
-                                  ? '${formatMNT(_total)} — Мод тарих'
-                                  : 'Энэ мод дууссан байна',
+                                  ? tr('center.plant_for_amount',
+                                      {'amount': formatMNT(_total)})
+                                  : tr('center.tree_out_of_stock'),
                               style: TextStyle(
                                 color: tree.inStock
                                     ? Colors.white
@@ -263,15 +265,17 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (tree.seedlingHeight.trim().isNotEmpty)
-            _specRow(
-                Icons.grass_rounded, 'Суулгацын өндөр', tree.seedlingHeight),
+            _specRow(Icons.grass_rounded, tr('center.seedling_height'),
+                tree.seedlingHeight),
           if (tree.matureHeight.trim().isNotEmpty)
-            _specRow(Icons.height_rounded, 'Нас биенд хүрсэн өндөр',
+            _specRow(Icons.height_rounded, tr('center.mature_height'),
                 tree.matureHeight),
           if (tree.lifespan.trim().isNotEmpty)
-            _specRow(Icons.hourglass_bottom_rounded, 'Насжилт', tree.lifespan),
+            _specRow(Icons.hourglass_bottom_rounded, tr('center.lifespan'),
+                tree.lifespan),
           if (tree.features.trim().isNotEmpty)
-            _specRow(Icons.auto_awesome_rounded, 'Онцлог', tree.features),
+            _specRow(Icons.auto_awesome_rounded, tr('center.features'),
+                tree.features),
         ],
       ),
     );
@@ -327,13 +331,13 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.badge_rounded, size: 15, color: kLeafGreen),
-              SizedBox(width: 6),
+              const Icon(Icons.badge_rounded, size: 15, color: kLeafGreen),
+              const SizedBox(width: 6),
               Text(
-                'Шошгон дээр хэвлэгдэх нэр',
-                style: TextStyle(
+                tr('center.plaque_name'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
                     fontWeight: FontWeight.w600),
@@ -341,9 +345,9 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Таны модонд энэ нэр бүхий шошго хадагдана.',
-            style: TextStyle(color: Colors.white54, fontSize: 11),
+          Text(
+            tr('center.plaque_name_hint'),
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
           const SizedBox(height: 10),
           TextField(
@@ -353,7 +357,7 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
             style: const TextStyle(color: Colors.white, fontSize: 13),
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'Жишээ: Билгүүн гэр бүлийн мод',
+              hintText: tr('center.plaque_name_placeholder'),
               hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
               counterStyle:
                   const TextStyle(color: Colors.white38, fontSize: 10),
@@ -417,9 +421,9 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Тарих модны тоо',
-                  style: TextStyle(
+                Text(
+                  tr('center.tree_qty'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.w600),
@@ -428,8 +432,8 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
                   const SizedBox(height: 2),
                   Text(
                     widget.tree.stock! > 0
-                        ? 'Үлдэгдэл: ${widget.tree.stock} ширхэг'
-                        : 'Нөөц дууссан',
+                        ? tr('center.stock_left', {'stock': widget.tree.stock})
+                        : tr('center.stock_empty'),
                     style: TextStyle(
                       color: widget.tree.stock! <= 20
                           ? const Color(0xFFFFB300)
@@ -493,18 +497,17 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: kForestGreen.withOpacity(0.35)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.energy_savings_leaf_rounded, size: 16, color: kLeafGreen),
-          SizedBox(width: 8),
+          const Icon(Icons.energy_savings_leaf_rounded,
+              size: 16, color: kLeafGreen),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Таны тарьсан мод Дэлхийн морин хуурын төв цогцолборын хотхонд '
-              'олон жил ургаж, ирээдүй хойч үед ногоон өв үлдээнэ. Мод бүрт '
-              'таны нэрийн шошго хадагдана.',
-              style:
-                  TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.5),
+              tr('center.plant_vibe_note'),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 11.5, height: 1.5),
             ),
           ),
         ],

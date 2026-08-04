@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_svg/svg.dart';
 
+import 'package:onegrgold/l10n/language_switcher.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/generate_screen.dart';
 import '../../../../../elements/main_button.dart';
 import '../../../../../repositories/auth_repository.dart';
@@ -50,7 +52,26 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
           backgroundColor: CustomColors.scaffoldDarkBack,
-          body: Column(
+          body: Stack(
+            children: [
+              _buildBody(context),
+              // Language switcher, floated over the top-right corner.
+              const SafeArea(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 8, right: 16),
+                    child: LanguageSwitcherButton(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -87,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: MainButton(
                           isLoading: false,
                           title: Text(
-                            "Нэвтрэх",
+                            tr('auth.sign_in'),
                             style: TextStyle(
                               color: CustomColors.scaffoldDarkBack,
                               fontWeight: FontWeight.bold,
@@ -112,8 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ],
-          ),
-        );
+          );
   }
 
   Future<void> getShowStatus() async {

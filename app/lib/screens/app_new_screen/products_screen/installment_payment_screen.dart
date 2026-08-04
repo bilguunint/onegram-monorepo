@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -35,8 +36,8 @@ class InstallmentPaymentScreen extends StatefulWidget {
   /// Human label for the day range — "5-р өдөр" for a single day, or
   /// "5–11-р өдөр" for a multi-day bundle.
   String get dayLabel => dayFrom == dayTo
-      ? '$dayFrom-р өдөр'
-      : '$dayFrom–$dayTo-р өдөр';
+      ? tr('purchase.day_single', {'day': dayFrom})
+      : tr('purchase.day_range', {'from': dayFrom, 'to': dayTo});
 
   @override
   State<InstallmentPaymentScreen> createState() =>
@@ -54,7 +55,7 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          '${widget.dayLabel} төлбөр',
+          tr('purchase.day_payment_title', {'day': widget.dayLabel}),
           style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
@@ -117,7 +118,9 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isCompleted ? 'Бүрэн төлөгдлөө!' : 'Төлбөр амжилттай',
+                isCompleted
+                    ? tr('purchase.fully_paid_title')
+                    : tr('purchase.payment_success_title'),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),
@@ -125,14 +128,18 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         ),
         content: Text(
           isCompleted
-              ? 'Та энэ барааны бүх өдрийн төлбөрөө төлж дуусгалаа. Удахгүй барааг хүлээлгэн өгөх болно.'
-              : '${widget.dayLabel} ${formatMNT(widget.amount)} төлбөр амжилттай төлөгдлөө.',
+              ? tr('purchase.fully_paid_body')
+              : tr('purchase.day_payment_success_body', {
+                  'day': widget.dayLabel,
+                  'amount': formatMNT(widget.amount),
+                }),
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text('За', style: TextStyle(color: CustomColors.mainColor)),
+            child: Text(tr('purchase.ok'),
+                style: TextStyle(color: CustomColors.mainColor)),
           ),
         ],
       ),
@@ -181,7 +188,7 @@ class _PendingView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Төлөх дүн',
+                tr('common.amount_due'),
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.55),
                   fontSize: 11,
@@ -227,7 +234,7 @@ class _PendingView extends StatelessWidget {
 
         const SizedBox(height: 16),
         Text(
-          'Банкны апп',
+          tr('common.bank_app'),
           style: TextStyle(
             color: Colors.white.withOpacity(0.7),
             fontSize: 12,
@@ -238,11 +245,11 @@ class _PendingView extends StatelessWidget {
 
         // Bank deeplinks
         if (invoice.links.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'QR кодыг QPay апп-аар уншуулна уу.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+              tr('common.scan_qr_hint'),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           )
@@ -318,16 +325,15 @@ class _PendingView extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.amber.withOpacity(0.25)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.info_outline, size: 14, color: Colors.amberAccent),
-              SizedBox(width: 8),
+              const Icon(Icons.info_outline,
+                  size: 14, color: Colors.amberAccent),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Төлбөр амжилттай төлөгдмөгц дэлгэц автоматаар шинэчлэгдэх '
-                  'болно. QR кодыг QPay эсвэл банкны апп-аар уншуулж төлбөрөө '
-                  'хийнэ үү.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  tr('purchase.auto_refresh_hint_pay'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ),
             ],
@@ -371,7 +377,9 @@ class _PaidView extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              isCompleted ? 'Бүрэн төлөгдлөө!' : 'Төлбөр амжилттай',
+              isCompleted
+                  ? tr('purchase.fully_paid_title')
+                  : tr('purchase.payment_success_title'),
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

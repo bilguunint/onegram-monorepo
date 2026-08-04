@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -97,17 +98,17 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
   Future<void> _updateRegistrationNumber() async {
     // Validate all fields
     if (_firstNameController.text.trim().isEmpty) {
-      _showErrorDialog('Нэрээ оруулна уу.');
+      _showErrorDialog(tr('reg.enter_first_name_error'));
       return;
     }
-    
+
     if (_lastNameController.text.trim().isEmpty) {
-      _showErrorDialog('Овогоо оруулна уу.');
+      _showErrorDialog(tr('reg.enter_last_name_error'));
       return;
     }
-    
+
     if (!_isValidRegistrationNumber(_registerNumberController.text)) {
-      _showErrorDialog('Регистрийн дугаар 8 оронтой тоо байх ёстой.');
+      _showErrorDialog(tr('reg.national_id_8_digits'));
       return;
     }
 
@@ -132,8 +133,8 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
       if (mounted) {
         // Show success message and go back
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Мэдээлэл амжилттай шинэчлэгдлээ'),
+          SnackBar(
+            content: Text(tr('reg.info_updated')),
             backgroundColor: Colors.green,
           ),
         );
@@ -141,7 +142,7 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('Алдаа гарлаа: $e');
+        _showErrorDialog(tr('common.error_with', {'error': e}));
       }
     } finally {
       if (mounted) {
@@ -158,9 +159,10 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: CustomColors.darkContainerColor,
-          title: const Text(
-            'Алдаа',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: Text(
+            tr('reg.error_title'),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
           content: Text(
             message,
@@ -170,7 +172,7 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Ойлголоо',
+                tr('reg.got_it'),
                 style: TextStyle(color: CustomColors.mainColor),
               ),
             ),
@@ -185,7 +187,7 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
     return Scaffold(
       backgroundColor: CustomColors.scaffoldDarkBack,
       appBar: AppBar(
-        title: const Text('Регистрийн дугаар шинэчлэх'),
+        title: Text(tr('reg.update_national_id')),
         centerTitle: false,
         backgroundColor: CustomColors.scaffoldDarkBack,
       ),
@@ -199,17 +201,19 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                         bottom: 8.0,
                                       ),
                                       child: ListView(children: [
-                                        const Padding(
-                                  padding: EdgeInsets.only(top: 16.0, bottom: 16.0),
+                                        Padding(
+                                  padding: const EdgeInsets.only(
+                                      top: 16.0, bottom: 16.0),
                                   child: Column(
                                     children: [
                                       Align(
                                         alignment: Alignment.topLeft,
                                         child: Padding(
-                                          padding: EdgeInsets.only(bottom: 8.0),
+                                          padding: const EdgeInsets.only(
+                                              bottom: 8.0),
                                           child: Text(
-                                            "Та мэдээллээ оруулна уу.",
-                                            style: TextStyle(
+                                            tr('reg.enter_your_info'),
+                                            style: const TextStyle(
                                               fontSize: 20.0,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -217,8 +221,8 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                         ),
                                       ),
                                       Text(
-                                        "Таны нэр, овог, регистрийн дугаараар таныг баталгаажуулах тул үнэн зөв мэдээлэл оруулна уу.",
-                                        style: TextStyle(
+                                        tr('reg.verify_info_hint'),
+                                        style: const TextStyle(
                                           fontSize: 12.0,
                                           color: Colors.white38,
                                         ),
@@ -236,8 +240,8 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                             decoration: InputDecoration(
                                               filled: true,
                                               fillColor: CustomColors.inputDarkColor,
-                                              labelText: "Овог",
-                                              hintText: "Овогоо оруулна уу",
+                                              labelText: tr('reg.last_name'),
+                                              hintText: tr('reg.last_name_hint'),
                                               enabledBorder: OutlineInputBorder(
                                                 borderRadius: BorderRadius.circular(8),
                                                 borderSide: const BorderSide(color: Colors.white24),
@@ -260,8 +264,9 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                             decoration: InputDecoration(
                                               filled: true,
                                               fillColor: CustomColors.inputDarkColor,
-                                              labelText: "Нэр",
-                                              hintText: "Нэрээ оруулна уу",
+                                              labelText: tr('reg.first_name'),
+                                              hintText:
+                                                  tr('reg.first_name_hint'),
                                               enabledBorder: OutlineInputBorder(
                                                 borderRadius: BorderRadius.circular(8),
                                                 borderSide: const BorderSide(color: Colors.white24),
@@ -275,11 +280,12 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                           ),
                                         ),
                                         
-                                        const Padding(
-                                          padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 8.0, bottom: 8.0),
                                           child: Text(
-                                            "Регистрийн дугаар",
-                                            style: TextStyle(
+                                            tr('reg.national_id'),
+                                            style: const TextStyle(
                                               fontSize: 14.0,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -520,7 +526,7 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                           MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          "Хадгалах",
+                                          tr('common.save'),
                                           style: TextStyle(
                                             color:
                                                 CustomColors.scaffoldDarkBack,
@@ -538,25 +544,29 @@ class _UpdateRegistrationScreenState extends State<UpdateRegistrationScreen> {
                                     onPress: () async {
                                       // Validate first name
                                       if (_firstNameController.text.trim().isEmpty) {
-                                        _showErrorDialog('Нэрээ оруулна уу.');
+                                        _showErrorDialog(
+                                            tr('reg.enter_first_name_error'));
                                         return;
                                       }
-                                      
+
                                       // Validate last name
                                       if (_lastNameController.text.trim().isEmpty) {
-                                        _showErrorDialog('Овогоо оруулна уу.');
+                                        _showErrorDialog(
+                                            tr('reg.enter_last_name_error'));
                                         return;
                                       }
-                                      
+
                                       // Validate registration number format
                                       if (!_isValidRegistrationNumber(_registerNumberController.text)) {
-                                        _showErrorDialog('Регистрийн дугаар 8 оронтой тоо байх ёстой.');
+                                        _showErrorDialog(
+                                            tr('reg.national_id_8_digits'));
                                         return;
                                       }
 
                                       // Validate letters are selected
                                       if (letterA.trim().isEmpty || letterB.trim().isEmpty) {
-                                        _showErrorDialog('Регистрийн дугаарын үсгүүдийг сонгоно уу.');
+                                        _showErrorDialog(tr(
+                                            'reg.select_national_id_letters'));
                                         return;
                                       }
 

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:onegrgold/bloc/bottom_navbar_bloc.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
@@ -120,7 +121,7 @@ class _MainScreenState extends State<MainScreen> {
               onTap: _bottomNavBarBloc.pickItem,
               items: [
                 BottomNavigationBarItem(
-                  label: "Эхлэл",
+                  label: tr('nav.home'),
                   icon: Padding(
                     padding: const EdgeInsets.only(bottom: 4.0, top: 4.0),
                     child: SizedBox(
@@ -145,7 +146,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 BottomNavigationBarItem(
-                  label: "Ханш",
+                  label: tr('nav.rates'),
                   icon: Padding(
                     padding: const EdgeInsets.only(bottom: 4.0, top: 4.0),
                     child: SizedBox(
@@ -170,7 +171,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 BottomNavigationBarItem(
-                  label: "Бүтээгдэхүүн",
+                  label: tr('nav.products'),
                   icon: Padding(
                     padding: const EdgeInsets.only(bottom: 4.0, top: 4.0),
                     child: SizedBox(
@@ -195,7 +196,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 BottomNavigationBarItem(
-                  label: "Профайл",
+                  label: tr('nav.profile'),
                   icon: Padding(
                     padding: const EdgeInsets.only(bottom: 4.0, top: 4.0),
                     child: SizedBox(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -44,12 +45,12 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
   Future<void> _updateProfile() async {
     if (!_isValidName(_firstNameController.text)) {
-      _showErrorDialog('Нэр зөв форматтай байх ёстой.');
+      _showErrorDialog(tr('reg.invalid_first_name_format'));
       return;
     }
 
     if (!_isValidName(_lastNameController.text)) {
-      _showErrorDialog('Овог зөв форматтай байх ёстой.');
+      _showErrorDialog(tr('reg.invalid_last_name_format'));
       return;
     }
 
@@ -70,8 +71,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       if (mounted) {
         // Show success message and go back
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Бүртгэл амжилттай шинэчлэгдлээ'),
+          SnackBar(
+            content: Text(tr('reg.profile_updated')),
             backgroundColor: Colors.green,
           ),
         );
@@ -79,7 +80,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('Алдаа гарлаа: $e');
+        _showErrorDialog(tr('common.error_with', {'error': e}));
       }
     } finally {
       if (mounted) {
@@ -96,9 +97,10 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: CustomColors.darkContainerColor,
-          title: const Text(
-            'Алдаа',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: Text(
+            tr('reg.error_title'),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
           content: Text(
             message,
@@ -108,7 +110,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Ойлголоо',
+                tr('reg.got_it'),
                 style: TextStyle(color: CustomColors.mainColor),
               ),
             ),
@@ -123,7 +125,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     return Scaffold(
       backgroundColor: CustomColors.scaffoldDarkBack,
       appBar: AppBar(
-        title: const Text('Бүртгэл засах'),
+        title: Text(tr('reg.edit_profile')),
         centerTitle: false,
         backgroundColor: CustomColors.scaffoldDarkBack,
       ),
@@ -132,19 +134,19 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Та өөрийн нэр, овгийг шинэчлэх боломжтой.',
-              style: TextStyle(
+            Text(
+              tr('reg.edit_profile_hint'),
+              style: const TextStyle(
                 fontSize: 14.0,
                 color: Colors.white70,
               ),
             ),
             const SizedBox(height: 32.0),
-            
+
             // Last Name Field
-            const Text(
-              'Овог',
-              style: TextStyle(
+            Text(
+              tr('reg.last_name'),
+              style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -162,7 +164,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 filled: true,
                 fillColor: CustomColors.inputDarkColor,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                hintText: "Овог оруулна уу",
+                hintText: tr('reg.last_name_placeholder'),
                 hintStyle: TextStyle(
                   fontSize: 14.0,
                   color: CustomColors.grey,
@@ -193,9 +195,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
             const SizedBox(height: 24.0),
             
             // First Name Field
-            const Text(
-              'Нэр',
-              style: TextStyle(
+            Text(
+              tr('reg.first_name'),
+              style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -213,7 +215,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 filled: true,
                 fillColor: CustomColors.inputDarkColor,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                hintText: "Нэр оруулна уу",
+                hintText: tr('reg.first_name_placeholder'),
                 hintStyle: TextStyle(
                   fontSize: 14.0,
                   color: CustomColors.grey,
@@ -248,9 +250,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 children: [
                   Expanded(
                     child: MainButton(
-                      title: const Text(
-                        "Хадгалах",
-                        style: TextStyle(
+                      title: Text(
+                        tr('common.save'),
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),

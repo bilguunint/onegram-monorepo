@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -19,16 +20,19 @@ class DirectPurchasePaymentScreen extends StatefulWidget {
   final MakeOrder invoice;
   final String productName;
 
-  /// Title shown in the AppBar. Defaults to "Шууд худалдан авалт".
-  final String appBarTitle;
+  /// Title shown in the AppBar. Defaults to the translated
+  /// "Шууд худалдан авалт".
+  final String? appBarTitleKey;
 
-  /// Title shown in the success dialog. Defaults to "Худалдан авалт амжилттай".
-  final String successTitle;
+  /// Title shown in the success dialog. Defaults to the translated
+  /// "Худалдан авалт амжилттай".
+  final String? successTitleKey;
 
   /// Body text shown in the success dialog. Defaults to a generic message.
   /// Built with `productName` + formatted amount so callers usually want to
   /// pass a custom string for installment-init.
-  final String? successMessage;
+  final String? successMessageKey;
+  final Map<String, Object?>? successMessageParams;
 
   const DirectPurchasePaymentScreen({
     super.key,
@@ -36,9 +40,10 @@ class DirectPurchasePaymentScreen extends StatefulWidget {
     required this.amount,
     required this.invoice,
     required this.productName,
-    this.appBarTitle = 'Шууд худалдан авалт',
-    this.successTitle = 'Худалдан авалт амжилттай',
-    this.successMessage,
+    this.appBarTitleKey,
+    this.successTitleKey,
+    this.successMessageKey,
+    this.successMessageParams,
   });
 
   @override
@@ -58,7 +63,7 @@ class _DirectPurchasePaymentScreenState
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          widget.appBarTitle,
+          tr(widget.appBarTitleKey ?? 'purchase.direct_purchase'),
           style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
@@ -102,9 +107,13 @@ class _DirectPurchasePaymentScreenState
 
   void _showSuccessAndPop() async {
     if (!mounted) return;
-    final message = widget.successMessage ??
-        '${widget.productName} барааг ${formatMNT(widget.amount)}-ээр '
-            'амжилттай худалдан авлаа.';
+    // Resolved here, not by the caller, so a live language switch is picked up.
+    final message = widget.successMessageKey != null
+        ? tr(widget.successMessageKey!, widget.successMessageParams)
+        : tr('purchase.purchase_success_body', {
+            'product': widget.productName,
+            'amount': formatMNT(widget.amount),
+          });
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -116,7 +125,7 @@ class _DirectPurchasePaymentScreenState
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                widget.successTitle,
+                tr(widget.successTitleKey ?? 'purchase.purchase_success'),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),
@@ -129,7 +138,8 @@ class _DirectPurchasePaymentScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text('За', style: TextStyle(color: CustomColors.mainColor)),
+            child: Text(tr('purchase.ok'),
+                style: TextStyle(color: CustomColors.mainColor)),
           ),
         ],
       ),
@@ -182,7 +192,7 @@ class _PendingView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Төлөх дүн',
+                tr('common.amount_due'),
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.55),
                   fontSize: 11,
@@ -227,7 +237,7 @@ class _PendingView extends StatelessWidget {
 
         const SizedBox(height: 16),
         Text(
-          'Банкны апп',
+          tr('common.bank_app'),
           style: TextStyle(
             color: Colors.white.withOpacity(0.7),
             fontSize: 12,
@@ -237,11 +247,11 @@ class _PendingView extends StatelessWidget {
         const SizedBox(height: 8),
 
         if (invoice.links.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'QR кодыг QPay апп-аар уншуулна уу.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+              tr('common.scan_qr_hint'),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           )
@@ -314,15 +324,15 @@ class _PendingView extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.amber.withOpacity(0.25)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.info_outline, size: 14, color: Colors.amberAccent),
-              SizedBox(width: 8),
+              const Icon(Icons.info_outline,
+                  size: 14, color: Colors.amberAccent),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Төлбөр амжилттай төлөгдмөгц дэлгэц автоматаар шинэчлэгдэх '
-                  'болно. QR кодыг QPay эсвэл банкны апп-аар уншуулна уу.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  tr('purchase.auto_refresh_hint'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ),
             ],
@@ -360,9 +370,9 @@ class _PaidView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Худалдан авалт амжилттай',
-              style: TextStyle(
+            Text(
+              tr('purchase.purchase_success'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 18,

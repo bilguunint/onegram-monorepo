@@ -4,6 +4,7 @@ import 'package:onegrgold/bloc/user_reset_pin_bloc/user_reset_pin_bloc.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/screens/auth_screen/user_reset_pin_screen/pincode_reset_form.dart';
 import 'package:onegrgold/style/colors.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 class PincodeResetScreen extends StatefulWidget {
   const PincodeResetScreen({
@@ -27,9 +28,9 @@ class _PincodeResetScreenState extends State<PincodeResetScreen> {
         backgroundColor: CustomColors.darkContainerColor,
         elevation: 0,
         centerTitle: false,
-        title: const Text(
-          "Пинкод сэргээх",
-          style: TextStyle(
+        title: Text(
+          tr('auth.reset_pin_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 14.0,
             fontWeight: FontWeight.bold,

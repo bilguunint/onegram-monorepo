@@ -1,6 +1,8 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/l10n/language_switcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
@@ -140,9 +142,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         )
                       else
-                        const Text(
-                          "Хэрэглэгчийн мэдээлэл ачаалагдаагүй",
-                          style: TextStyle(fontSize: 12.0, color: Colors.grey),
+                        Text(
+                          tr('reg.user_info_not_loaded'),
+                          style: const TextStyle(
+                              fontSize: 12.0, color: Colors.grey),
                         ),
                     ],
                   ),
@@ -152,11 +155,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Expanded(
               child: ListView(
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(left: 16.0, bottom: 8.0),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
                     child: Text(
-                      "Тохиргоо",
-                      style: TextStyle(fontFamily: "InterBold"),
+                      tr('reg.settings'),
+                      style: const TextStyle(fontFamily: "InterBold"),
                     ),
                   ),
                   Padding(
@@ -190,16 +193,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Row(
+                                  Row(
                                     children: [
-                                      Icon(FluentIcons
+                                      const Icon(FluentIcons
                                           .text_bullet_list_square_edit_24_regular),
-                                      SizedBox(
+                                      const SizedBox(
                                         width: 8.0,
                                       ),
                                       Text(
-                                        "Бүртгэл засах",
-                                        style: TextStyle(
+                                        tr('reg.edit_profile'),
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12.0),
                                       ),
@@ -233,15 +236,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Row(
+                                  Row(
                                     children: [
-                                      Icon(FluentIcons.lock_closed_24_regular),
-                                      SizedBox(
+                                      const Icon(
+                                          FluentIcons.lock_closed_24_regular),
+                                      const SizedBox(
                                         width: 8.0,
                                       ),
                                       Text(
-                                        "Пинкод солих",
-                                        style: TextStyle(
+                                        tr('reg.change_pincode'),
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12.0),
                                       ),
@@ -257,6 +261,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
+                          GestureDetector(
+                            onTap: () => showLanguagePicker(context),
+                            child: Container(
+                              height: 60.0,
+                              color: CustomColors.darkContainerColor,
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                          FluentIcons.local_language_24_regular),
+                                      const SizedBox(
+                                        width: 8.0,
+                                      ),
+                                      Text(
+                                        tr('language.title'),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12.0),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      ValueListenableBuilder<AppLanguage>(
+                                        valueListenable: AppLocale.notifier,
+                                        builder: (context, lang, _) => Text(
+                                          lang.label,
+                                          style: TextStyle(
+                                            fontSize: 12.0,
+                                            color: CustomColors.textGrey,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6.0),
+                                      Icon(
+                                        Ionicons.chevron_forward,
+                                        color: CustomColors.textGrey
+                                            .withOpacity(0.6),
+                                        size: 18.0,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -265,11 +319,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(8.0),
                     child: GestureDetector(
                       onTap: () {
-                        showPopUpDialog(context, "Системээс гарах",
-                            'Та гарахдаа итгэлтэй байна уу?', [
+                        showPopUpDialog(context, tr('reg.sign_out_title'),
+                            tr('reg.sign_out_confirm'), [
                           CupertinoDialogAction(
                               child: Text(
-                                "Тийм",
+                                tr('reg.yes'),
                                 style: TextStyle(color: CustomColors.alerRed),
                               ),
                               onPressed: () {
@@ -279,8 +333,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               }),
                           CupertinoDialogAction(
                             child: Text(
-                              "Үгүй",
-                              style: TextStyle(color: Colors.white),
+                              tr('reg.no'),
+                              style: const TextStyle(color: Colors.white),
                             ),
                             onPressed: () {
                               Navigator.pop(context);
@@ -316,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         width: 8.0,
                                       ),
                                       Text(
-                                        "Гарах",
+                                        tr('reg.sign_out'),
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: CustomColors.alerRed,

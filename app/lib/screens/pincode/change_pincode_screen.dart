@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:onscreen_num_keyboard/onscreen_num_keyboard.dart';
@@ -38,11 +39,11 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
   String get _stepTitle {
     switch (_currentStep) {
       case 0:
-        return 'Одоогийн PIN код';
+        return tr('auth.current_pin');
       case 1:
-        return 'Шинэ PIN код';
+        return tr('auth.new_pin');
       case 2:
-        return 'PIN код баталгаажуулах';
+        return tr('auth.confirm_pin_title');
       default:
         return '';
     }
@@ -51,11 +52,11 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
   String get _stepDescription {
     switch (_currentStep) {
       case 0:
-        return 'Одоогийн PIN кодоо оруулна уу';
+        return tr('auth.enter_current_pin');
       case 1:
-        return 'Шинэ PIN кодоо оруулна уу';
+        return tr('auth.enter_new_pin_code');
       case 2:
-        return 'Шинэ PIN кодоо дахин оруулна уу';
+        return tr('auth.reenter_new_pin');
       default:
         return '';
     }
@@ -110,7 +111,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
     final controller = _getCurrentController();
     
     if (controller.text.length != 6) {
-      showAlertPopUpDialog(context, 'PIN код 6 оронтой байх ёстой', 60);
+      showAlertPopUpDialog(context, tr('auth.change_pin_must_be_6'), 60);
       return;
     }
 
@@ -135,7 +136,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
               _currentPinController.clear();
             });
             _rebuildPinCodeTextField();
-            showAlertPopUpDialog(context, 'Одоогийн PIN код буруу байна', 60);
+            showAlertPopUpDialog(context, tr('auth.current_pin_incorrect'), 60);
           }
         }
       } catch (e) {
@@ -146,7 +147,8 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
             _currentPinController.clear();
           });
           _rebuildPinCodeTextField();
-          showAlertPopUpDialog(context, 'Алдаа гарлаа: $e', 60);
+          showAlertPopUpDialog(
+              context, tr('common.error_with', {'error': e}), 60);
         }
       }
     } else if (_currentStep == 1) {
@@ -165,7 +167,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
           _confirmController.clear();
         });
         _rebuildPinCodeTextField();
-        showAlertPopUpDialog(context, 'PIN кодууд таарахгүй байна', 60);
+        showAlertPopUpDialog(context, tr('auth.pin_codes_mismatch'), 60);
         return;
       }
 
@@ -179,8 +181,8 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
         if (success) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('PIN код амжилттай солигдлоо'),
+              SnackBar(
+                content: Text(tr('auth.pin_changed_success')),
                 backgroundColor: Colors.green,
               ),
             );
@@ -188,12 +190,13 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
           }
         } else {
           if (mounted) {
-            showAlertPopUpDialog(context, 'PIN код солихад алдаа гарлаа', 60);
+            showAlertPopUpDialog(context, tr('auth.pin_change_failed'), 60);
           }
         }
       } catch (e) {
         if (mounted) {
-          showAlertPopUpDialog(context, 'Алдаа гарлаа: $e', 60);
+          showAlertPopUpDialog(
+              context, tr('common.error_with', {'error': e}), 60);
         }
       } finally {
         if (mounted) {
@@ -270,9 +273,9 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Та пинкодоо оруулна уу',
-                        style: TextStyle(
+                      Text(
+                        tr('auth.enter_your_pin'),
+                        style: const TextStyle(
                             fontSize: 13.0, color: Colors.white),
                         textAlign: TextAlign.start,
                       ),
@@ -318,7 +321,9 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
                     Expanded(
                       child: MainButton(
                         title: Text(
-                          _currentStep == 2 ? "Хадгалах" : "Үргэлжлүүлэх",
+                          _currentStep == 2
+                              ? tr('common.save')
+                              : tr('common.continue'),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.black,

@@ -1,3 +1,5 @@
+import 'package:onegrgold/l10n/app_locale.dart';
+
 class WithdrawResponse {
   final String status;
   final String withdrawId;
@@ -38,7 +40,8 @@ class WithdrawResponse {
   }
 
   // Helper getters
-  String get metalName => metalId == 1 ? 'Алт' : 'Мөнгө';
+  String get metalName =>
+      metalId == 1 ? tr('home.metal_gold') : tr('home.metal_silver');
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';

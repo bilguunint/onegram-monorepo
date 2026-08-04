@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -58,19 +59,19 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
     final account = _accountCtrl.text.trim();
     final holder = _holderCtrl.text.trim();
     if (_bank == null) {
-      _toast('Банкаа сонгоно уу.');
+      _toast(tr('product.select_bank_error'));
       return;
     }
     if (!RegExp(r'^\d{5,20}$').hasMatch(account)) {
-      _toast('Дансны дугаараа зөв оруулна уу (зөвхөн тоо).');
+      _toast(tr('product.invalid_account'));
       return;
     }
     if (holder.length < 2) {
-      _toast('Хүлээн авагчийн нэрээ оруулна уу.');
+      _toast(tr('product.enter_holder_name'));
       return;
     }
     if (!_termsAccepted) {
-      _toast('Буцаан олголтын нөхцөлийг хүлээн зөвшөөрнө үү.');
+      _toast(tr('product.accept_refund_terms'));
       return;
     }
 
@@ -92,25 +93,24 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
             children: [
               Icon(Icons.check_circle, color: CustomColors.successGreen),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Хүсэлт илгээгдлээ',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
+                  tr('product.request_sent'),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ],
           ),
           content: Text(
-            'Таны цуцлах хүсэлтийг админ шалгаж баталгаажуулсны дараа '
-            '${formatMNT(_refund)} ажлын 5 хоногийн дотор таны данс руу '
-            'шилжинэ.',
+            tr('product.cancel_request_sent_body',
+                {'amount': formatMNT(_refund)}),
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(),
-              child:
-                  Text('За', style: TextStyle(color: CustomColors.mainColor)),
+              child: Text(tr('product.got_it'),
+                  style: TextStyle(color: CustomColors.mainColor)),
             ),
           ],
         ),
@@ -137,9 +137,9 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Хуваан төлөлт цуцлах',
-          style: TextStyle(
+        title: Text(
+          tr('product.cancel_installment'),
+          style: const TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
         centerTitle: false,
@@ -167,9 +167,9 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
               child: MainButton(
                 isLoading: _submitting,
                 onPress: _submitting ? null : _submit,
-                title: const Text(
-                  'Баталгаажуулах',
-                  style: TextStyle(
+                title: Text(
+                  tr('common.confirm'),
+                  style: const TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
                       fontSize: 14),
@@ -199,16 +199,16 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
                 color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
-          _row('Нийт төлсөн дүн', formatMNT(_paid), Colors.white),
+          _row(tr('product.total_paid'), formatMNT(_paid), Colors.white),
           const SizedBox(height: 8),
-          _row('Цуцлалтын шимтгэл ($_feePercent%)', '−${formatMNT(_fee)}',
-              const Color(0xFFE57373)),
+          _row(tr('product.cancel_fee_percent', {'percent': _feePercent}),
+              '−${formatMNT(_fee)}', const Color(0xFFE57373)),
           const Divider(color: Colors.white12, height: 22),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Буцаан олгох дүн',
-                  style: TextStyle(
+              Text(tr('product.refund_amount'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.w600)),
@@ -251,9 +251,9 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Буцаан олголт хүлээн авах данс',
-            style: TextStyle(
+          Text(
+            tr('product.refund_account'),
+            style: const TextStyle(
                 color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
@@ -263,7 +263,7 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
             style: const TextStyle(color: Colors.white, fontSize: 13),
             icon: Icon(Icons.keyboard_arrow_down_rounded,
                 color: CustomColors.mainColor),
-            decoration: _inputDecoration('Банк сонгох'),
+            decoration: _inputDecoration(tr('product.select_bank')),
             items: kMongolianBanks
                 .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                 .toList(),
@@ -275,14 +275,14 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: _inputDecoration('Дансны дугаар'),
+            decoration: _inputDecoration(tr('product.account_number')),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: _holderCtrl,
             textCapitalization: TextCapitalization.words,
             style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: _inputDecoration('Хүлээн авагчийн нэр'),
+            decoration: _inputDecoration(tr('product.account_holder')),
           ),
         ],
       ),
@@ -303,18 +303,7 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
     );
   }
 
-  String get _termsText => '''
-1. Хуваан төлөлтийг цуцлахад нийт төлсөн дүнгээс цуцлалтын шимтгэл ($_feePercent%) суутгагдана.
-
-2. Буцаан олгох дүнг цуцлах хүсэлтийг админ шалгаж баталгаажуулснаас хойш АЖЛЫН 5 ХОНОГИЙН ДОТОР таны заасан банкны данс руу шилжүүлнэ.
-
-3. Банк, дансны дугаар, хүлээн авагчийн нэрийг үнэн зөв оруулах нь хэрэглэгчийн хариуцлага бөгөөд буруу мэдээллээс үүдэх хойшлолт, алдааг Компани хариуцахгүй.
-
-4. Цуцлах хүсэлт хүлээгдэж байх хугацаанд тухайн хуваан төлөлтөд шинэ төлбөр хийх боломжгүй.
-
-5. Цуцлалт баталгаажсаны дараа худалдан авалт сэргээгдэхгүй бөгөөд төлсөн өдрүүд шинэ худалдан авалтад шилжихгүй.
-
-6. Буцаан олголт нь зөвхөн хэрэглэгчийн заасан данс руу нэг удаа хийгдэнэ.''';
+  String get _termsText => tr('product.refund_terms', {'percent': _feePercent});
 
   Widget _termsSection() {
     return Container(
@@ -327,9 +316,9 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Буцаан олголтын нөхцөл',
-            style: TextStyle(
+          Text(
+            tr('product.refund_terms_title'),
+            style: const TextStyle(
                 color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 10),
@@ -383,11 +372,10 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
                         : null,
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Би мөнгөн буцаан олголтын дээрх нөхцөлүүдийг бүрэн '
-                      'уншиж танилцаж, хүлээн зөвшөөрч байна.',
-                      style: TextStyle(
+                      tr('product.accept_terms_checkbox'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
                         height: 1.35,
@@ -411,19 +399,16 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.amber.withOpacity(0.25)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, size: 14, color: Colors.amberAccent),
-          SizedBox(width: 8),
+          const Icon(Icons.info_outline, size: 14, color: Colors.amberAccent),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Хүсэлтийг админ шалгаж баталгаажуулсны дараа хуваан төлөлт '
-              'цуцлагдаж, буцаан олгох дүн ажлын 5 хоногийн дотор дээрх данс '
-              'руу шилжинэ. Хүсэлт хүлээгдэж байх хооронд төлбөр хийх '
-              'боломжгүй.',
-              style:
-                  TextStyle(color: Colors.white70, fontSize: 11, height: 1.4),
+              tr('product.cancel_info_note'),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 11, height: 1.4),
             ),
           ),
         ],

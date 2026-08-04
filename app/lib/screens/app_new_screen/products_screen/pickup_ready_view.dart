@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -87,19 +88,19 @@ class _CelebrationHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Баяр хүргэе!',
-            style: TextStyle(
+          Text(
+            tr('purchase.congrats'),
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Та төлбөрөө бүрэн төлж дуусгалаа.\nБараагаа авахад бэлэн боллоо.',
+          Text(
+            tr('purchase.pickup_ready_subtitle'),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 12,
               height: 1.4,
@@ -181,8 +182,9 @@ class _ProductCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   purchase.purchaseType == PurchaseType.installment
-                      ? '${purchase.months} сар бүрэн төлсөн'
-                      : 'Шууд худалдан авалт',
+                      ? tr('purchase.months_fully_paid',
+                          {'months': purchase.months})
+                      : tr('purchase.direct_purchase'),
                   style:
                       const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
@@ -219,7 +221,7 @@ class _PickupCodeCard extends StatelessWidget {
                   size: 16, color: CustomColors.mainColor),
               const SizedBox(width: 6),
               Text(
-                'Бараа хүлээн авах код',
+                tr('purchase.pickup_code_label'),
                 style: TextStyle(
                   color: CustomColors.mainColor,
                   fontWeight: FontWeight.bold,
@@ -246,7 +248,7 @@ class _PickupCodeCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Энэхүү кодыг манай ажилтанд үзүүлснээр бараагаа авна.',
+                  tr('purchase.pickup_code_hint'),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -260,9 +262,9 @@ class _PickupCodeCard extends StatelessWidget {
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: code!));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Код хуулагдлаа'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(tr('purchase.code_copied')),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -273,9 +275,9 @@ class _PickupCodeCard extends StatelessWidget {
                     minimumSize: const Size(0, 28),
                   ),
                   icon: const Icon(Icons.copy, size: 14),
-                  label: const Text(
-                    'Хуулах',
-                    style: TextStyle(fontSize: 11),
+                  label: Text(
+                    tr('purchase.copy'),
+                    style: const TextStyle(fontSize: 11),
                   ),
                 ),
             ],
@@ -289,9 +291,8 @@ class _PickupCodeCard extends StatelessWidget {
 class _StoreInfoCard extends StatelessWidget {
   const _StoreInfoCard();
 
-  static const String _address =
-      'ХУД, 15-р хороо, Махатма Гандигийн гудамж,\nOne Center /Хуучнаар Home Plaza/';
-  static const String _hours = 'Өдөр бүр 11:00 — 20:00';
+  String get _address => tr('purchase.store_address');
+  String get _hours => tr('purchase.store_hours');
   static const List<String> _phones = ['7588-8888', '9901-4939'];
 
   Future<void> _call(String number) async {
@@ -313,14 +314,14 @@ class _StoreInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.storefront_outlined,
+              const Icon(Icons.storefront_outlined,
                   size: 16, color: Colors.white70),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
-                'Их хаадын чулуу — Төв салбар',
-                style: TextStyle(
+                tr('purchase.store_name'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -409,16 +410,16 @@ class _IdNotice extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.amber.withOpacity(0.25)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.badge_outlined,
+          const Icon(Icons.badge_outlined,
               size: 16, color: Colors.amberAccent),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Бараагаа авахдаа өөрийн биеэр иргэний үнэмлэх (бичиг баримт)-тайгаа ирнэ үү. Бусдад итгэмжлэн өгөх боломжгүй.',
-              style: TextStyle(
+              tr('purchase.id_required_notice'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11.5,
                 height: 1.45,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -54,7 +55,7 @@ class ActivePurchaseBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    'Идэвхтэй худалдан авалт',
+                    tr('purchase.active_purchase'),
                     style: TextStyle(
                       color: CustomColors.mainBlack,
                       fontSize: 10,
@@ -64,7 +65,7 @@ class ActivePurchaseBanner extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  'Дэлгэрэнгүй',
+                  tr('common.details'),
                   style: TextStyle(
                     color: CustomColors.mainColor,
                     fontSize: 11,
@@ -121,7 +122,8 @@ class ActivePurchaseBanner extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Нийт: ${formatMNT(purchase.totalPrice)}',
+                        tr('purchase.total_with',
+                            {'amount': formatMNT(purchase.totalPrice)}),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 11,
@@ -150,7 +152,10 @@ class ActivePurchaseBanner extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '${purchase.paidDays}/${purchase.totalDays} өдөр төлөгдсөн',
+                  tr('purchase.days_paid', {
+                    'paid': purchase.paidDays,
+                    'total': purchase.totalDays,
+                  }),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -175,19 +180,19 @@ class ActivePurchaseBanner extends StatelessWidget {
               children: [
                 Expanded(
                   child: _MiniStat(
-                    label: 'Өдөр бүр',
+                    label: tr('purchase.daily'),
                     value: formatMNT(purchase.dailyPayment),
                   ),
                 ),
                 Expanded(
                   child: _MiniStat(
-                    label: 'Төлсөн',
+                    label: tr('purchase.paid'),
                     value: formatMNT(purchase.paidAmount),
                   ),
                 ),
                 Expanded(
                   child: _MiniStat(
-                    label: 'Үлдсэн',
+                    label: tr('purchase.remaining'),
                     value: formatMNT(purchase.remainingAmount),
                     emphasised: true,
                   ),
@@ -211,7 +216,7 @@ class ActivePurchaseBanner extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Дуусах хугацаа',
+                        tr('purchase.deadline'),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 11,

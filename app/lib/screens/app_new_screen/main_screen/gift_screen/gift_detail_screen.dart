@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/models/gift_order_model.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import '../../../../repositories/user_repository.dart';
 import '../../../../style/colors.dart';
 import '../../../../bloc/accept_gift_bloc/accept_gift_bloc.dart';
@@ -40,7 +41,8 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Баяр хүргэе! Таны алтан хуримтлал ${state.response.quantity}гр-аар нэмэгдлээ.',
+                  tr('order.gift_accepted_success',
+                      {'qty': state.response.quantity}),
                   style: const TextStyle(color: Colors.white),
                 ),
                 backgroundColor: CustomColors.successGreen,
@@ -51,7 +53,7 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Бэлэг хүлээн авахад алдаа гарлаа: ${state.error}',
+                  tr('order.gift_accept_error', {'error': state.error}),
                   style: const TextStyle(color: Colors.white),
                 ),
                 backgroundColor: CustomColors.alerRed,
@@ -75,9 +77,9 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Бэлэг',
-          style: TextStyle(
+        title: Text(
+          tr('order.gift'),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -101,7 +103,10 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 0.0, top: 0.0),
                     child: Text(
-                      "Бэлэг - ${widget.giftOrder.sender.fullName}/${widget.giftOrder.quantity}гр алт/",
+                      tr('order.gift_from_sender_title', {
+                        'sender': widget.giftOrder.sender.fullName,
+                        'qty': widget.giftOrder.quantity
+                      }),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 18.0,
@@ -113,7 +118,11 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: Text(
-                      "Танд ${widget.giftOrder.sender.phone} дугаартай ${widget.giftOrder.sender.fullName} хэрэглэгчээс ${widget.giftOrder.quantity}гр алт бэлэглэж байна.",
+                      tr('order.gift_received_desc', {
+                        'phone': widget.giftOrder.sender.phone,
+                        'name': widget.giftOrder.sender.fullName,
+                        'qty': widget.giftOrder.quantity
+                      }),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 14.0,
@@ -122,15 +131,21 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16.0),
-                  _buildDetailRow("Илгээгчийн нэр:", widget.giftOrder.sender.fullName),
+                  _buildDetailRow(tr('order.sender_name_label'),
+                      widget.giftOrder.sender.fullName),
                   const SizedBox(height: 16.0),
-                  _buildDetailRow("Илгээгчийн дугаар:", widget.giftOrder.sender.phone),
+                  _buildDetailRow(tr('order.sender_phone_label'),
+                      widget.giftOrder.sender.phone),
                   const SizedBox(height: 16.0),
-                  _buildDetailRow("Бэлэглэсэн хэмжээ:", "${widget.giftOrder.quantity}гр"),
+                  _buildDetailRow(tr('order.gift_quantity_label'),
+                      tr('order.quantity_gram',
+                          {'qty': widget.giftOrder.quantity})),
                   const SizedBox(height: 16.0),
-                  _buildStatusRow("Төлөв:", widget.giftOrder.status),
+                  _buildStatusRow(
+                      tr('order.status_label'), widget.giftOrder.status),
                   const SizedBox(height: 16.0),
-                  _buildDetailRow("Огноо:", _formatDate(widget.giftOrder.createdAt)),
+                  _buildDetailRow(tr('order.date_label'),
+                      _formatDate(widget.giftOrder.createdAt)),
                   const SizedBox(height: 24.0),
                   if (widget.giftOrder.greeting != null && widget.giftOrder.greeting!.isNotEmpty)
                     Container(
@@ -144,9 +159,9 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Зурвас:",
-                            style: TextStyle(
+                          Text(
+                            tr('order.message_label'),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14.0,
                               color: Colors.white,
@@ -189,8 +204,8 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                                           );
                                     } else {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Нэвтрэх токен олдсонгүй'),
+                                        SnackBar(
+                                          content: Text(tr('order.token_not_found')),
                                           backgroundColor: Colors.red,
                                         ),
                                       );
@@ -198,15 +213,16 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Токен авахад алдаа гарлаа: $e'),
+                                        content: Text(tr('order.token_error',
+                                            {'error': e})),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
                                   }
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Нэвтрээгүй байна'),
+                                    SnackBar(
+                                      content: Text(tr('order.not_signed_in')),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
@@ -229,9 +245,9 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
                                   strokeWidth: 2.0,
                                 ),
                               )
-                            : const Text(
-                                "Бэлэг хүлээн авах",
-                                style: TextStyle(
+                            : Text(
+                                tr('order.accept_gift'),
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16.0,
                                 ),
@@ -344,13 +360,13 @@ class _GiftDetailScreenState extends State<GiftDetailScreen> {
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return 'Хүлээгдэж байна';
+        return tr('common.pending');
       case 'received':
-        return 'Хүлээн авсан';
+        return tr('common.received');
       case 'cancelled':
-        return 'Цуцлагдсан';
+        return tr('common.cancelled');
       case 'failed':
-        return 'Амжилтгүй';
+        return tr('common.failed');
       default:
         return status;
     }

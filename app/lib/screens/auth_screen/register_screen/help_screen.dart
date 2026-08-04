@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/make_order_screen/order_agreement_screen.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/privacy_screen.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,15 +23,15 @@ class _HelpScreenState extends State<HelpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Тусламж"),
+        title: Text(tr('reg.help_title')),
       ),
       body: ListView(
         children: [
-          const Padding(
+          Padding(
             padding: const EdgeInsets.only(left: 16.0, bottom: 8.0, top: 16.0),
             child: Text(
-              "Тухай",
-              style: TextStyle(fontFamily: "InterBold"),
+              tr('reg.help_about'),
+              style: const TextStyle(fontFamily: "InterBold"),
             ),
           ),
           Padding(
@@ -54,15 +55,15 @@ class _HelpScreenState extends State<HelpScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(FluentIcons.book_information_24_regular),
-                              SizedBox(
+                              const Icon(FluentIcons.book_information_24_regular),
+                              const SizedBox(
                                 width: 8.0,
                               ),
                               Text(
-                                "Төслийн танилцуулга",
-                                style: TextStyle(
+                                tr('reg.help_project_intro'),
+                                style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12.0),
                               ),
@@ -92,16 +93,16 @@ class _HelpScreenState extends State<HelpScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(FluentIcons
+                              const Icon(FluentIcons
                                   .clipboard_task_list_rtl_24_regular),
-                              SizedBox(
+                              const SizedBox(
                                 width: 8.0,
                               ),
                               Text(
-                                "Үйлчилгээний нөхцөл",
-                                style: TextStyle(
+                                tr('purchase.terms_title'),
+                                style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12.0),
                               ),
@@ -131,15 +132,15 @@ class _HelpScreenState extends State<HelpScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(FluentIcons.shield_keyhole_24_regular),
-                              SizedBox(
+                              const Icon(FluentIcons.shield_keyhole_24_regular),
+                              const SizedBox(
                                 width: 8.0,
                               ),
                               Text(
-                                "Нууцлалын бодлого",
-                                style: TextStyle(
+                                tr('reg.help_privacy_policy'),
+                                style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12.0),
                               ),
@@ -158,11 +159,11 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
             ),
           ),
-          const Padding(
+          Padding(
             padding: const EdgeInsets.only(left: 16.0, bottom: 8.0, top: 16.0),
             child: Text(
-              "Холбоо барих",
-              style: TextStyle(fontFamily: "InterBold"),
+              tr('reg.help_contact'),
+              style: const TextStyle(fontFamily: "InterBold"),
             ),
           ),
           Padding(
@@ -183,15 +184,15 @@ class _HelpScreenState extends State<HelpScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(FluentIcons.call_24_regular),
-                              SizedBox(
+                              const Icon(FluentIcons.call_24_regular),
+                              const SizedBox(
                                 width: 8.0,
                               ),
                               Text(
-                                "Залгах",
-                                style: TextStyle(
+                                tr('reg.help_call'),
+                                style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12.0),
                               ),
@@ -217,15 +218,15 @@ class _HelpScreenState extends State<HelpScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(FluentIcons.mail_24_regular),
-                              SizedBox(
+                              const Icon(FluentIcons.mail_24_regular),
+                              const SizedBox(
                                 width: 8.0,
                               ),
                               Text(
-                                "И-Мэйл бичих",
-                                style: TextStyle(
+                                tr('reg.help_email'),
+                                style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12.0),
                               ),
@@ -244,11 +245,11 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
             ),
           ),
-          const Padding(
+          Padding(
             padding: const EdgeInsets.only(left: 16.0, bottom: 8.0, top: 16.0),
             child: Text(
-              "Сошиал хаяг",
-              style: TextStyle(fontFamily: "InterBold"),
+              tr('reg.help_social'),
+              style: const TextStyle(fontFamily: "InterBold"),
             ),
           ),
           Padding(

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -62,41 +63,44 @@ class DetailView extends StatelessWidget {
       future: _getRateByMetalId(metalId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(
+          return Center(
               child: Text(
-            'Захиалгын дэлгэрэнгүйг харахад алдаа гарлаа!',
-            style: TextStyle(color: Colors.black),
+            tr('order.detail_load_error'),
+            style: const TextStyle(color: Colors.black),
           ));
         }
 
         if (snapshot.connectionState != ConnectionState.done) {
           // loading state - show placeholders (unchanged UI)
           return Column(
-            children: const [
+            children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Өнөөдрийн ханш:",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0)),
-                  Text("-")
+                  Text(tr('order.todays_rate_label'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12.0)),
+                  const Text("-")
                 ],
               ),
-              SizedBox(height: 8.0),
+              const SizedBox(height: 8.0),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Татвар + Шимтгэл:",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0)),
-                  Text("-")
+                  Text(tr('order.tax_and_fee_label'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12.0)),
+                  const Text("-")
                 ],
               ),
-              SizedBox(height: 8.0),
+              const SizedBox(height: 8.0),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Нийт дүн:",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0)),
-                  Text("-")
+                  Text(tr('order.total_amount_label'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12.0)),
+                  const Text("-")
                 ],
               ),
             ],
@@ -117,21 +121,26 @@ class DetailView extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Өнөөдрийн ханш:",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0),
+                Text(
+                  tr('order.todays_rate_label'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 12.0),
                 ),
                 isGoldLan
-                    ? Text("${currencyFormatter.format(rate * 37.5)}₮ / 1лан")
-                    : Text("${currencyFormatter.format(rate)}₮ / 1гр")
+                    ? Text(tr('order.rate_per_lan', {
+                        'amount': currencyFormatter.format(rate * 37.5)
+                      }))
+                    : Text(tr('order.rate_per_gram',
+                        {'amount': currencyFormatter.format(rate)}))
               ],
             ),
             const SizedBox(height: 8.0),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Татвар + Шимтгэл:",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0)),
+                Text(tr('order.tax_and_fee_label'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 12.0)),
                 Text("${currencyFormatter.format(serviceFee + noat)}₮")
               ],
             ),
@@ -140,8 +149,9 @@ class DetailView extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Нийт дүн:",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.0)),
+                Text(tr('order.total_amount_label'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 12.0)),
                 Text(
                   isGoldLan
                       ? "${currencyFormatter.format((quantity * rate * 37.5 + serviceFee + noat))}₮"

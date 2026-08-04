@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -25,9 +26,9 @@ class _MyPurchasesScreenState extends State<MyPurchasesScreen> {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Миний худалдан авалт',
-          style: TextStyle(
+        title: Text(
+          tr('purchase.my_purchases'),
+          style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
             color: Colors.white,
@@ -177,16 +178,19 @@ class _PurchaseRowCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           if (isInstallment)
                             Text(
-                              '${purchase.paidDays}/${purchase.totalDays} өдөр',
+                              tr('purchase.days_progress', {
+                                'paid': purchase.paidDays,
+                                'total': purchase.totalDays,
+                              }),
                               style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 11,
                               ),
                             )
                           else
-                            const Text(
-                              'Шууд авалт',
-                              style: TextStyle(
+                            Text(
+                              tr('purchase.direct_short'),
+                              style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 11,
                               ),
@@ -242,7 +246,8 @@ class _PurchaseRowCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Дуусах хугацаа: ${_fmtDate(purchase.deadline!)}',
+                      tr('purchase.deadline_with_date',
+                          {'date': _fmtDate(purchase.deadline!)}),
                       style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 11,
@@ -285,22 +290,22 @@ class _StatusBadge extends StatelessWidget {
       case ProductPurchaseStatus.active:
         bg = const Color(0x331E88E5);
         fg = const Color(0xFF7CC2FF);
-        text = 'Идэвхтэй';
+        text = tr('purchase.status_active');
         break;
       case ProductPurchaseStatus.completed:
         bg = const Color(0x3343A047);
         fg = const Color(0xFF7BD389);
-        text = 'Төлөгдсөн';
+        text = tr('purchase.status_paid');
         break;
       case ProductPurchaseStatus.delivered:
         bg = const Color(0x33FCD535);
         fg = CustomColors.mainColor;
-        text = 'Хүлээлгэн өгсөн';
+        text = tr('purchase.status_delivered');
         break;
       case ProductPurchaseStatus.cancelled:
         bg = const Color(0x33C2240B);
         fg = const Color(0xFFE57373);
-        text = 'Цуцалсан';
+        text = tr('purchase.status_cancelled');
         break;
     }
     return Container(
@@ -336,21 +341,21 @@ class _EmptyState extends StatelessWidget {
           Icon(Icons.receipt_long_outlined,
               size: 56, color: Colors.white.withOpacity(0.3)),
           const SizedBox(height: 12),
-          const Text(
-            'Худалдан авалт байхгүй байна',
-            style: TextStyle(
+          Text(
+            tr('purchase.empty_title'),
+            style: const TextStyle(
               color: Colors.white54,
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
           ),
           const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              'Бүтээгдэхүүн сонгож хуваан төлөх эсвэл шууд худалдан авалт хийгээрэй.',
+              tr('purchase.empty_subtitle'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white38, fontSize: 11),
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
             ),
           ),
         ],
@@ -373,9 +378,9 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
             const SizedBox(height: 12),
-            const Text(
-              'Худалдан авалт ачаалахад алдаа гарлаа',
-              style: TextStyle(
+            Text(
+              tr('purchase.load_error'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,

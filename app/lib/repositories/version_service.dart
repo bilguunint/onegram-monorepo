@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:version/version.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -81,9 +82,9 @@ class VersionService {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Шинэчлэлт хийх шаардлагатай'),
-          content: const Text(
-            'Таны апп-н хувилбар хуучирсан байна. Үргэлжлүүлэхийн тулд шинэчлэлт хийнэ үү.',
+          title: Text(tr('home.update_required_title')),
+          content: Text(
+            tr('home.update_required_body'),
           ),
           actions: [
             TextButton(
@@ -91,7 +92,7 @@ class VersionService {
                 Navigator.of(context).pop();
                 _openStore();
               },
-              child: const Text('Шинэчлэх'),
+              child: Text(tr('home.update_action')),
             ),
           ],
         );

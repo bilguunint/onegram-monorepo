@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,10 +40,10 @@ class _BalanceViewState extends State<BalanceView> {
         }
 
         if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(
+          return Center(
             child: Text(
-              'Мэдээлэл ачаалахад алдаа гарлаа',
-              style: TextStyle(color: Colors.white),
+              tr('home.balance_load_error'),
+              style: const TextStyle(color: Colors.white),
             ),
           );
         }
@@ -66,11 +67,11 @@ class _BalanceViewState extends State<BalanceView> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Text(
-                        "Алт:",
-                        style: TextStyle(shadows: <Shadow>[
+                        tr('home.gold_label'),
+                        style: const TextStyle(shadows: <Shadow>[
                           Shadow(
                             offset: Offset(1.0, 1.0),
                             blurRadius: 3.0,
@@ -92,7 +93,8 @@ class _BalanceViewState extends State<BalanceView> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "${userModel.balance.gold}гр",
+                        tr('home.grams_short',
+                            {'quantity': userModel.balance.gold}),
                         style: TextStyle(
                             fontFamily: "InterBold",
                             fontSize: 18.0,
@@ -116,9 +118,9 @@ class _BalanceViewState extends State<BalanceView> {
                   const SizedBox(
                     height: 8.0,
                   ),
-                  const Text(
-                    "Мөнгө:",
-                    style: TextStyle(
+                  Text(
+                    tr('home.silver_label'),
+                    style: const TextStyle(
                         fontSize: 12.0,
                         shadows: <Shadow>[
                           Shadow(
@@ -141,7 +143,10 @@ class _BalanceViewState extends State<BalanceView> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "${(userModel.balance.silver / 37.5).toStringAsFixed(2)}лан",
+                        tr('home.lan_short', {
+                          'quantity': (userModel.balance.silver / 37.5)
+                              .toStringAsFixed(2)
+                        }),
                         style: TextStyle(
                             fontFamily: "InterBold",
                             fontSize: 18.0,
@@ -216,7 +221,7 @@ class _BalanceViewState extends State<BalanceView> {
                             width: 8.0,
                           ),
                           Text(
-                            "Захиалах",
+                            tr('home.action_order'),
                             style: TextStyle(
                                 shadows: <Shadow>[
                                   Shadow(
@@ -266,7 +271,7 @@ class _BalanceViewState extends State<BalanceView> {
                             width: 8.0,
                           ),
                            Text(
-                            "Бэлэглэх",
+                            tr('home.action_gift'),
                             style: TextStyle(
                                 color:  CustomColors.mainSilver,
                                 fontWeight: FontWeight.bold,
@@ -310,7 +315,7 @@ class _BalanceViewState extends State<BalanceView> {
                             height: 2.0,
                           ),
                            Text(
-                            "Биетээр авах",
+                            tr('home.action_withdraw'),
                             style: TextStyle(
                                 color:  CustomColors.mainSilver,
                                 fontWeight: FontWeight.bold,

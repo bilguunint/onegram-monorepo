@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/accept_gift_model.dart';
 import 'package:onegrgold/models/cancel_gift_model.dart';
 import 'package:onegrgold/models/make_order_response.dart';
@@ -64,11 +65,15 @@ class UserRepository {
       );
 
       if (response.statusCode != 200 || response.data['status'] != 'success') {
-        throw Exception(response.data['msg'] ?? 'Failed to set pincode');
+        final rawMsg = response.data['msg']?.toString();
+        throw Exception(
+            rawMsg != null ? trServer(rawMsg) : 'Failed to set pincode');
       }
     } on DioException catch (e) {
       debugPrint('🔥 setPincode error: $e');
-      throw Exception(e.response?.data['msg'] ?? e.message ?? 'Network error');
+      final rawMsg = e.response?.data['msg']?.toString();
+      throw Exception(
+          rawMsg != null ? trServer(rawMsg) : (e.message ?? 'Network error'));
     } catch (e) {
       debugPrint('🔥 setPincode error: $e');
       rethrow;
@@ -85,8 +90,7 @@ class UserRepository {
         data: {'pin': pin, 'token': token},
       );
 
-      return response.statusCode == 200 &&
-          response.data['status'] == 'success';
+      return response.statusCode == 200 && response.data['status'] == 'success';
     } on DioException catch (e) {
       debugPrint('🔥 verifyPincode error: $e');
       return false;
@@ -97,32 +101,31 @@ class UserRepository {
   }
 
   Future<bool> changePincode(String currentPin, String newPin) async {
-  try {
-    final token = await _auth.currentUser?.getIdToken();
-    if (token == null) return false;
+    try {
+      final token = await _auth.currentUser?.getIdToken();
+      if (token == null) return false;
 
-    final response = await _dio.post(
-      'https://changepin-yuv3eg5qha-uc.a.run.app',
-      data: {
-        'currentPin': currentPin,
-        'newPin': newPin,
-        'token': token,
-      },
-    );
+      final response = await _dio.post(
+        'https://changepin-yuv3eg5qha-uc.a.run.app',
+        data: {
+          'currentPin': currentPin,
+          'newPin': newPin,
+          'token': token,
+        },
+      );
 
-    return response.statusCode == 200 &&
-        response.data['status'] == 'success';
-  } on DioException catch (e) {
-    debugPrint('🔥 changePincode error: $e');
-    return false;
-  } catch (e) {
-    debugPrint('🔥 changePincode error: $e');
-    return false;
+      return response.statusCode == 200 && response.data['status'] == 'success';
+    } on DioException catch (e) {
+      debugPrint('🔥 changePincode error: $e');
+      return false;
+    } catch (e) {
+      debugPrint('🔥 changePincode error: $e');
+      return false;
+    }
   }
-}
 
-  Future<MakeOrderResponse> makeOrder(
-      String userId, int metalId, num quantity, String prodType, num price) async {
+  Future<MakeOrderResponse> makeOrder(String userId, int metalId, num quantity,
+      String prodType, num price) async {
     final Map<String, dynamic> data = {
       "user_id": userId,
       "quantity": quantity,
@@ -137,21 +140,28 @@ class UserRepository {
         data: data,
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      return MakeOrderResponse.fromJson(response.data as Map<String, dynamic>, response.statusCode ?? 500);
+      return MakeOrderResponse.fromJson(
+          response.data as Map<String, dynamic>, response.statusCode ?? 500);
     } on DioException catch (e) {
       debugPrint('🔥 makeOrder error: ${e.response?.data ?? e.message}');
       final dynamic body = e.response?.data;
-      final String message = body is Map<String, dynamic>
-          ? (body['message']?.toString() ?? body['error']?.toString() ?? 'Алдаа гарлаа')
-          : (e.message ?? 'Алдаа гарлаа');
+      final String? rawMessage = body is Map<String, dynamic>
+          ? (body['message']?.toString() ?? body['error']?.toString())
+          : null;
+      final String message = rawMessage != null
+          ? trServer(rawMessage)
+          : (body is Map<String, dynamic>
+              ? tr('common.error')
+              : (e.message ?? tr('common.error')));
       return MakeOrderResponse.failure(message);
     } catch (e) {
       debugPrint('🔥 makeOrder unexpected error: $e');
-      return MakeOrderResponse.failure('Алдаа гарлаа');
+      return MakeOrderResponse.failure(tr('common.error'));
     }
   }
 
-  static const String _prodBase = 'https://us-central1-grammgold.cloudfunctions.net';
+  static const String _prodBase =
+      'https://us-central1-grammgold.cloudfunctions.net';
 
   static Future<AcceptGiftResponse> acceptGift({
     required String giftId,
@@ -176,7 +186,9 @@ class UserRepository {
       if (response.statusCode == 200) {
         return AcceptGiftResponse.fromJson(responseBody);
       } else {
-        throw Exception(responseBody['error'] ?? 'Failed to accept gift');
+        final rawError = responseBody['error']?.toString();
+        throw Exception(
+            rawError != null ? trServer(rawError) : 'Failed to accept gift');
       }
     } catch (e) {
       throw Exception('Network error: ${e.toString()}');
@@ -196,7 +208,7 @@ class UserRepository {
       if (user == null) {
         throw Exception('User not authenticated');
       }
-      
+
       final request = WithdrawRequest(
         userId: userId,
         quantity: quantity,
@@ -216,9 +228,19 @@ class UserRepository {
       final responseBody = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        // Translate the server's success message (shown on the success
+        // screen) before the model snapshots it.
+        if (responseBody is Map<String, dynamic> &&
+            responseBody['message'] != null) {
+          responseBody['message'] =
+              trServer(responseBody['message'].toString());
+        }
         return WithdrawResponse.fromJson(responseBody);
       } else {
-        throw Exception(responseBody['error'] ?? 'Failed to create withdraw request');
+        final rawError = responseBody['error']?.toString();
+        throw Exception(rawError != null
+            ? trServer(rawError)
+            : 'Failed to create withdraw request');
       }
     } catch (e) {
       throw Exception('Network error: ${e.toString()}');
@@ -248,7 +270,9 @@ class UserRepository {
       if (response.statusCode == 200) {
         return CancelGiftResponse.fromJson(responseBody);
       } else {
-        throw Exception(responseBody['error'] ?? 'Failed to cancel gift');
+        final rawError = responseBody['error']?.toString();
+        throw Exception(
+            rawError != null ? trServer(rawError) : 'Failed to cancel gift');
       }
     } catch (e) {
       throw Exception('Network error: ${e.toString()}');
@@ -260,7 +284,7 @@ class UserRepository {
     final status = json['status']?.toString() ?? '';
     final giftId = json['gift_id']?.toString() ?? '';
     if (status.isEmpty || giftId.isEmpty) {
-      throw const GiftApiException('Серверийн буцах өгөгдөл буруу байна.');
+      throw GiftApiException(tr('home.invalid_server_response'));
     }
     return CreateGiftResult(status: status, giftId: giftId);
   }
@@ -284,18 +308,18 @@ class UserRepository {
   }) async {
     // client-side validation
     if (!_isValidMnPhone(receiverPhone)) {
-      throw const InvalidPhoneException('Утасны дугаар буруу байна. +976XXXXXXXX эсвэл 8 оронтой дугаар оруулна уу.');
+      throw InvalidPhoneException(tr('home.invalid_phone_format'));
     }
     if (quantity <= 0) {
-      throw const GiftValidationException('Тоо хэмжээ 0-ээс их байх ёстой.');
+      throw GiftValidationException(tr('home.quantity_must_be_positive'));
     }
     if (!_isValidMetal(metalId)) {
-      throw const GiftValidationException('Металлын төрөл буруу байна. Алт(1) эсвэл Мөнгө(3)-г сонгоно уу.');
+      throw GiftValidationException(tr('home.invalid_metal_type'));
     }
 
     final user = _auth.currentUser;
     if (user == null) {
-      throw const GiftApiException('Нэвтрээгүй хэрэглэгч.');
+      throw GiftApiException(tr('home.not_signed_in_user'));
     }
     final idToken = await user.getIdToken();
 
@@ -330,21 +354,24 @@ class UserRepository {
         return _parseCreateGiftSuccess(body);
       }
 
-      // Map known errors
+      // Map known errors. The lowercased `err` is only for comparison —
+      // never translate it, or the `contains` checks would break.
       final err = (body['error']?.toString() ?? '').toLowerCase();
       if (err.contains('invalid phone') || err.contains('phone')) {
-        throw const InvalidPhoneException('Хүлээн авах дугаар буруу байна.');
+        throw InvalidPhoneException(tr('home.invalid_receiver_phone'));
       }
       if (err.contains('invalid pincode') || err.contains('pin')) {
-        throw const InvalidPincodeException('Пин код буруу байна.');
+        throw InvalidPincodeException(tr('home.invalid_pincode'));
       }
       if (err.contains('insufficient') || err.contains('balance')) {
-        throw const InsufficientBalanceException('Үлдэгдэл хүрэлцэхгүй байна.');
+        throw InsufficientBalanceException(tr('home.insufficient_balance'));
       }
 
-      throw GiftApiException(body['error']?.toString() ?? 'Үл мэдэгдэх алдаа гарлаа.');
+      final rawError = body['error']?.toString();
+      throw GiftApiException(
+          rawError != null ? trServer(rawError) : tr('home.unknown_error'));
     } on http.ClientException catch (e) {
-      throw GiftApiException('Сүлжээний алдаа: ${e.message}');
+      throw GiftApiException(tr('home.network_error', {'error': e.message}));
     } catch (e) {
       // rethrow typed exceptions
       if (e is GiftException) rethrow;
@@ -420,7 +447,7 @@ class CreateGiftViewModel extends ChangeNotifier {
     } on GiftException catch (e) {
       error = e.message; // already user-friendly
     } catch (e) {
-      error = 'Алдаа гарлаа: ${e.toString()}';
+      error = tr('common.error_with', {'error': e.toString()});
     } finally {
       isLoading = false;
       notifyListeners();

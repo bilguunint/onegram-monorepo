@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class OrderList extends StatefulWidget {
@@ -78,11 +79,11 @@ class _OrderListState extends State<OrderList> {
             width: 80.0,
             height: 80.0,
             child: SvgPicture.asset("assets/icons/no-order-dark.svg")),
-        const Padding(
-          padding: EdgeInsets.only(top: 16.0),
+        Padding(
+          padding: const EdgeInsets.only(top: 16.0),
           child: Text(
-            "Захиалга байхгүй байна.",
-            style: TextStyle(
+            tr('home.no_orders'),
+            style: const TextStyle(
                 fontSize: 12.0,
                 color: Colors.white38,
                 fontWeight: FontWeight.bold),
@@ -118,20 +119,20 @@ class _OrderListState extends State<OrderList> {
         Color statusColor;
         IconData statusIcon;
         if (adminStatus.toLowerCase() == 'success') {
-          statusText = 'Амжилттай';
+          statusText = tr('common.success');
           statusColor = CustomColors.successGreen;
           statusIcon = Ionicons.checkmark_circle_outline;
         } else if (adminStatus.toLowerCase() == 'refund') {
-          statusText = 'Цуцлагдсан';
+          statusText = tr('common.cancelled');
           statusColor = CustomColors.alerRed;
           statusIcon = Ionicons.close_circle_outline;
         } else if (paymentStatus.toLowerCase() == 'success') {
-          statusText = 'Хүлээгдэж байна';
+          statusText = tr('common.pending');
           statusColor = CustomColors.textGrey;
           statusIcon = Ionicons.time_outline;
         } else {
           // fallback
-          statusText = 'Хүлээгдэж байна';
+          statusText = tr('common.pending');
           statusColor = CustomColors.textGrey;
           statusIcon = Ionicons.time_outline;
         }
@@ -190,7 +191,7 @@ class _OrderListState extends State<OrderList> {
                   child: Column(
                     children: [
                       Text(
-                        "$quantityгр",
+                        tr('home.grams_short', {'quantity': quantity}),
                         style: TextStyle(
                             fontSize: 12.0,
                             fontFamily: "InterBold",

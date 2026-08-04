@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/models/gift_order_model.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class SuccessGiftScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Бэлэг илгээх хүсэлт"),
+        title: Text(tr('order.send_gift_request_title')),
         centerTitle: false,
         backgroundColor: CustomColors.scaffoldDarkBack,
       ),
@@ -44,15 +45,16 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
         stream: watchGiftOrderById(widget.giftId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
                   Text(
-                    "Бэлгийн мэдээлэл уншиж байна...",
-                    style: TextStyle(fontSize: 14.0, color: Colors.white60),
+                    tr('order.gift_loading'),
+                    style: const TextStyle(
+                        fontSize: 14.0, color: Colors.white60),
                   ),
                 ],
               ),
@@ -75,9 +77,10 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                           color: Colors.red,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          "Бэлгийн мэдээлэл уншихад алдаа гарлаа",
-                          style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                        Text(
+                          tr('order.gift_load_error'),
+                          style: const TextStyle(
+                              fontSize: 18.0, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -92,9 +95,9 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                       children: [
                         Expanded(
                           child: MainButton(
-                            title: const Text(
-                              "Буцах",
-                              style: TextStyle(
+                            title: Text(
+                              tr('common.back'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold, 
                                 color: Colors.black
                               ),
@@ -112,20 +115,22 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
           }
           
           if (!snapshot.hasData) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
                   Text(
-                    "Бэлгийн мэдээлэл үүсэхийг хүлээж байна...",
-                    style: TextStyle(fontSize: 14.0, color: Colors.white60),
+                    tr('order.gift_waiting_create'),
+                    style: const TextStyle(
+                        fontSize: 14.0, color: Colors.white60),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    "Энэ нь хэдэн секунд үргэлжилж болно",
-                    style: TextStyle(fontSize: 12.0, color: Colors.white38),
+                    tr('order.gift_may_take_seconds'),
+                    style: const TextStyle(
+                        fontSize: 12.0, color: Colors.white38),
                   ),
                 ],
               ),
@@ -147,18 +152,25 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                         height: 200.0,
                         child: Lottie.asset("assets/icons/animation-gift.json"),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 16.0, top: 0.0),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0, top: 0.0),
                         child: Text(
-                          "Бэлэг амжилттай илгээлээ",
+                          tr('order.gift_sent_success'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 18.0, fontFamily: "InterBold"),
+                          style: const TextStyle(
+                              fontSize: 18.0, fontFamily: "InterBold"),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 32.0),
                         child: Text(
-                          "${giftOrder.receiver.phone} дугаартай хэрэглэгчрүү ${giftOrder.quantity}гр ${giftOrder.metalId == 1 ? 'алт' : 'мөнгө'}-ыг амжилттай бэлэг болгон илгээлээ. Хүлээн авагч нь таны бэлгийг хүлээн авснаар бэлгийн захиалга амжилттай болно.",
+                          tr('order.gift_sent_success_desc', {
+                            'phone': giftOrder.receiver.phone,
+                            'qty': giftOrder.quantity,
+                            'metal': giftOrder.metalId == 1
+                                ? tr('order.metal_gold')
+                                : tr('order.metal_silver')
+                          }),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14.0,
@@ -172,9 +184,10 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Бэлгийн ID:",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                          Text(
+                            tr('order.gift_id_label'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14.0),
                           ),
                           Text(
                             giftOrder.giftId,
@@ -192,9 +205,10 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Хүлээн авагч:",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                          Text(
+                            tr('order.recipient_label'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14.0),
                           ),
                           Text(
                             giftOrder.receiver.phone,
@@ -215,9 +229,11 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  "Мэндчилгээний үг:",
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                                Text(
+                                  tr('order.greeting_label'),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14.0),
                                 ),
                                 Flexible(
                                   child: Text(
@@ -242,12 +258,17 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Бэлэглэсэн хэмжээ:",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                          Text(
+                            tr('order.gift_quantity_label'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14.0),
                           ),
                           Text(
-                            "${giftOrder.quantity}${giftOrder.metalId == 1 ? 'гр' : 'лан'}",
+                            giftOrder.metalId == 1
+                                ? tr('order.quantity_gram',
+                                    {'qty': giftOrder.quantity})
+                                : tr('order.quantity_lan',
+                                    {'qty': giftOrder.quantity}),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: CustomColors.mainColor,
@@ -264,9 +285,11 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  "Мөнгөн дүн:",
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                                Text(
+                                  tr('order.amount_label'),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14.0),
                                 ),
                                 Text(
                                   "${currencyFormatter.format(giftOrder.amount)}₮",
@@ -286,9 +309,10 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Илгээсэн огноо:",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                          Text(
+                            tr('order.sent_date_label'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14.0),
                           ),
                           Text(
                             DateFormat('yyyy-MM-dd HH:mm').format(giftOrder.createdAt),
@@ -306,9 +330,10 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Төлөв:",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+                          Text(
+                            tr('order.status_label'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14.0),
                           ),
                           Text(
                             _getStatusText(giftOrder.status),
@@ -328,9 +353,9 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
                     children: [
                       Expanded(
                         child: MainButton(
-                          title: const Text(
-                            "Ойлголоо",
-                            style: TextStyle(
+                          title: Text(
+                            tr('order.understood'),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold, 
                               color: Colors.black,
                             ),
@@ -353,13 +378,13 @@ class _SuccessGiftScreenState extends State<SuccessGiftScreen> {
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return 'Хүлээгдэж буй';
+        return tr('order.status_pending_short');
       case 'completed':
-        return 'Амжилттай';
+        return tr('common.success');
       case 'cancelled':
-        return 'Цуцлагдсан';
+        return tr('common.cancelled');
       case 'failed':
-        return 'Амжилтгүй';
+        return tr('common.failed');
       default:
         return status;
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/user_reset_pin_bloc/user_reset_pin_bloc.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:onscreen_num_keyboard/onscreen_num_keyboard.dart';
@@ -99,26 +100,26 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
     switch (_currentStep) {
       case 0:
         if (_otpController.text.length < 4) {
-          _showSnackBar(ctx, 'OTP код 4 оронтой байх ёстой', isError: true);
+          _showSnackBar(ctx, tr('auth.otp_must_be_4'), isError: true);
           return;
         }
       case 1:
         if (_registerNumberController.text.length != 8) {
-          _showSnackBar(ctx, 'Регистрийн дугаар 8 оронтой байх ёстой', isError: true);
+          _showSnackBar(ctx, tr('auth.register_must_be_8'), isError: true);
           return;
         }
       case 2:
         if (_newPinController.text.length < 6) {
-          _showSnackBar(ctx, 'Пинкод 6 оронтой байх ёстой', isError: true);
+          _showSnackBar(ctx, tr('auth.pin_must_be_6'), isError: true);
           return;
         }
       case 3:
         if (_confirmPinController.text.length < 6) {
-          _showSnackBar(ctx, 'Пинкод 6 оронтой байх ёстой', isError: true);
+          _showSnackBar(ctx, tr('auth.pin_must_be_6'), isError: true);
           return;
         }
         if (_newPinController.text != _confirmPinController.text) {
-          _showSnackBar(ctx, 'Пинкод таарахгүй байна', isError: true);
+          _showSnackBar(ctx, tr('auth.pin_mismatch'), isError: true);
           setState(() => _confirmPinController.clear());
           return;
         }
@@ -214,13 +215,13 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24.0),
-          const Text(
-            'Баталгаажуулах код',
-            style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+          Text(
+            tr('auth.verification_code'),
+            style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8.0),
           Text(
-            'Бид таны ${widget.input} дугаарт баталгаажуулах код илгээлээ. Кодоо оруулна уу.',
+            tr('auth.otp_sent_to', {'input': widget.input}),
             style: const TextStyle(fontSize: 13.0, color: Colors.white60),
           ),
           const SizedBox(height: 32.0),
@@ -253,10 +254,10 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
             ),
           ),
           const SizedBox(height: 24.0),
-          const Center(
+          Center(
             child: Text(
-              'OTP код ирээгүй юу? Код дахин авах',
-              style: TextStyle(fontSize: 13.0, color: Colors.white54),
+              tr('auth.otp_not_received'),
+              style: const TextStyle(fontSize: 13.0, color: Colors.white54),
             ),
           ),
         ],
@@ -271,14 +272,14 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24.0),
-          const Text(
-            'Регистрийн дугаар',
-            style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+          Text(
+            tr('auth.register_number'),
+            style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8.0),
-          const Text(
-            'Таны регистрийн дугаараар таныг баталгаажуулах тул үнэн зөв оруулна уу.',
-            style: TextStyle(fontSize: 13.0, color: Colors.white38),
+          Text(
+            tr('auth.register_number_hint'),
+            style: const TextStyle(fontSize: 13.0, color: Colors.white38),
           ),
           const SizedBox(height: 24.0),
           Row(
@@ -377,9 +378,9 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Шинэ пинкодоо оруулна уу',
-          style: TextStyle(fontSize: 14.0, color: Colors.white70),
+        Text(
+          tr('auth.enter_new_pin'),
+          style: const TextStyle(fontSize: 14.0, color: Colors.white70),
         ),
         const SizedBox(height: 24.0),
         IgnorePointer(
@@ -412,9 +413,9 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Пинкодоо дахин оруулж баталгаажуулна уу',
-          style: TextStyle(fontSize: 14.0, color: Colors.white70),
+        Text(
+          tr('auth.confirm_pin_again'),
+          style: const TextStyle(fontSize: 14.0, color: Colors.white70),
         ),
         const SizedBox(height: 24.0),
         IgnorePointer(
@@ -457,7 +458,7 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
           Navigator.of(context).pop();
           _showSnackBar(
             context,
-            'Пинкод амжилттай солигдлоо. Шинэ пинкодоороо нэвтэрнэ үү.',
+            tr('auth.pin_changed_sign_in'),
           );
            // UserResetPinScreen → EnterPincodeScreen
         }
@@ -524,9 +525,9 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
                       if (_currentStep > 0) ...[
                         TextButton(
                           onPressed: _goBack,
-                          child: const Text(
-                            'Буцах',
-                            style: TextStyle(color: Colors.white54),
+                          child: Text(
+                            tr('common.back'),
+                            style: const TextStyle(color: Colors.white54),
                           ),
                         ),
                         const SizedBox(width: 12.0),
@@ -534,7 +535,9 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
                       Expanded(
                         child: MainButton(
                           title: Text(
-                            isLastStep ? 'Пинкод солих' : 'Үргэлжлүүлэх',
+                            isLastStep
+                                ? tr('auth.change_pin')
+                                : tr('common.continue'),
                             style: TextStyle(
                               color: CustomColors.scaffoldDarkBack,
                               fontWeight: FontWeight.bold,

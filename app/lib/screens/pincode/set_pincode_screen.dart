@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/main_screen.dart';
@@ -54,7 +55,7 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
   Future<void> _nextOrSave() async {
     if (!_isConfirmStep) {
       if (_firstController.text.length < 6) {
-        showAlertPopUpDialog(context, 'Пин код 6 оронтой байх ёстой', 60.0);
+        showAlertPopUpDialog(context, tr('auth.set_pin_must_be_6'), 60.0);
         return;
       }
       setState(() => _isConfirmStep = true);
@@ -67,12 +68,12 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
     }
 
     if (_confirmController.text.length < 6) {
-      showAlertPopUpDialog(context, 'Пин код 6 оронтой байх ёстой', 60.0);
+      showAlertPopUpDialog(context, tr('auth.set_pin_must_be_6'), 60.0);
       return;
     }
 
     if (_firstController.text != _confirmController.text) {
-      showAlertPopUpDialog(context, 'Пинкод таарахгүй байна', 75.0);
+      showAlertPopUpDialog(context, tr('auth.pin_mismatch'), 75.0);
       _confirmController.clear();
       setState(() {});
       return;
@@ -93,7 +94,7 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      showAlertPopUpDialog(context, 'Пинкод хадгалах үед алдаа гарлаа', 60.0);
+      showAlertPopUpDialog(context, tr('auth.pin_save_failed'), 60.0);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -104,7 +105,7 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: CustomColors.scaffoldDarkBack,
-        title: const Text('Хэрэглэгчийн пин код'),
+        title: Text(tr('auth.user_pin_title')),
         centerTitle: false,
         elevation: 0,
       ),
@@ -116,13 +117,13 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
             children: [
               Expanded(
                 child: Column(children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
                         Text(
-                          "Та баталгаажуулах пин кодоо оруулна уу. Уг 6 оронтой тоо нь таны дансны аюулгүй байдлыг хангах зорилготой.",
-                          style: TextStyle(
+                          tr('auth.set_pin_intro'),
+                          style: const TextStyle(
                             fontSize: 14.0,
                             color: Colors.white38,
                           ),
@@ -139,9 +140,9 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
-                              'Та пинкодоо оруулна уу',
-                              style: TextStyle(
+                            Text(
+                              tr('auth.enter_your_pin'),
+                              style: const TextStyle(
                                   fontSize: 13.0, color: Colors.white),
                               textAlign: TextAlign.start,
                             ),
@@ -173,9 +174,9 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
-                              'Та пинкодоо дахин оруулж баталгаажуулна уу',
-                              style: TextStyle(
+                            Text(
+                              tr('auth.reenter_your_pin_confirm'),
+                              style: const TextStyle(
                                   fontSize: 13.0, color: Colors.white),
                               textAlign: TextAlign.start,
                             ),
@@ -241,9 +242,10 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
                                         curve: Curves.easeIn,
                                       );
                                     },
-                                    child: const Text(
-                                      "Буцах",
-                                      style: TextStyle(color: Colors.white54),
+                                    child: Text(
+                                      tr('common.back'),
+                                      style: const TextStyle(
+                                          color: Colors.white54),
                                     ),
                                   ),
                                 ) : Container(),
@@ -253,7 +255,9 @@ class _SetPincodeScreenState extends State<SetPincodeScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                _isConfirmStep ? "Баталгаажуулах" : "Үргэлжлүүлэх",
+                                _isConfirmStep
+                                    ? tr('common.confirm')
+                                    : tr('common.continue'),
                                 style: TextStyle(
                                   color: CustomColors.scaffoldDarkBack,
                                   fontWeight: FontWeight.bold,

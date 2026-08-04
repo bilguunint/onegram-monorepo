@@ -9,6 +9,7 @@ import 'package:onegrgold/bloc/send_gift/send_gift_bloc.dart';
 import 'package:onegrgold/bloc/send_gift/send_gift_event.dart';
 import 'package:onegrgold/bloc/send_gift/send_gift_state.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/elements/main_button.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/send_gift_screen/success_gift_screen.dart';
@@ -95,7 +96,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Бэлэг илгээх'),
+        title: Text(tr('order.send_gift_title')),
         backgroundColor: CustomColors.scaffoldDarkBack,
       ),
       backgroundColor: CustomColors.scaffoldDarkBack,
@@ -158,9 +159,9 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                                       agreementAccepted = !agreementAccepted;
                                     });
                                   },
-                                  child: const Text(
-                                    "Бэлэг илгээх нөхцөлтэй танилцаж, зөвшөөрч байна.",
-                                    style: TextStyle(
+                                  child: Text(
+                                    tr('order.accept_gift_terms_checkbox'),
+                                    style: const TextStyle(
                                         fontSize: 12.0,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -182,9 +183,9 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                                           right: 32.0,
                                           left: 32.0),
                                       child: MainButton(
-                                          title: const Text(
-                                            "Үргэлжлүүлэх",
-                                            style: TextStyle(
+                                          title: Text(
+                                            tr('common.continue'),
+                                            style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.black),
                                           ),
@@ -192,7 +193,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                                             if (!agreementAccepted) {
                                               showAlertPopUpDialog(
                                                   context,
-                                                  "Үйлчилгээний нөхцөлтэй танилцаж зөвшөөрнө үү.",
+                                                  tr('order.must_accept_terms'),
                                                   85);
                                             } else {
                                               pageController.animateToPage(
@@ -229,7 +230,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 32.0, right: 32.0, top: 16.0),
                       child: Text(
-                        "Та бэлэглэх алтны граммын хэмжээгээ оруулна уу.",
+                        tr('order.gift_enter_amount'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white54,
@@ -241,7 +242,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        "${quantityText}гр",
+                        tr('order.quantity_gram', {'qty': quantityText}),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: "InterBold",
@@ -289,12 +290,12 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                     Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: MainButton(
-                        title: const Row(
+                        title: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Үргэлжлүүлэх",
-                              style: TextStyle(
+                              tr('common.continue'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
@@ -304,7 +305,8 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                         onPress: () {
                           final qty = num.tryParse(quantityText) ?? 0;
                           if (qty <= 0) {
-                            showAlertPopUpDialog(context, "Тоо хэмжээ 0-ээс их байх ёстой.", 75);
+                            showAlertPopUpDialog(
+                                context, tr('order.quantity_must_be_positive'), 75);
                           } else {
                             // Check gold balance
                             final userGoldBalance = widget.userModel.balance.gold;
@@ -312,7 +314,8 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                             if (qty > userGoldBalance) {
                               showAlertPopUpDialog(
                                 context,
-                                "Таны алтны үлдэгдэл хэмжээ хүрэлцэхгүй байна. Та эхлээд Захиалах цэснээс $qtyгр захиалга үүсгэнэ үү.",
+                                tr('order.insufficient_gold_for_gift',
+                                    {'qty': qty}),
                                 125
                               );
                             } else {
@@ -337,11 +340,12 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                   Expanded(
                     child: ListView(
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
                           child: Text(
-                            "Бэлэг хүлээн авагчийн мэдээлэл",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            tr('order.recipient_info_title'),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
                         Padding(
@@ -354,8 +358,8 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: CustomColors.inputDarkColor,
-                              labelText: "Хүлээн авагчийн утасны дугаар",
-                              hintText: "Хүлээн авагчийн утасны дугаар оруулна уу.",
+                              labelText: tr('order.recipient_phone_field'),
+                              hintText: tr('order.recipient_phone_hint'),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(color: Colors.white24),
@@ -378,8 +382,8 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: CustomColors.inputDarkColor,
-                              labelText: "Мэндчилгээний үг (заавал биш)",
-                              hintText: "Мэндчилгээний үгээ бичнэ үү...",
+                              labelText: tr('order.greeting_field'),
+                              hintText: tr('order.greeting_hint'),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(color: Colors.white24),
@@ -402,12 +406,12 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                         children: [
                           Expanded(
                             child: MainButton(
-                              title: const Row(
+                              title: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "Үргэлжлүүлэх",
-                                    style: TextStyle(
+                                    tr('common.continue'),
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black,
                                     ),
@@ -418,7 +422,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                                 if (_phoneController.text.length != 8) {
                                   showAlertPopUpDialog(
                                     context,
-                                    "Хүлээн авагчийн утасны дугаарыг зөв оруулна уу (8 орон)",
+                                    tr('order.recipient_phone_invalid'),
                                     65,
                                   );
                                 } else {
@@ -456,22 +460,24 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                             width: 45.0,
                             color: CustomColors.mainColor,
                           ),
-                          const Padding(
-                            padding: EdgeInsets.only(left: 32.0, right: 32.0, top: 16.0),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                left: 32.0, right: 32.0, top: 16.0),
                             child: Text(
-                              "Та пин кодоо оруулж баталгаажуулна уу.",
+                              tr('order.pin_confirm_prompt'),
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 16.0,
                               ),
                             ),
                           ),
                           const SizedBox(height: 16.0),
-                          const Text(
-                            'Та пинкодоо оруулна уу',
+                          Text(
+                            tr('order.pin_enter_hint'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 10.0, color: Colors.white70),
+                            style: const TextStyle(
+                                fontSize: 10.0, color: Colors.white70),
                           ),
                           const SizedBox(height: 16.0),
                           Center(
@@ -519,12 +525,12 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                     Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: MainButton(
-                        title: const Row(
+                        title: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Баталгаажуулах",
-                              style: TextStyle(
+                              tr('common.confirm'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
@@ -535,7 +541,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                           if (_pinController.text.length != 6) {
                             showAlertPopUpDialog(
                               context,
-                              "Пин кодоо бүрэн оруулна уу (6 орон).",
+                              tr('order.pin_incomplete'),
                               65,
                             );
                           } else {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_payment_screen.dart';
@@ -58,9 +59,9 @@ class _CenterCartScreenState extends State<CenterCartScreen> {
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Сагс',
-          style: TextStyle(
+        title: Text(
+          tr('center.cart'),
+          style: const TextStyle(
               fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
         ),
         centerTitle: false,
@@ -70,15 +71,16 @@ class _CenterCartScreenState extends State<CenterCartScreen> {
         builder: (context, _) {
           final cart = CenterCart.instance;
           if (cart.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.shopping_cart_outlined,
+                  const Icon(Icons.shopping_cart_outlined,
                       color: Colors.white24, size: 48),
-                  SizedBox(height: 12),
-                  Text('Сагс хоосон байна.',
-                      style: TextStyle(color: Colors.white54, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  Text(tr('center.cart_empty'),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 13)),
                 ],
               ),
             );
@@ -114,8 +116,8 @@ class _CenterCartScreenState extends State<CenterCartScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Нийт дүн',
-                  style: TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(tr('center.total_amount'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
               const SizedBox(height: 2),
               Text(
                 formatMNT(total),
@@ -132,9 +134,9 @@ class _CenterCartScreenState extends State<CenterCartScreen> {
             child: MainButton(
               isLoading: _submitting,
               onPress: _submitting ? null : _checkout,
-              title: const Text(
-                'Баталгаажуулах',
-                style: TextStyle(
+              title: Text(
+                tr('common.confirm'),
+                style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 14),

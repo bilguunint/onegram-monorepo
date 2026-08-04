@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onegrgold/models/gift_order_model.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'sent_gift_order_detail_screen.dart';
@@ -72,13 +73,13 @@ class _SentGiftOrdersWidgetState extends State<SentGiftOrdersWidget> {
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return 'Хүлээгдэж байна';
+        return tr('common.pending');
       case 'received':
-        return 'Хүлээн авсан';
+        return tr('common.received');
       case 'cancelled':
-        return 'Цуцлагдсан';
+        return tr('common.cancelled');
       case 'failed':
-        return 'Амжилтгүй';
+        return tr('common.failed');
       default:
         return status;
     }
@@ -108,7 +109,7 @@ class _SentGiftOrdersWidgetState extends State<SentGiftOrdersWidget> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Алдаа гарлаа: ${snapshot.error}',
+                  tr('common.error_with', {'error': snapshot.error}),
                   style: const TextStyle(color: Colors.white60),
                   textAlign: TextAlign.center,
                 ),
@@ -130,12 +131,12 @@ class _SentGiftOrdersWidgetState extends State<SentGiftOrdersWidget> {
                   height: 200.0,
                   child: Lottie.asset("assets/icons/animation-gift.json"),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16.0, top: 0.0),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0, top: 0.0),
                   child: Text(
-                    "Та бэлэг илгээгээгүй байна.",
+                    tr('order.no_sent_gifts'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14.0,
                       color: Colors.white60,
                       fontFamily: "InterBold",
@@ -197,7 +198,14 @@ class _SentGiftOrdersWidgetState extends State<SentGiftOrdersWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Та ${giftOrder.receiver.phone} утасны дугаартай ${giftOrder.receiver.fullName}-д ${giftOrder.quantity}${giftOrder.metalId == 1 ? 'гр алт' : 'лан мөнгө'} бэлэг болгон илгээсэн байна.",
+                                tr('order.sent_gift_list_desc', {
+                                  'phone': giftOrder.receiver.phone,
+                                  'name': giftOrder.receiver.fullName,
+                                  'qty': giftOrder.quantity,
+                                  'unit': giftOrder.metalId == 1
+                                      ? tr('common.gram_gold')
+                                      : tr('common.lan_silver')
+                                }),
                                 style: const TextStyle(
                                   fontSize: 11.0,
                                   fontFamily: "InterBold",

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lottie/lottie.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/safebox_widget.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -73,12 +74,12 @@ class _SafeboxMainWidgetState extends State<SafeboxMainWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-                    padding: EdgeInsets.only(
+        Padding(
+                    padding: const EdgeInsets.only(
                         left: 16.0, top: 16.0, bottom: 16.0),
                     child: Text(
-                      "Миний сейф",
-                      style: TextStyle(
+                      tr('home.my_safebox'),
+                      style: const TextStyle(
                         fontFamily: "InterBold",
                         fontSize: 14.0,
                       ),
@@ -196,10 +197,13 @@ class _SafeboxMainWidgetState extends State<SafeboxMainWidget> {
                               ),
                               SizedBox(width: 16),
                               Text(
-                                _isLoadingBalance 
-                                  ? '...' 
-                                  : _isSafeOpen 
-                                    ? '${_balance.toStringAsFixed(1)}гр'
+                                _isLoadingBalance
+                                  ? '...'
+                                  : _isSafeOpen
+                                    ? tr('home.grams_short', {
+                                        'quantity':
+                                            _balance.toStringAsFixed(1)
+                                      })
                                     : '-',
                                 style: TextStyle(
                                   color: CustomColors.mainColor,
@@ -235,7 +239,7 @@ class _SafeboxMainWidgetState extends State<SafeboxMainWidget> {
                                   ? 'Loading...' 
                                   : _endDate != null
                                     ? '${_endDate!.year}/${_endDate!.month.toString().padLeft(2, '0')}/${_endDate!.day.toString().padLeft(2, '0')}'
-                                    : 'Огноо олдсонгүй',
+                                    : tr('home.date_not_found'),
                                 style: TextStyle(
                                   color: Colors.white30,
                                   fontSize: 9,

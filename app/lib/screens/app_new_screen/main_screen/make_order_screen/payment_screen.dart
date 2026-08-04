@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/elements/main_button.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/models/order_model.dart';
@@ -27,10 +28,13 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen>
     with SingleTickerProviderStateMixin {
-  List<String> tabs = [
-    "Банкны апп",
-    "Шилжүүлэг",
-  ];
+  // A getter, not a field: resolved on every build so the labels follow a
+  // live language switch instead of freezing at the language the screen
+  // was opened in.
+  List<String> get tabs => [
+        tr('common.bank_app'),
+        tr('order.transfer_tab'),
+      ];
   final currencyFormatter = NumberFormat();
   late TabController _tabController;
 
@@ -45,7 +49,7 @@ class _PaymentScreenState extends State<PaymentScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Төлбөр төлөх"),
+        title: Text(tr('order.payment_title')),
         centerTitle: false,
       ),
       body: SafeArea(
@@ -57,9 +61,9 @@ class _PaymentScreenState extends State<PaymentScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Төлөх дүн:",
-                    style: TextStyle(
+                  Text(
+                    tr('order.amount_due_label'),
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -156,7 +160,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Банк:",
+                            tr('order.bank_label'),
                             style: TextStyle(
                                 fontSize: 13.0,
                                 color: Colors.white70),
@@ -165,7 +169,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                             height: 5.0,
                           ),
                           Text(
-                            "Хаан банк",
+                            tr('order.khan_bank'),
                             style: TextStyle(
                                 fontSize: 14.0,
                                 fontWeight: FontWeight.bold,
@@ -192,7 +196,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Данс эзэмшигч:",
+                                tr('order.account_holder_label'),
                                 style: TextStyle(
                                     fontSize: 13.0,
                                     color: Colors.white70),
@@ -220,7 +224,9 @@ class _PaymentScreenState extends State<PaymentScreen>
                                       backgroundColor:
                                           CustomColors.darkContainerColor,
                                       content: Text(
-                                        '"УАН ГРАММ ГОУЛД СТОНЕ ХХК"  хуулагдлаа',
+                                        tr('order.copied', {
+                                          'value': 'УАН ГРАММ ГОУЛД СТОНЕ ХХК'
+                                        }),
                                         style: TextStyle(color: Colors.white),
                                       )),
                                 );
@@ -236,7 +242,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                                   borderRadius: const BorderRadius.all(
                                       Radius.circular(10.0))),
                               child: Text(
-                                "Хуулах".toUpperCase(),
+                                tr('order.copy').toUpperCase(),
                                 style: TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -264,7 +270,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Дансны дугаар:",
+                                tr('order.account_number_label'),
                                 style: TextStyle(
                                     fontSize: 13.0,
                                     color: Colors.white70),
@@ -292,7 +298,8 @@ class _PaymentScreenState extends State<PaymentScreen>
                                       backgroundColor:
                                           CustomColors.darkContainerColor,
                                       content: Text(
-                                        '"190005005926653395"  хуулагдлаа',
+                                        tr('order.copied',
+                                            {'value': '190005005926653395'}),
                                         style: TextStyle(color: Colors.white),
                                       )),
                                 );
@@ -308,7 +315,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                                   borderRadius: const BorderRadius.all(
                                       Radius.circular(10.0))),
                               child: Text(
-                                "Хуулах".toUpperCase(),
+                                tr('order.copy').toUpperCase(),
                                 style: TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -336,7 +343,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Гүйлгээний утга:",
+                                tr('order.transaction_note_label'),
                                 style: TextStyle(
                                     fontSize: 13.0,
                                     color: Colors.white70),
@@ -369,7 +376,8 @@ class _PaymentScreenState extends State<PaymentScreen>
                                       backgroundColor:
                                           CustomColors.darkContainerColor,
                                       content: Text(
-                                        '"$transactionText"  хуулагдлаа',
+                                        tr('order.copied',
+                                            {'value': transactionText}),
                                         style: TextStyle(color: Colors.white),
                                       )),
                                 );
@@ -385,7 +393,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                                   borderRadius: const BorderRadius.all(
                                       Radius.circular(10.0))),
                               child: Text(
-                                "Хуулах".toUpperCase(),
+                                tr('order.copy').toUpperCase(),
                                 style: TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -413,7 +421,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Нийт дүн:",
+                                tr('order.total_amount_label'),
                                 style: TextStyle(
                                     fontSize: 13.0,
                                     color: Colors.white70),
@@ -442,7 +450,10 @@ class _PaymentScreenState extends State<PaymentScreen>
                                       backgroundColor:
                                           CustomColors.darkContainerColor,
                                       content: Text(
-                                        '"${currencyFormatter.format(widget.order.amount.toInt())}"  хуулагдлаа',
+                                        tr('order.copied', {
+                                          'value': currencyFormatter.format(
+                                              widget.order.amount.toInt())
+                                        }),
                                         style: const TextStyle(
                                             color: Colors.white),
                                       )),
@@ -459,7 +470,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                                   borderRadius: const BorderRadius.all(
                                       Radius.circular(10.0))),
                               child: Text(
-                                "Хуулах".toUpperCase(),
+                                tr('order.copy').toUpperCase(),
                                 style: const TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -492,12 +503,12 @@ class _PaymentScreenState extends State<PaymentScreen>
                 children: [
                   Expanded(
                     child: MainButton(
-                        title: const Row(
+                        title: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Болсон",
-                              style: TextStyle(
+                              tr('common.ok'),
+                              style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black),
                             ),

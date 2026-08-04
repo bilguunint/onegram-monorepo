@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:onegrgold/models/rate_model.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class DollarRateWidget extends StatelessWidget {
@@ -20,7 +21,7 @@ class DollarRateWidget extends StatelessWidget {
     }
 
     if (!snapshot.hasData || snapshot.data == null) {
-      return const Text("Алтны ханш олдсонгүй");
+      return Text(tr('home.gold_rate_not_found'));
     }
 
     final metal = snapshot.data!;
@@ -45,9 +46,9 @@ class DollarRateWidget extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Доллар",
-                          style: TextStyle(
+                        Text(
+                          tr('home.dollar'),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14.0,
                             color: Colors.white,

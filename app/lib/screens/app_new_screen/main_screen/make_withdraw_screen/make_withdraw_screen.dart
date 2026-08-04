@@ -8,6 +8,7 @@ import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_
 import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_event.dart';
 import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_state.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/elements/main_button.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/make_withdraw_screen/success_withdraw_screen.dart';
@@ -88,7 +89,7 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Биетээр авах хүсэлт'),
+        title: Text(tr('order.withdraw_request_title')),
         backgroundColor: CustomColors.scaffoldDarkBack,
       ),
       backgroundColor: CustomColors.scaffoldDarkBack,
@@ -151,9 +152,9 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                                       agreementAccepted = !agreementAccepted;
                                     });
                                   },
-                                  child: const Text(
-                                    "Үйлчилгээний нөхцөлийг хүлээн зөвшөөрч байна.",
-                                    style: TextStyle(
+                                  child: Text(
+                                    tr('order.accept_terms_checkbox'),
+                                    style: const TextStyle(
                                         fontSize: 12.0,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -175,9 +176,9 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                                           right: 32.0,
                                           left: 32.0),
                                       child: MainButton(
-                                          title: const Text(
-                                            "Үргэлжлүүлэх",
-                                            style: TextStyle(
+                                          title: Text(
+                                            tr('common.continue'),
+                                            style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.black),
                                           ),
@@ -185,7 +186,7 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                                             if (!agreementAccepted) {
                                               showAlertPopUpDialog(
                                                   context,
-                                                  "Үйлчилгээний нөхцөлтэй танилцаж зөвшөөрнө үү.",
+                                                  tr('order.must_accept_terms'),
                                                   85);
                                             } else {
                                               pageController.animateToPage(
@@ -222,28 +223,31 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                         BlendMode.srcIn,
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 32.0, right: 32.0, top: 16.0),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 32.0, right: 32.0, top: 16.0),
                       child: Text(
-                        "Та биетээр авах алтны хэмжээгээ оруулна уу.",
+                        tr('order.withdraw_enter_amount'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white54,
                           fontSize: 16.0,
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 32.0, right: 32.0, top: 16.0),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 32.0, right: 32.0, top: 16.0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.info_outline, color: Colors.amber, size: 18.0),
-                          SizedBox(width: 8.0),
+                          const Icon(Icons.info_outline,
+                              color: Colors.amber, size: 18.0),
+                          const SizedBox(width: 8.0),
                           Expanded(
                             child: Text(
-                              "100гр-аас дээш биетээр авах хүсэлт илгээвэл ажлын 5 хоногт багтаан таны хүсэлтийг шийдвэрлэхийг анхаарна уу.",
-                              style: TextStyle(
+                              tr('order.withdraw_large_amount_note'),
+                              style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 13.0,
                               ),
@@ -258,7 +262,7 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        "${quantityText}гр",
+                        tr('order.quantity_gram', {'qty': quantityText}),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: "InterBold",
@@ -306,12 +310,12 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                     Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: MainButton(
-                        title: const Row(
+                        title: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Үргэлжлүүлэх",
-                              style: TextStyle(
+                              tr('common.continue'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
@@ -321,7 +325,8 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                         onPress: () {
                           final qty = num.tryParse(quantityText) ?? 0;
                           if (qty <= 0) {
-                            showAlertPopUpDialog(context, "Тоо хэмжээ 0-ээс их байх ёстой.", 75);
+                            showAlertPopUpDialog(
+                                context, tr('order.quantity_must_be_positive'), 75);
                           } else {
                             // Check metal balance
                             final userBalance = _metalId == 1 
@@ -330,8 +335,12 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                             
                             if (qty > userBalance) {
                               showAlertPopUpDialog(
-                                context, 
-                                "Таны ${_metalId == 1 ? 'алтны' : 'мөнгөний'} үлдэгдэл хэмжээ хүрэлцэхгүй байна.", 
+                                context,
+                                tr('order.insufficient_balance', {
+                                  'metal': _metalId == 1
+                                      ? tr('order.metal_gold_genitive')
+                                      : tr('order.metal_silver_genitive')
+                                }),
                                 85
                               );
                             } else {
@@ -367,22 +376,24 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                               BlendMode.srcIn,
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.only(left: 32.0, right: 32.0, top: 16.0),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                left: 32.0, right: 32.0, top: 16.0),
                             child: Text(
-                              "Та пин кодоо оруулж баталгаажуулна уу.",
+                              tr('order.pin_confirm_prompt'),
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 16.0,
                               ),
                             ),
                           ),
                           const SizedBox(height: 16.0),
-                          const Text(
-                            'Та пинкодоо оруулна уу',
+                          Text(
+                            tr('order.pin_enter_hint'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 10.0, color: Colors.white70),
+                            style: const TextStyle(
+                                fontSize: 10.0, color: Colors.white70),
                           ),
                           const SizedBox(height: 16.0),
                           Center(
@@ -430,12 +441,12 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                     Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: MainButton(
-                        title: const Row(
+                        title: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Баталгаажуулах",
-                              style: TextStyle(
+                              tr('common.confirm'),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
@@ -446,7 +457,7 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                           if (_pinController.text.length != 6) {
                             showAlertPopUpDialog(
                               context,
-                              "Пин кодоо бүрэн оруулна уу (6 орон).",
+                              tr('order.pin_incomplete'),
                               65,
                             );
                           } else {

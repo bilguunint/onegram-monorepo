@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
@@ -45,8 +46,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _onInstallmentTap() async {
     if (_busy) return;
     if (widget.hasActiveInstallment) {
-      _showSnack(
-          'Танд аль хэдийн идэвхтэй хуваан төлөлт байна.');
+      _showSnack(tr('product.active_installment_exists'));
       return;
     }
     final months = await showModalBottomSheet<int>(
@@ -74,17 +74,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             amount: result.amount,
             invoice: result.invoice,
             productName: widget.product.name,
-            appBarTitle: 'Хуваан төлөлт — 1-р өдөр',
-            successTitle: 'Хуваан төлөлт эхэллээ',
-            successMessage:
-                'Эхний өдрийн ${formatMNT(result.amount)} амжилттай төлөгдлөө. '
-                'Цаашид өдөр бүр төлбөрөө хийгээрэй ($months сарын дотор).',
+            appBarTitleKey: 'product.installment_day_one_title',
+            successTitleKey: 'product.installment_started',
+            successMessageKey: 'product.installment_started_message',
+            successMessageParams: {
+              'amount': formatMNT(result.amount),
+              'months': months,
+            },
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Алдаа: $e');
+      _showSnack(tr('product.error_with', {'error': e}));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -93,8 +95,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _onDirectTap() async {
     if (_busy) return;
     if (widget.hasActiveInstallment) {
-      _showSnack(
-          'Танд аль хэдийн идэвхтэй хуваан төлөлт байна.');
+      _showSnack(tr('product.active_installment_exists'));
       return;
     }
     final confirmed = await showDialog<bool>(
@@ -121,7 +122,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Алдаа: $e');
+      _showSnack(tr('product.error_with', {'error': e}));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -132,7 +133,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       SnackBar(content: Text(message)),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -145,9 +145,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       backgroundColor: CustomColors.darkContainerColor,
       appBar: AppBar(
         backgroundColor: CustomColors.darkContainerColor,
-        title: const Text(
-          'Дэлгэрэнгүй',
-          style: TextStyle(
+        title: Text(
+          tr('common.details'),
+          style: const TextStyle(
             fontFamily: 'InterBold',
             fontSize: 13,
             color: Colors.white,
@@ -201,8 +201,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 final active = i == _currentImage;
                                 return AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 3),
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 3),
                                   width: active ? 18 : 6,
                                   height: 6,
                                   decoration: BoxDecoration(
@@ -237,7 +237,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 const SizedBox(height: 6),
                 if (product.stock != null)
                   Text(
-                    'Үлдсэн: ${product.stock} ширхэг',
+                    tr('product.stock_remaining', {'count': product.stock}),
                     style: const TextStyle(
                       color: Colors.white54,
                       fontSize: 11,
@@ -251,9 +251,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 if (product.description.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  const Text(
-                    'Тайлбар',
-                    style: TextStyle(
+                  Text(
+                    tr('product.description'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -272,14 +272,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 const SizedBox(height: 18),
                 _InfoTile(
                   icon: Icons.calendar_month_outlined,
-                  label: 'Хугацаа',
+                  label: tr('product.duration'),
                   value: product.minMonths == product.maxMonths
-                      ? '${product.maxMonths} сар'
-                      : '${product.minMonths}-${product.maxMonths} сар',
+                      ? tr(
+                          'product.months_value', {'months': product.maxMonths})
+                      : tr('product.months_range', {
+                          'min': product.minMonths,
+                          'max': product.maxMonths,
+                        }),
                 ),
                 _InfoTile(
                   icon: Icons.warning_amber_outlined,
-                  label: 'Цуцлах шимтгэл',
+                  label: tr('product.cancel_fee'),
                   value: '${product.cancelFeePercent}%',
                 ),
                 const SizedBox(height: 16),
@@ -289,21 +293,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     decoration: BoxDecoration(
                       color: Colors.amber.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: Colors.amber.withOpacity(0.35)),
+                      border: Border.all(color: Colors.amber.withOpacity(0.35)),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline,
+                        const Icon(Icons.info_outline,
                             color: Colors.amberAccent, size: 16),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Танд аль хэдийн идэвхтэй хуваан төлөлт байна. '
-                            'Уг төлбөрөө дуусгасны дараа шинэ худалдан авалт '
-                            'хийх боломжтой болно.',
-                            style: TextStyle(
+                            tr('product.active_installment_banner'),
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
                               height: 1.4,
@@ -317,16 +318,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
                 _BuyButtons(
                   busy: _busy,
-                  available: product.isAvailable &&
-                      !widget.hasActiveInstallment,
+                  available:
+                      product.isAvailable && !widget.hasActiveInstallment,
                   onInstallment: _onInstallmentTap,
                   onDirect: _onDirectTap,
                 ),
                 if (!product.isAvailable) ...[
                   const SizedBox(height: 8),
-                  const Text(
-                    'Энэ бараа одоогоор боломжгүй байна.',
-                    style: TextStyle(color: Colors.redAccent, fontSize: 11),
+                  Text(
+                    tr('product.unavailable'),
+                    style:
+                        const TextStyle(color: Colors.redAccent, fontSize: 11),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -385,7 +387,7 @@ class _PriceBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Нийт үнэ',
+            tr('product.total_price'),
             style:
                 TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11),
           ),
@@ -412,7 +414,10 @@ class _PriceBlock extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Хуваан төлөхөд $maxMonths сар, өдөр бүр ${formatMNT(daily)}',
+                    tr('product.installment_hint', {
+                      'months': maxMonths,
+                      'amount': formatMNT(daily),
+                    }),
                     style: const TextStyle(color: Colors.white70, fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -503,7 +508,7 @@ class _BuyButtons extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : const Text('Хуваан авах'),
+                : Text(tr('product.buy_installment')),
           ),
         ),
         const SizedBox(width: 10),
@@ -520,7 +525,7 @@ class _BuyButtons extends StatelessWidget {
               textStyle:
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
-            child: const Text('Шууд авах'),
+            child: Text(tr('product.buy_direct')),
           ),
         ),
       ],
@@ -536,9 +541,9 @@ class _DirectPurchaseDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF1F1F22),
-      title: const Text(
-        'Шууд худалдан авалт',
-        style: TextStyle(color: Colors.white, fontSize: 14),
+      title: Text(
+        tr('product.direct_purchase'),
+        style: const TextStyle(color: Colors.white, fontSize: 14),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -554,7 +559,8 @@ class _DirectPurchaseDialog extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Та ${formatMNT(product.price)}-аар нэг удаа төлж бараагаа шууд авах гэж байна. Та итгэлтэй байна уу?',
+            tr('product.direct_purchase_confirm',
+                {'amount': formatMNT(product.price)}),
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
@@ -562,9 +568,9 @@ class _DirectPurchaseDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text(
-            'Цуцлах',
-            style: TextStyle(color: Colors.white54),
+          child: Text(
+            tr('product.dismiss'),
+            style: const TextStyle(color: Colors.white54),
           ),
         ),
         ElevatedButton(
@@ -573,7 +579,7 @@ class _DirectPurchaseDialog extends StatelessWidget {
             backgroundColor: CustomColors.mainColor,
             foregroundColor: CustomColors.mainBlack,
           ),
-          child: const Text('Тийм, авах'),
+          child: Text(tr('product.yes_buy')),
         ),
       ],
     );

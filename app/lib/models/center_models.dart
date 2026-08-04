@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 /// Models for the "Дэлхийн морин хуурын төв цогцолбор" donation campaign.
 
@@ -318,9 +319,9 @@ class CenterTopDonor {
   /// Masked donor-wall name: "Н.Бил****" — last-name initial + first name
   /// with only its first 3 letters shown, the rest replaced by `*`.
   String get displayName {
-    if (anonymous) return 'Нэрээ нууцалсан';
+    if (anonymous) return tr('center.anonymous_donor');
     final raw = engraveName.trim();
-    if (raw.isEmpty) return 'Нэргүй';
+    if (raw.isEmpty) return tr('center.unnamed');
     final parts = raw.split(RegExp(r'\s+'));
     if (parts.length >= 2 && parts[0].isNotEmpty) {
       final lastInitial = parts[0].substring(0, 1);

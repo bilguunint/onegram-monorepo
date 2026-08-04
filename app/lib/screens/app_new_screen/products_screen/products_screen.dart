@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
@@ -37,9 +38,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
         preferredSize: const Size.fromHeight(45.0),
         child: AppBar(
           backgroundColor: CustomColors.darkContainerColor,
-          title: const Text(
-            "Бүтээгдэхүүн",
-            style: TextStyle(
+          title: Text(
+            tr('purchase.products_title'),
+            style: const TextStyle(
               fontFamily: "InterBold",
               fontSize: 12,
               color: Colors.white,
@@ -48,7 +49,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           centerTitle: false,
           actions: [
             IconButton(
-              tooltip: 'Миний худалдан авалт',
+              tooltip: tr('purchase.my_purchases'),
               icon: SvgPicture.asset(
                 'assets/icons/invoice.svg',
                 colorFilter: const ColorFilter.mode(
@@ -202,9 +203,9 @@ class _EmptyState extends StatelessWidget {
           Icon(Icons.inventory_2_outlined,
               size: 56, color: Colors.white.withOpacity(0.3)),
           const SizedBox(height: 12),
-          const Text(
-            'Одоогоор бүтээгдэхүүн алга',
-            style: TextStyle(
+          Text(
+            tr('purchase.no_products'),
+            style: const TextStyle(
               color: Colors.white54,
               fontWeight: FontWeight.w600,
               fontSize: 13,
@@ -230,9 +231,9 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
             const SizedBox(height: 12),
-            const Text(
-              'Бүтээгдэхүүн ачаалахад алдаа гарлаа',
-              style: TextStyle(
+            Text(
+              tr('purchase.products_load_error'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -270,9 +271,9 @@ class _PickupReadyBanner extends StatelessWidget {
               appBar: AppBar(
                 backgroundColor: CustomColors.darkContainerColor,
                 iconTheme: const IconThemeData(color: Colors.white),
-                title: const Text(
-                  'Хүлээж авахад бэлэн',
-                  style: TextStyle(
+                title: Text(
+                  tr('purchase.pickup_ready'),
+                  style: const TextStyle(
                     fontFamily: 'InterBold',
                     fontSize: 13,
                     color: Colors.white,
@@ -309,9 +310,9 @@ class _PickupReadyBanner extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Хүлээж авахад бэлэн',
-                    style: TextStyle(
+                  Text(
+                    tr('purchase.pickup_ready'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -319,7 +320,8 @@ class _PickupReadyBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${purchase.productSnapshot.name} — авах кодоо харах',
+                    tr('purchase.view_pickup_code',
+                        {'product': purchase.productSnapshot.name}),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

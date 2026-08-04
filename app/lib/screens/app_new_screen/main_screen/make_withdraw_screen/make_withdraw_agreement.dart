@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ionicons/ionicons.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 
 
@@ -40,31 +41,19 @@ class _MakeWithdrawAgreementState extends State<MakeWithdrawAgreement> {
                     Column(
   crossAxisAlignment: CrossAxisAlignment.start,
   children: [
-    SectionTitle('3. ҮНЭТ ЭДЛЭЛ БИЕТЭЭР АВАХ ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛ'),
+    SectionTitle(tr('order.withdraw_terms_title')),
 
-    SectionTitle('1. Нийтлэг үндэслэл'),
-    BulletPoint(
-      '1.1. Хэрэглэгч захиалсан үнэт эдлэлээ биет хэлбэрээр (“үнэт эдлэл”) авах хүсэлт гаргаж авна.',
-    ),
-    BulletPoint(
-      '1.2. Энэ үйлчилгээг Монгол Улсын “Үнэт металл, үнэт чулууны тухай хууль”-д нийцүүлэн хэрэгжүүлнэ.',
-    ),
+    SectionTitle(tr('order.terms_s1_title')),
+    BulletPoint(tr('order.withdraw_terms_1_1')),
+    BulletPoint(tr('order.withdraw_terms_1_2')),
 
-    SectionTitle('2. Захиалга өгөх журам'),
-    BulletPoint(
-      '2.1. Биет хэлбэрээр үнэт эдлэл авах хүсэлтийг Аппликейшнээр дамжуулан гаргана.',
-    ),
-    BulletPoint(
-      '2.2. Захиалгын доод хэмжээ 1 грамм байна.',
-    ),
-    BulletPoint(
-      '2.3. Үнэт эдлэлийн хийцлэл, хэлбэр, хэмжээ, сав баглаа боодол нь компанийн санал болгосон стандартын дагуу хийгдэнэ.',
-    ),
+    SectionTitle(tr('order.withdraw_terms_s2_title')),
+    BulletPoint(tr('order.withdraw_terms_2_1')),
+    BulletPoint(tr('order.withdraw_terms_2_2')),
+    BulletPoint(tr('order.withdraw_terms_2_3')),
 
-    SectionTitle('3. Үнэт эдлэл хүлээлгэн өгөх'),
-    BulletPoint(
-      '3.1. Хэрэглэгч үнэт эдлэлээ компанийн албан ёсны төв дэлгүүрээс болон салбараас биечлэн авна.',
-    ),
+    SectionTitle(tr('order.withdraw_terms_s3_title')),
+    BulletPoint(tr('order.withdraw_terms_3_1')),
     SizedBox(
                 height: 16.0,
               ),
@@ -86,21 +75,21 @@ class _MakeWithdrawAgreementState extends State<MakeWithdrawAgreement> {
                               size: 20,
                             ),
                             const SizedBox(width: 12),
-                            Text("Их Хаадын Чулуу” ХХК-ийн салбар:", style: TextStyle(
+                            Text(tr('order.withdraw_branches_label'), style: TextStyle(
                               color: Colors.blue.shade300,
                               fontSize: 14.0,
                             ),),
                           ],
                         ),
                         Text(
-                          'a. Төв дэлгүүр – ХУД, 15-р хороо, Махатма Гандийн гудамж, One Center 10 тоот',
+                          tr('order.withdraw_branch_main'),
                           style: TextStyle(
                             color: Colors.blue.shade300,
                             fontSize: 14.0,
                           ),
                         ),
                         Text(
-                          'b. Эрдэнэт салбар – Орхон аймаг, Эрдэнэт хот, Гок гарден хотхон',
+                          tr('order.withdraw_branch_erdenet'),
                           style: TextStyle(
                             color: Colors.blue.shade300,
                             fontSize: 14.0,
@@ -160,29 +149,15 @@ class _MakeWithdrawAgreementState extends State<MakeWithdrawAgreement> {
               SizedBox(
                 height: 16.0,
               ),
-    BulletPoint(
-      '3.2. Үнэт эдлэл хүлээж авахдаа иргэний үнэмлэхээрээ Хэрэглэгч өөрийгөө баталгаажуулна.',
-    ),
-    BulletPoint(
-      '3.3. Хэрэглэгч өөрийн биеэр үнэт эдлэлээ биетээр авах боломжгүй тохиолдолд нотариатаар баталгаажуулсан итгэмжлэлийг үндэслэн олгоно.',
-    ),
-    BulletPoint(
-      '3.4. Компани Хэрэглэгчид үнэт эдлэлийг зөвхөн биетээр олгохдоо НӨАТ-ын баримтыг олгоно.',
-    ),
-    BulletPoint(
-      '3.5. Үнэт эдлэлийг Хэрэглэгчид зөвхөн ажлын өдөр, ажлын цагаар олгоно.',
-    ),
+    BulletPoint(tr('order.withdraw_terms_3_2')),
+    BulletPoint(tr('order.withdraw_terms_3_3')),
+    BulletPoint(tr('order.withdraw_terms_3_4')),
+    BulletPoint(tr('order.withdraw_terms_3_5')),
 
-    SectionTitle('4. Компанийн эрх, үүрэг'),
-    BulletPoint(
-      '4.1. Үнэт эдлэлийг сорьцын улсын баталгаажуулалттайгаар олгох үүрэгтэй.',
-    ),
-    BulletPoint(
-      '4.2. Хэрэглэгчийн захиалгыг 24-48 хугацаанд биелүүлэх үүрэгтэй.',
-    ),
-    BulletPoint(
-      '4.3. Байгалийн гамшиг, гэнэтийн нөхцөлөөс үүдэн хойшилсон тохиолдолд хэрэглэгчид урьдчилан мэдэгдэнэ.',
-    ),
+    SectionTitle(tr('order.terms_s4_company_title')),
+    BulletPoint(tr('order.withdraw_terms_4_1')),
+    BulletPoint(tr('order.withdraw_terms_4_2')),
+    BulletPoint(tr('order.withdraw_terms_4_3')),
   ],
 )
 ,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 
 
@@ -36,45 +37,25 @@ class _SendGiftAgreementState extends State<SendGiftAgreement> {
                 Column(
   crossAxisAlignment: CrossAxisAlignment.start,
   children: [
-    SectionTitle('2. ҮНЭТ ЭДЛЭЛ БЭЛЭГЛЭХ ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛ'),
+    SectionTitle(tr('order.gift_terms_title')),
 
-    SectionTitle('1. Үндсэн ойлголт'),
-    BulletPoint(
-      '1.1. “Үнэт эдлэл бэлэглэх үйлчилгээ” нь Хэрэглэгч өөрийн захиалсан үнэт эдлэл тодорхой хэмжээг бусад бүртгэлтэй хэрэглэгчид шилжүүлэх боломжийг олгоно.',
-    ),
-    BulletPoint(
-      '1.2. Энэ үйлчилгээ нь Монгол Улсын Иргэний хуульд заасан “бэлэглэх гэрээ”-ний зарчмыг дагана.',
-    ),
+    SectionTitle(tr('order.gift_terms_s1_title')),
+    BulletPoint(tr('order.gift_terms_1_1')),
+    BulletPoint(tr('order.gift_terms_1_2')),
 
-    SectionTitle('2. Үйлчилгээний журам'),
-    BulletPoint(
-      '2.1. Үнэт эдлэл бэлэглэх үйлчилгээ нь зөвхөн Аппликейшнд бүртгэлтэй хэрэглэгчийн бүртгэл хооронд хийгдэнэ.',
-    ),
-    BulletPoint(
-      '2.2. Хэрэглэгчид үнэт эдлэл бэлэглэх эрх нь өдөрт 1 удаа 1гр байна.',
-    ),
-    BulletPoint(
-      '2.3. Үнэт эдлэл бэлэглэх үйлчилгээг баталгаажуулахдаа код ашиглана.',
-    ),
+    SectionTitle(tr('order.gift_terms_s2_title')),
+    BulletPoint(tr('order.gift_terms_2_1')),
+    BulletPoint(tr('order.gift_terms_2_2')),
+    BulletPoint(tr('order.gift_terms_2_3')),
 
-    SectionTitle('3. Хэрэглэгчийн хариуцлага'),
-    BulletPoint(
-      '3.1. Үнэт эдлэл бэлгэлсэн бэлгийг бэлэг хүлээн авагч хүлээн авсан тохиолдолд буцаах боломжгүй.',
-    ),
-    BulletPoint(
-      '3.2. Бусдад санаатай болон болгоомжгүйгээр андууран бэлэглэсэн тохиолдолд Хэрэглэгч бүрэн хариуцна.',
-    ),
-    BulletPoint(
-      '3.3. Хуурамч, хууль бус зорилгоор үнэт эдлэл бэлэглэсэн нь тогтоогдвол Компани Хэрэглэгчид үйлчилгээ үзүүлэхээ зогсоох эрхтэй.',
-    ),
+    SectionTitle(tr('order.gift_terms_s3_title')),
+    BulletPoint(tr('order.gift_terms_3_1')),
+    BulletPoint(tr('order.gift_terms_3_2')),
+    BulletPoint(tr('order.gift_terms_3_3')),
 
-    SectionTitle('4. Компанийн эрх, үүрэг'),
-    BulletPoint(
-      '4.1. Монгол Улсын татварын болон санхүүгийн хууль тогтоомжид нийцүүлэн бүртгэж, тайлагнана.',
-    ),
-    BulletPoint(
-      '4.2. Мэдээллийн аюулгүй байдлыг хангах техникийн арга хэмжээ авна.',
-    ),
+    SectionTitle(tr('order.terms_s4_company_title')),
+    BulletPoint(tr('order.gift_terms_4_1')),
+    BulletPoint(tr('order.gift_terms_4_2')),
   ],
 )
 

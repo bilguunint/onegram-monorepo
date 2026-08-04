@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -79,9 +80,9 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
                 ),
               ),
             ),
-            const Text(
-              'Төлөх өдрүүдээ сонгоно уу',
-              style: TextStyle(
+            Text(
+              tr('purchase.select_days_title'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
@@ -89,8 +90,7 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Дараагийн төлөгдөөгүй өдрөөс эхлэн хэдэн ч өдрийг нэг дор '
-              'төлж болно.',
+              tr('purchase.select_days_subtitle'),
               style: TextStyle(
                 color: Colors.white.withOpacity(0.55),
                 fontSize: 11.5,
@@ -104,24 +104,25 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
               runSpacing: 8,
               children: [
                 _PresetChip(
-                  label: '1 өдөр',
+                  label: tr('purchase.preset_one_day'),
                   selected: _selectedCount == 1,
                   onTap: () => _setUpToDay(widget.nextDay),
                 ),
                 if (_remainingDays >= 7)
                   _PresetChip(
-                    label: '7 хоног',
+                    label: tr('purchase.preset_week'),
                     selected: _selectedCount == 7,
                     onTap: () => _setUpToDay(widget.nextDay + 6),
                   ),
                 if (_remainingDays >= 30)
                   _PresetChip(
-                    label: '30 хоног',
+                    label: tr('purchase.preset_month'),
                     selected: _selectedCount == 30,
                     onTap: () => _setUpToDay(widget.nextDay + 29),
                   ),
                 _PresetChip(
-                  label: 'Бүх үлдсэн ($_remainingDays)',
+                  label: tr('purchase.preset_all_remaining',
+                      {'count': _remainingDays}),
                   selected: _upToDay >= widget.totalDays,
                   onTap: () => _setUpToDay(widget.totalDays),
                 ),
@@ -175,7 +176,7 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              '$day-р өдөр',
+                              tr('purchase.day_single', {'day': day}),
                               style: TextStyle(
                                 color: selected ? Colors.white : Colors.white60,
                                 fontSize: 12.5,
@@ -210,8 +211,12 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Сонгосон: $_selectedCount өдөр'
-                        '${_selectedCount > 1 ? ' (${widget.nextDay}–$_upToDay)' : ''}',
+                        tr('purchase.selected_days', {
+                          'count': _selectedCount,
+                          'range': _selectedCount > 1
+                              ? ' (${widget.nextDay}–$_upToDay)'
+                              : '',
+                        }),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.6),
                           fontSize: 11.5,
@@ -247,7 +252,7 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
                       fontSize: 13,
                     ),
                   ),
-                  child: const Text('Төлөх'),
+                  child: Text(tr('purchase.pay')),
                 ),
               ],
             ),

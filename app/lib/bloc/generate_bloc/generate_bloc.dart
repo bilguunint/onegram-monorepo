@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import '../../repositories/auth_repository.dart';
 
 part 'generate_event.dart';
@@ -23,7 +24,8 @@ class GenerateBloc extends Bloc<GenerateEvent, GenerateState> {
     if (statusCode == 200) {
       emit(GenerateSuccess(phone: event.phone));
     } else {
-      emit(GenerateFailed(msg: "OTP код илгээхэд алдаа гарлаа. Код: $statusCode"));
+      emit(GenerateFailed(
+          msg: tr('auth.otp_send_failed_code', {'code': statusCode})));
     }
   }
 }

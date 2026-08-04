@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/news_item_model.dart';
 import 'package:onegrgold/screens/app_new_screen/news_screen/news_item_widget.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -18,9 +19,9 @@ class NewsScreen extends StatelessWidget {
         preferredSize: Size.fromHeight(45.0),
         child: AppBar(
           backgroundColor: CustomColors.darkContainerColor,
-          title: const Text(
-            "Мэдээ",
-            style: TextStyle(
+          title: Text(
+            tr('home.news'),
+            style: const TextStyle(
               fontFamily: "InterBold",
               fontSize: 12,
               color: Colors.white,
@@ -48,7 +49,7 @@ class NewsScreen extends StatelessWidget {
                   Icon(Icons.error_outline, size: 60, color: Colors.red),
                   SizedBox(height: 16),
                   Text(
-                    'Алдаа гарлаа: ${snapshot.error}',
+                    tr('common.error_with', {'error': snapshot.error}),
                     style: TextStyle(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
@@ -69,9 +70,9 @@ class NewsScreen extends StatelessWidget {
                     height: 120.0,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    "Мэдээ байхгүй байна.",
-                    style: TextStyle(
+                  Text(
+                    tr('home.no_news'),
+                    style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14.0,
                         color: Colors.white30),

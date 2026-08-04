@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:onegrgold/models/login_response.dart';
+import 'package:onegrgold/l10n/app_locale.dart';
 
 class AuthRepository {
   final Dio dio;
@@ -13,6 +14,7 @@ class AuthRepository {
   var generateOTPApi = "https://requestotp-yuv3eg5qha-uc.a.run.app";
   var verifyOtpApi = "https://verifyotp-yuv3eg5qha-uc.a.run.app";
   var userResetPinApi = "https://userresetpin-yuv3eg5qha-uc.a.run.app";
+
   /// Firebase custom token-оор нэвтрэх
   Future<UserCredential> signInWithCustomToken(String token) async {
     return await _firebaseAuth.signInWithCustomToken(token);
@@ -43,15 +45,22 @@ class AuthRepository {
       final bool isEmail = _looksLikeEmail(input);
       final Map<String, dynamic> body;
       if (isEmail) {
-        body = {"email": input.trim(), "isFourDigits": true}; // хэрэглэгчийн шаардлагын дагуу "email" key
+        body = {
+          "email": input.trim(),
+          "isFourDigits": true
+        }; // хэрэглэгчийн шаардлагын дагуу "email" key
       } else {
         final String normalized = _normalizeMnPhone(input);
-        body = {"phoneNumber": normalized, "isFourDigits": true}; // хэрэглэгчийн шаардлагын дагуу "phoneNumber" key
+        body = {
+          "phoneNumber": normalized,
+          "isFourDigits": true
+        }; // хэрэглэгчийн шаардлагын дагуу "phoneNumber" key
       }
       final Response response = await dio.post(generateOTPApi, data: body);
       return response.statusCode ?? 500; // 200 бол амжилттай
     } on DioException catch (e) {
-      return e.response?.statusCode ?? 500; // Алдаа гарсан бол статус код буцаана
+      return e.response?.statusCode ??
+          500; // Алдаа гарсан бол статус код буцаана
     }
   }
 
@@ -78,21 +87,19 @@ class AuthRepository {
   }
 
   /// PIN шинэчлэх
-  Future<Map<String, dynamic>> userResetPin({
-    required String registerNum,
-    required String newPin,
-    required String otpCode,
-    required String input
-  }) async {
+  Future<Map<String, dynamic>> userResetPin(
+      {required String registerNum,
+      required String newPin,
+      required String otpCode,
+      required String input}) async {
     try {
       final user = _firebaseAuth.currentUser;
       if (user == null) {
-        return {"status": "failed", "msg": "Нэвтрээгүй байна"};
+        return {"status": "failed", "msg": tr('order.not_signed_in')};
       }
       final idToken = await user.getIdToken();
-      final String normalizedInput = _looksLikeEmail(input)
-          ? input.trim()
-          : _normalizeMnPhone(input);
+      final String normalizedInput =
+          _looksLikeEmail(input) ? input.trim() : _normalizeMnPhone(input);
       final response = await dio.post(
         userResetPinApi,
         data: {
@@ -109,29 +116,38 @@ class AuthRepository {
         ),
       );
       if (response.statusCode == 200) {
-        return response.data is Map
-            ? Map<String, dynamic>.from(response.data)
-            : {"status": "success", "msg": "PIN амжилттай шинэчлэгдлээ"};
+        if (response.data is Map) {
+          final data = Map<String, dynamic>.from(response.data);
+          if (data["msg"] != null) {
+            data["msg"] = trServer(data["msg"].toString());
+          }
+          return data;
+        }
+        return {"status": "success", "msg": tr('auth.pin_updated_success')};
       }
+      final rawMsg =
+          (response.data is Map ? response.data["msg"] : null)?.toString();
       return {
         "status": "failed",
-        "msg": (response.data is Map ? response.data["msg"] : null) ?? "Алдаа гарлаа",
+        "msg": rawMsg != null ? trServer(rawMsg) : tr('common.error'),
       };
     } on DioException catch (e) {
       final res = e.response;
       if (res != null) {
+        final rawMsg = (res.data is Map ? res.data["msg"] : null)?.toString();
         return {
           "status": "failed",
-          "msg": (res.data is Map ? res.data["msg"] : null) ?? "Алдаа гарлаа",
+          "msg": rawMsg != null ? trServer(rawMsg) : tr('common.error'),
         };
       }
-      return {"status": "failed", "msg": e.message ?? "Сүлжээний алдаа"};
+      return {"status": "failed", "msg": e.message ?? tr('auth.network_error')};
     }
   }
 
   /// Dio ашиглан backend-аас custom token авах (optional)
   Future<String> getCustomTokenFromServer(String phone, String otp) async {
-    final response = await dio.post('https://yourserver.com/auth/verify', data: {
+    final response =
+        await dio.post('https://yourserver.com/auth/verify', data: {
       'phone': phone,
       'otp': otp,
     });
@@ -151,22 +167,25 @@ class AuthRepository {
         'last_opened_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
       };
-      await FirebaseFirestore.instance.collection('users').doc(uid).update(tokenData);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update(tokenData);
     } catch (e) {
       print('⚠️ Error saving FCM token: $e');
       // Don't throw, just log the error so login can continue
     }
   }
 
-Future<void> logoutAndClearFCMToken(String uid) async {
-  final messaging = FirebaseMessaging.instance;
-  await messaging.unsubscribeFromTopic("all");
-  await FirebaseFirestore.instance.collection('users').doc(uid).update({
-    'fcm_token': FieldValue.delete(),
-  });
+  Future<void> logoutAndClearFCMToken(String uid) async {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.unsubscribeFromTopic("all");
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'fcm_token': FieldValue.delete(),
+    });
 
-  await FirebaseAuth.instance.signOut();
-}
+    await FirebaseAuth.instance.signOut();
+  }
 
   bool _looksLikeEmail(String s) {
     final v = s.trim();
