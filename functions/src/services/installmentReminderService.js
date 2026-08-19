@@ -66,12 +66,10 @@ function nextInvoiceAmount(purchase) {
   return dailyPayment;
 }
 
-// Days without any payment before the user is warned about cancellation,
-// and the threshold at which the plan may actually be cancelled. Mirrors the
-// app (ProductPurchase.installmentWarn/CancelGapDays) and the admin overdue
-// rule (OVERDUE_GAP_DAYS).
+// Days without any payment before the reminder switches from the on-schedule
+// wording to the behind-schedule one. Mirrors the app
+// (ProductPurchase.installmentWarnGapDays).
 const WARN_GAP_DAYS = 5;
-const CANCEL_GAP_DAYS = 10;
 
 // Calendar days since the most recent payment, falling back to started_at
 // when no payment carries a timestamp. null when neither is known.
@@ -92,9 +90,8 @@ function daysSinceLastPayment(purchase) {
 
 // Build a (title, body) pair tailored to slot + payment state. Cases:
 //   1. Paid today                  → thank-you
-//   2. No payment for WARN+ days    → cancellation warning (escalates at CANCEL)
-//   3. Not paid, behind schedule    → urgent reminder with day-count
-//   4. Not paid, on track           → gentle reminder with daily amount
+//   2. Behind (gap ≥ WARN, or fewer days paid than elapsed) → plain nudge
+//   3. Not paid, on track           → gentle reminder with daily amount
 function buildMessage(slot, purchase) {
   const productName =
     (purchase.product_snapshot && purchase.product_snapshot.name) || "Бараа";
@@ -116,39 +113,19 @@ function buildMessage(slot, purchase) {
     };
   }
 
-  // No payment for WARN_GAP_DAYS+ days — warn about (and at CANCEL, flag
-  // imminent) cancellation. Takes priority over the plain overdue reminder.
+  // Behind on payments. These used to warn that the plan could be cancelled,
+  // which backfired — users read it as a threat and cancelled the plan
+  // themselves. Everyone now gets the same plain nudge; only `kind` still
+  // separates them so the run stats keep showing who is behind.
   const gap = daysSinceLastPayment(purchase);
-  if (gap != null && gap >= WARN_GAP_DAYS) {
-    const left = Math.max(0, CANCEL_GAP_DAYS - gap);
-    if (gap >= CANCEL_GAP_DAYS) {
-      return {
-        title: "🚫 Хуваан төлөлт цуцлагдаж болзошгүй",
-        body:
-          `${productName} — та ${gap} хоног төлбөр хийгээгүй байна. ` +
-          `Хуваан төлөлт цуцлагдах эрсдэлтэй. Өнөөдөр ${formatMNT(amount)} ` +
-          "төлж үргэлжлүүлнэ үү.",
-        kind: "lapse_warning",
-      };
-    }
+  const lapsing = gap != null && gap >= WARN_GAP_DAYS;
+  if (lapsing || behind > 0) {
     return {
-      title: "⚠️ Төлбөрөө хийнэ үү — цуцлагдах эрсдэлтэй",
+      title: "💰 Хуваан төлөлтөө хийнэ үү",
       body:
-        `${productName} — та ${gap} хоног төлбөр хийгээгүй байна. ` +
-        `${CANCEL_GAP_DAYS} хоног төлбөргүй бол төлөлт цуцлагдана` +
-        `${left > 0 ? ` (дахин ${left} хоног)` : ""}. ` +
-        `Өнөөдөр ${formatMNT(amount)} төлнө үү.`,
-      kind: "lapse_warning",
-    };
-  }
-
-  if (behind > 0) {
-    return {
-      title: `⚠️ Хуваан төлөлт ${behind} өдөр хоцорсон`,
-      body:
-        `${productName}-ийн төлбөр хоцорчээ. Plan-аа тасрахаас сэргийлэхийн ` +
-        `тулд өнөөдөр ${formatMNT(amount)} төлнө үү.`,
-      kind: "overdue",
+        `${productName} — өнөөдөр ${formatMNT(amount)} төлнө. ` +
+        `${paidDays}/${totalDays} өдөр төлөгдсөн.`,
+      kind: lapsing ? "lapse_warning" : "overdue",
     };
   }
 
