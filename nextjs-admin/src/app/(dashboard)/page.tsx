@@ -39,6 +39,7 @@ import {
 import { DailyUsersChart } from "@/components/dashboard/DailyUsersChart";
 import { DailyRevenueChart } from "@/components/dashboard/DailyRevenueChart";
 import { GoldBalanceDistribution } from "@/components/dashboard/GoldBalanceDistribution";
+import { CancelTrendCard } from "@/components/dashboard/CancelTrendCard";
 
 export default function DashboardPage() {
   const { adminData } = useAuth();
@@ -179,6 +180,11 @@ function AdminDashboard() {
             </>
           )}
         </div>
+      </section>
+
+      {/* Did softening the lapse warnings reduce self-cancellations? */}
+      <section className="grid grid-cols-1 gap-3 sm:max-w-sm">
+        <CancelTrendCard />
       </section>
 
       {/* Gold rate + month summary */}
