@@ -119,27 +119,29 @@ exports.verifyWithdraw = onRequest({
           throw new Error("Verification code already used");
         }
 
-        // Check if verification code is expired (skip for special admin).
-        // For seller role we override the expiration to 15 min from created_at,
-        // since the original verificationCodeExpiresAt is 10 min (admin flow).
-        const isSpecialAdmin = adminUid === "mOlavOSKiyfGXnEQ0D4ODDIb9eq1";
-        if (!isSpecialAdmin) {
-          const now = new Date();
-          if (adminRole === "seller") {
-            const createdAt = withdraw.created_at && withdraw.created_at.toDate ?
-              withdraw.created_at.toDate() :
-              null;
-            if (!createdAt || now.getTime() - createdAt.getTime() > 15 * 60 * 1000) {
-              throw new Error("Код идэвхжүүлэх хугацаа дууссан");
-            }
-          } else {
-            const expiresAt = withdraw.verificationCodeExpiresAt && withdraw.verificationCodeExpiresAt.toDate ?
-              withdraw.verificationCodeExpiresAt.toDate() :
-              null;
-            if (!expiresAt || now > expiresAt) {
-              throw new Error("Verification code has expired");
-            }
-          }
+        // Expiry. Admin-level roles may verify a request whose code has already
+        // expired — they confirm the handover in person, so the clock is a
+        // convenience rather than a control for them. Sellers stay time-boxed
+        // to 15 min from created_at (the code itself is issued for 10 min).
+        const canBypassExpiry =
+          ["admin", "superadmin", "owner"].includes(adminRole);
+        const now = new Date();
+        let codeExpired;
+        if (adminRole === "seller") {
+          const createdAt = withdraw.created_at && withdraw.created_at.toDate ?
+            withdraw.created_at.toDate() :
+            null;
+          codeExpired = !createdAt ||
+            now.getTime() - createdAt.getTime() > 15 * 60 * 1000;
+        } else {
+          const expiresAt = withdraw.verificationCodeExpiresAt &&
+            withdraw.verificationCodeExpiresAt.toDate ?
+            withdraw.verificationCodeExpiresAt.toDate() :
+            null;
+          codeExpired = !expiresAt || now > expiresAt;
+        }
+        if (codeExpired && !canBypassExpiry) {
+          throw new Error("Код идэвхжүүлэх хугацаа дууссан");
         }
 
         // Check if already verified
@@ -185,6 +187,12 @@ exports.verifyWithdraw = onRequest({
           verified_by_name: adminName,
           updated_at: admin.firestore.FieldValue.serverTimestamp(),
         };
+
+        // Flag the ones confirmed past the code's expiry, so the loosened
+        // control leaves a trail that can be audited later.
+        if (codeExpired) {
+          updateData.verified_after_expiry = true;
+        }
         
         // Add withdraw_type if provided
         const effectiveWithdrawType = withdrawType ?
