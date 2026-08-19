@@ -741,9 +741,10 @@ class _CancelledCard extends StatelessWidget {
   }
 }
 
-/// Warns an active installment buyer who has gone several days without a
-/// payment. Amber while approaching the cancellation threshold, red once the
-/// plan is at risk of being cancelled.
+/// Reminds an active installment buyer who has gone several days without a
+/// payment. Deliberately calm — an earlier version warned in red that the plan
+/// could be cancelled, and users read that as a verdict and cancelled the plan
+/// themselves instead of catching up.
 class _PaymentLapseWarning extends StatelessWidget {
   final ProductPurchase purchase;
   const _PaymentLapseWarning({required this.purchase});
@@ -752,24 +753,15 @@ class _PaymentLapseWarning extends StatelessWidget {
   Widget build(BuildContext context) {
     final gap = purchase.daysSinceLastPayment ?? 0;
     final critical = gap >= ProductPurchase.installmentCancelGapDays;
-    final remaining = ProductPurchase.installmentCancelGapDays - gap;
 
-    final Color accent =
-        critical ? const Color(0xFFE57373) : Colors.amberAccent;
-    final Color bg =
-        critical ? const Color(0x33C2240B) : Colors.amber.withOpacity(0.10);
-    final Color border =
-        critical ? const Color(0x55C2240B) : Colors.amber.withOpacity(0.25);
+    // One calm amber treatment for both levels — no red, no alarm icon.
+    final Color accent = Colors.amberAccent;
+    final Color bg = Colors.amber.withOpacity(0.10);
+    final Color border = Colors.amber.withOpacity(0.25);
 
     final String body = critical
         ? tr('product.lapse_critical_body', {'gap': gap})
-        : tr('product.lapse_warning_body', {
-            'gap': gap,
-            'threshold': ProductPurchase.installmentCancelGapDays,
-            'extra': remaining > 0
-                ? tr('product.lapse_extra_days', {'days': remaining})
-                : '',
-          });
+        : tr('product.lapse_warning_body', {'gap': gap});
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -782,7 +774,7 @@ class _PaymentLapseWarning extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            critical ? Icons.warning_amber_rounded : Icons.info_outline,
+            Icons.payments_outlined,
             color: accent,
             size: 18,
           ),

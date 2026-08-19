@@ -196,48 +196,39 @@ const Map<String, Map<String, String>> kProductsATranslations = {
 
   // Missed-payment warning
   'product.lapse_critical_title': {
-    'mn': 'Цуцлагдах эрсдэлтэй',
-    'en': 'At risk of cancellation',
-    'zh': '有被取消的风险',
-    'ru': 'Риск отмены'
+    'mn': 'Төлбөрөө үргэлжлүүлээрэй',
+    'en': 'Keep your plan going',
+    'zh': '继续您的分期付款',
+    'ru': 'Продолжите оплату'
   },
+
   'product.lapse_warning_title': {
-    'mn': 'Төлбөрийн анхааруулга',
-    'en': 'Payment reminder',
-    'zh': '付款提醒',
-    'ru': 'Напоминание о платеже'
+    'mn': 'Төлбөрөө хийнэ үү',
+    'en': 'Time for your payment',
+    'zh': '该付款啦',
+    'ru': 'Пора внести платёж'
   },
+
   'product.lapse_critical_body': {
-    'mn': 'Та {gap} хоног төлбөр хийгээгүй байна. Хуваан төлөлт цуцлагдах '
-        'эрсдэлтэй боллоо. Цуцлагдвал төлсөн дүнгээс цуцлах шимтгэл '
-        'хасагдана. Төлбөрөө яаралтай хийнэ үү.',
-    'en': 'You have not paid for {gap} days. Your instalment plan is at risk '
-        'of being cancelled. If it is cancelled, a cancellation fee will be '
-        'deducted from the amount you have paid. Please pay as soon as '
-        'possible.',
-    'zh': '您已 {gap} 天未付款，分期付款有被取消的风险。若被取消，将从您已付金额中扣除取消手续费。请尽快付款。',
-    'ru': 'Вы не платили {gap} дней. Ваша рассрочка может быть отменена. При '
-        'отмене из уплаченной суммы будет удержана комиссия за отмену. '
-        'Пожалуйста, внесите платёж как можно скорее.'
+    'mn': 'Та {gap} хоног төлбөр хийгээгүй байна. '
+        'Хуваан төлөлтөө үргэлжлүүлэхийн тулд өнөөдөр төлбөрөө хийнэ үү.',
+    'en': "It's been {gap} days since your last payment. "
+        'Make a payment today to keep your plan going.',
+    'zh': '距离您上次付款已有 {gap} 天。请今天付款以继续您的分期付款。',
+    'ru': 'С последнего платежа прошло дней: {gap}. '
+        'Внесите платёж сегодня, чтобы продолжить рассрочку.'
   },
+
   'product.lapse_warning_body': {
-    'mn': 'Та {gap} хоног төлбөр хийгээгүй байна. Дараалсан {threshold} хоног '
-        'төлбөр хийхгүй бол хуваан төлөлт цуцлагдаж болзошгүй{extra}. '
+    'mn': 'Та {gap} хоног төлбөр хийгээгүй байна. '
         'Төлбөрөө хийж үргэлжлүүлээрэй.',
-    'en': 'You have not paid for {gap} days. If you miss {threshold} days in a '
-        'row, your instalment plan may be cancelled{extra}. Please keep making '
-        'your payments.',
-    'zh': '您已 {gap} 天未付款。若连续 {threshold} 天未付款，分期付款可能被取消{extra}。请继续按时付款。',
-    'ru': 'Вы не платили {gap} дней. Если платежей не будет {threshold} дней '
-        'подряд, рассрочка может быть отменена{extra}. Пожалуйста, продолжайте '
-        'вносить платежи.'
+    'en': "It's been {gap} days since your last payment. "
+        'Make a payment to keep going.',
+    'zh': '距离您上次付款已有 {gap} 天。请继续付款。',
+    'ru': 'С последнего платежа прошло дней: {gap}. '
+        'Внесите платёж, чтобы продолжить.'
   },
-  'product.lapse_extra_days': {
-    'mn': ' (танд {days} хоног үлдсэн)',
-    'en': ' (you have {days} days left)',
-    'zh': '（您还剩 {days} 天）',
-    'ru': ' (у вас осталось {days} дн.)'
-  },
+
   'product.cancel_pending_banner': {
     'mn': 'Цуцлах хүсэлт илгээгдсэн. Админ шалгаж баталгаажуулсны дараа '
         'хуваан төлөлт цуцлагдаж, буцаан олгох дүн таны данс руу '
