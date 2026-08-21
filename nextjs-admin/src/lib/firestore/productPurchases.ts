@@ -69,6 +69,7 @@ export type ProductPurchase = {
   refund_fee?: number;
   delivered_at: Timestamp | null;
   delivered_by?: string;
+  delivered_by_name?: string;
   pickup_code?: string;
   payments?: PaymentRecord[];
 };
@@ -112,6 +113,7 @@ function mapPurchase(id: string, raw: DocumentData): ProductPurchase {
     refund_fee: raw.refund_fee == null ? undefined : Number(raw.refund_fee),
     delivered_at: raw.delivered_at ?? null,
     delivered_by: raw.delivered_by,
+    delivered_by_name: raw.delivered_by_name,
     pickup_code: raw.pickup_code,
     payments: Array.isArray(raw.payments)
       ? (raw.payments as PaymentRecord[])
@@ -158,6 +160,21 @@ function currentAdminUid(): string {
   return u.uid;
 }
 
+/** Who is acting, in a form the purchases table can show as-is. */
+function currentAdminIdentity(): {
+  uid: string;
+  name: string;
+  email: string | null;
+} {
+  const u = getFirebaseAuth().currentUser;
+  if (!u) throw new Error("Нэвтрээгүй байна.");
+  return {
+    uid: u.uid,
+    name: u.displayName || u.email || u.uid,
+    email: u.email,
+  };
+}
+
 export type CancelPurchaseInput = {
   reason: string;
   refundAmount: number;
@@ -189,7 +206,7 @@ export async function deliverProductPurchase(
   purchaseId: string,
   enteredCode: string
 ): Promise<void> {
-  const uid = currentAdminUid();
+  const actor = currentAdminIdentity();
   const ref = doc(getDb(), "product_purchases", purchaseId);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
@@ -215,6 +232,8 @@ export async function deliverProductPurchase(
   await updateDoc(ref, {
     status: "delivered",
     delivered_at: serverTimestamp(),
-    delivered_by: uid,
+    delivered_by: actor.uid,
+    delivered_by_name: actor.name,
+    delivered_by_email: actor.email,
   });
 }

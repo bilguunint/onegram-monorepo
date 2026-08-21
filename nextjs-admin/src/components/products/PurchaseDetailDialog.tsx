@@ -129,6 +129,15 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
               {p.deadline ? formatOrderDate(p.deadline) : "—"}
             </dd>
           </div>
+          {p.status === "delivered" && (
+            <div className="col-span-2 flex justify-between gap-2">
+              <dt className="text-muted-foreground">Хүлээлгэн өгсөн</dt>
+              <dd className="font-medium">
+                {formatOrderDate(p.delivered_at)}
+                {p.delivered_by_name ? ` · ${p.delivered_by_name}` : ""}
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
 

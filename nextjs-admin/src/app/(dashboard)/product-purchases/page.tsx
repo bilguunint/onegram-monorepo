@@ -85,11 +85,24 @@ function paidAtToDate(
   return null;
 }
 
+/**
+ * Accountants are view/export-only, except for the ones listed here, who hand
+ * goods over at the counter and need the deliver action. Cancelling stays out
+ * of their reach either way. Edit this list to grant or revoke — the deliver
+ * itself records who performed it on the purchase doc.
+ */
+const DELIVER_ALLOWED_ACCOUNTANTS = ["oyunaa@999.mn"];
+
 export default function ProductPurchasesPage() {
   const { adminData } = useAuth();
   const role = adminData?.role ?? null;
   // Accountant is view/export-only — no deliver/cancel actions.
   const canSeeActions = role !== "accountant";
+  const canDeliver =
+    canSeeActions ||
+    DELIVER_ALLOWED_ACCOUNTANTS.includes(
+      (adminData?.email ?? "").trim().toLowerCase()
+    );
 
   const [items, setItems] = useState<ProductPurchase[]>([]);
   const [loading, setLoading] = useState(false);
@@ -663,13 +676,13 @@ export default function ProductPurchasesPage() {
                             {purchaseStatusText(p.status)}
                           </span>
                         </td>
-                        {canSeeActions && (
+                        {(canSeeActions || canDeliver) && (
                           <td className="px-2 py-2">
                             <div
                               className="flex items-center justify-end gap-1"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {p.status === "completed" && (
+                              {canDeliver && p.status === "completed" && (
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
@@ -680,8 +693,9 @@ export default function ProductPurchasesPage() {
                                   <PackageCheck className="h-3.5 w-3.5" />
                                 </Button>
                               )}
-                              {(p.status === "active" ||
-                                p.status === "completed") && (
+                              {canSeeActions &&
+                                (p.status === "active" ||
+                                  p.status === "completed") && (
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
