@@ -1,7 +1,5 @@
 import type { Withdraw } from "@/lib/firestore/withdraws";
 
-export const SUPER_ADMIN_UID = "mOlavOSKiyfGXnEQ0D4ODDIb9eq1";
-
 export function getWithdrawClientName(w: Withdraw): string {
   const first = w.client?.first_name?.trim() ?? "";
   const last = w.client?.last_name?.trim() ?? "";
@@ -89,14 +87,17 @@ export function verificationStatusBadge(w: Withdraw): string {
   return VERIFICATION_BADGE[getVerificationStatusKey(w)];
 }
 
+/**
+ * Every admin can verify anything not already verified — including a request
+ * whose code has lapsed, since they confirm the handover in person.
+ *
+ * This used to hinge on a single hardcoded uid, which left the rest of the
+ * admins unable to even see the button on an expired request while the
+ * verifyWithdraw function would have accepted them. The function is the real
+ * gate: it re-checks the caller's role and still holds sellers to their
+ * 15-minute window.
+ */
 export function canVerifyWithdraw(w: Withdraw, adminUid: string | null): boolean {
   if (!adminUid) return false;
-  if (adminUid === SUPER_ADMIN_UID) {
-    return w.status !== "verified";
-  }
-  return (
-    w.status === "pending" &&
-    !w.verified_at &&
-    !isVerificationCodeExpired(w)
-  );
+  return w.status !== "verified";
 }
