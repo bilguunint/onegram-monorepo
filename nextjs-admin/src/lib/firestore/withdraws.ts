@@ -44,6 +44,9 @@ export type Withdraw = {
   verified_at?: Timestamp | null;
   verified_by_name?: string;
   verified_by_uid?: string;
+  withdraw_type_previous?: string;
+  withdraw_type_changed_at?: Timestamp | null;
+  withdraw_type_changed_by_name?: string;
   created_at?: Timestamp | null;
   updated_at?: Timestamp | null;
 };
@@ -61,6 +64,9 @@ function mapWithdrawDoc(id: string, raw: DocumentData): Withdraw {
     notes: raw.notes,
     bank_name: raw.bank_name,
     bank_account_number: raw.bank_account_number,
+    withdraw_type_previous: raw.withdraw_type_previous,
+    withdraw_type_changed_at: raw.withdraw_type_changed_at ?? null,
+    withdraw_type_changed_by_name: raw.withdraw_type_changed_by_name,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : undefined,
     verificationCode: raw.verificationCode,
     verificationCodeUsed: raw.verificationCodeUsed,

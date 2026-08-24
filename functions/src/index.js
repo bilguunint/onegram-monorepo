@@ -36,6 +36,7 @@ const { cancelGift } = require("./payment/cancelGift");
 const { acceptGift } = require("./payment/acceptGift");
 const { withdrawRequest } = require("./payment/withdrawRequest");
 const { verifyWithdraw } = require("./payment/verifyWithdraw");
+const { updateWithdrawType } = require("./payment/updateWithdrawType");
 const makeInvest = require("./payment/makeInvest");
 const closeInvestment = require("./payment/closeInvestment");
 const { scheduledAutoVerifyOrders, initAutoVerifyOrders } = require("./payment/autoVerifyOrders");
@@ -140,6 +141,7 @@ exports.cancelGift = cancelGift;
 exports.acceptGift = acceptGift;
 exports.withdrawRequest = withdrawRequest;
 exports.verifyWithdraw = verifyWithdraw;
+exports.updateWithdrawType = updateWithdrawType;
 exports.makeInvest = makeInvest;
 exports.closeInvestment = closeInvestment;
 

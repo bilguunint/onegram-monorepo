@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   Inbox,
   Loader2,
+  Pencil,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -44,6 +45,7 @@ import {
 import { formatMNT2, formatOrderDate, formatQuantity, metalLabel } from "@/lib/orders";
 import { WithdrawDetailDialog } from "@/components/withdraws/WithdrawDetailDialog";
 import { VerifyWithdrawDialog } from "@/components/withdraws/VerifyWithdrawDialog";
+import { EditWithdrawTypeDialog } from "@/components/withdraws/EditWithdrawTypeDialog";
 
 type SortField =
   | "client_name"
@@ -85,6 +87,7 @@ export default function WithdrawsPage() {
 
   const [detailW, setDetailW] = useState<Withdraw | null>(null);
   const [verifyW, setVerifyW] = useState<Withdraw | null>(null);
+  const [editTypeW, setEditTypeW] = useState<Withdraw | null>(null);
 
   const load = useCallback(async (range: WithdrawDateRange) => {
     setLoading(true);
@@ -585,6 +588,17 @@ export default function WithdrawsPage() {
                                   <Check className="h-3.5 w-3.5" />
                                 </Button>
                               )}
+                              {canSeeActions && w.withdraw_type && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  title="Төрөл засах"
+                                  onClick={() => setEditTypeW(w)}
+                                  className="text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </td>
                         )}
@@ -646,6 +660,12 @@ export default function WithdrawsPage() {
         withdraw={verifyW}
         onOpenChange={(o) => !o && setVerifyW(null)}
         onCompleted={() => void load(dateRange)}
+      />
+      <EditWithdrawTypeDialog
+        open={!!editTypeW}
+        withdraw={editTypeW}
+        onOpenChange={(o) => !o && setEditTypeW(null)}
+        onSaved={() => void load(dateRange)}
       />
     </div>
   );

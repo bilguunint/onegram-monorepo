@@ -74,6 +74,18 @@ export function WithdrawDetailDialog({ open, withdraw, onOpenChange }: Props) {
                   value={withdrawTypeText(withdraw.withdraw_type)}
                 />
               )}
+              {withdraw.withdraw_type_previous && (
+                <Row
+                  label="Төрөл засварласан"
+                  value={`${withdrawTypeText(
+                    withdraw.withdraw_type_previous
+                  )} → ${withdrawTypeText(withdraw.withdraw_type)}${
+                    withdraw.withdraw_type_changed_by_name
+                      ? ` · ${withdraw.withdraw_type_changed_by_name}`
+                      : ""
+                  }`}
+                />
+              )}
               {withdraw.notes && (
                 <Row label="Тэмдэглэл" value={withdraw.notes} multiline />
               )}
