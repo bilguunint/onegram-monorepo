@@ -232,7 +232,10 @@ function AdminDashboard() {
         {loading ? (
           <MonthlyTableSkeleton />
         ) : (
-          <MonthlyTable rows={data?.recentMonths ?? []} />
+          <MonthlyTable
+            rows={data?.recentMonths ?? []}
+            previousYear={data?.previousYearMonths ?? []}
+          />
         )}
       </section>
 

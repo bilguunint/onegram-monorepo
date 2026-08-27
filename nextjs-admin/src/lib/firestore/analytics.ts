@@ -180,6 +180,9 @@ export type DashboardSnapshot = {
   currentMonth: MonthlyAnalytics | null;
   previousMonth: MonthlyAnalytics | null;
   recentMonths: MonthlyAnalytics[];
+  /** The 12 months preceding `recentMonths`, so each row can be read against
+   *  the same month a year earlier. */
+  previousYearMonths: MonthlyAnalytics[];
   dailyUsers: DailyUserPoint[];
   dailyIncomes: DailyIncomePoint[];
   goldDistribution: GoldDistribution | null;
@@ -197,7 +200,7 @@ export async function fetchDashboardSnapshot(
     goldRateHistory,
     currentMonth,
     previousMonth,
-    recentMonths,
+    twoYearsOfMonths,
     dailyUsers,
     dailyIncomes,
     goldDistribution,
@@ -208,12 +211,16 @@ export async function fetchDashboardSnapshot(
     fetchRecentGoldRates(30).catch(() => []),
     fetchMonth(currentMonthKey),
     fetchMonth(previousMonthKey),
-    fetchRecentMonths(12),
+    fetchRecentMonths(24),
     fetchDailyUsers().catch(() => []),
     fetchDailyIncomes().catch(() => []),
     fetchGoldDistribution().catch(() => null),
     fetchInvestmentsCount().catch(() => 0),
   ]);
+  // Newest first, so the leading 12 are the window on show and the rest are
+  // only there to be looked up by month key.
+  const recentMonths = twoYearsOfMonths.slice(0, 12);
+  const previousYearMonths = twoYearsOfMonths.slice(12);
   return {
     overall,
     goldRate,
@@ -221,6 +228,7 @@ export async function fetchDashboardSnapshot(
     currentMonth,
     previousMonth,
     recentMonths,
+    previousYearMonths,
     dailyUsers,
     dailyIncomes,
     goldDistribution,

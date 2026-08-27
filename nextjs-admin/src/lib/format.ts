@@ -86,3 +86,20 @@ export function percentChange(
   if (previous === 0) return current === 0 ? 0 : null;
   return ((current - previous) / previous) * 100;
 }
+
+// "2026-08", -12 → "2025-08". Used to line a month up with its counterpart a
+// year earlier; the Date round-trip handles the year rollover.
+export function shiftMonthKey(monthKey: string, months: number): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!m) return monthKey;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1 + months, 1);
+  return currentMonthKey(d);
+}
+
+// "2026 оны 8-р сар" → "8-р сар" for axis-style labels where the year is
+// already carried by a neighbouring column.
+export function shortMonthLabel(monthKey: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!m) return monthKey;
+  return `${parseInt(m[2], 10)}-р сар`;
+}

@@ -23,7 +23,11 @@ function getDateKey(timestamp) {
 }
 
 // Update monthly analytics
-async function updateMonthlyAnalytics(db, orderData, isAdd = true) {
+// `countOrder` is false when an existing order merely changes status: the doc
+// was already counted in total_orders when it was created, and counting it
+// again on the transition to success inflated the month's order total by
+// exactly the number of successful orders.
+async function updateMonthlyAnalytics(db, orderData, isAdd = true, countOrder = true) {
   const monthKey = getMonthYearKey(orderData.created_at);
   const monthlyRef = db.collection("analytics").doc("monthly").collection("data").doc(monthKey);
   
@@ -57,7 +61,9 @@ async function updateMonthlyAnalytics(db, orderData, isAdd = true) {
       currentData.total_revenue += (orderData.amount || 0) * multiplier;
       currentData.successful_orders += 1 * multiplier;
     }
-    currentData.total_orders += 1 * multiplier;
+    if (countOrder) {
+      currentData.total_orders += 1 * multiplier;
+    }
     currentData.last_updated = admin.firestore.FieldValue.serverTimestamp();
 
     transaction.set(monthlyRef, currentData, { merge: true });
@@ -466,12 +472,12 @@ exports.onOrderUpdated = onDocumentUpdated({
   try {
     // If admin_status changed from non-success to success
     if (beforeData.admin_status !== "success" && afterData.admin_status === "success") {
-      await updateMonthlyAnalytics(db, afterData, true);
+      await updateMonthlyAnalytics(db, afterData, true, false);
       // Update daily income when order becomes successful
       await updateDailyIncome(db, afterData, true);
     } else if (beforeData.admin_status === "success" && afterData.admin_status !== "success") {
       // If admin_status changed from success to non-success
-      await updateMonthlyAnalytics(db, beforeData, false);
+      await updateMonthlyAnalytics(db, beforeData, false, false);
       // Subtract from daily income when order status reverted
       await updateDailyIncome(db, beforeData, false);
     }
