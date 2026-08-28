@@ -1,16 +1,16 @@
+import 'dart:math' as math;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:rainbow_edge_lighting/rainbow_edge_lighting.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/lottery_campaign_models.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_promo_popup.dart';
 import 'package:onegrgold/style/colors.dart';
 
-/// Molten-gold palette for the animated card edge (loops seamlessly) — the
-/// same treatment the Морин хуур card gets, in lottery colours.
+/// Molten-gold palette for the animated ticket edge (loops seamlessly).
 const List<Color> _kGoldColors = [
   Color(0xFFB8860B), // dark goldenrod
   Color(0xFFFFD700), // gold
@@ -20,8 +20,53 @@ const List<Color> _kGoldColors = [
   Color(0xFFB8860B), // dark goldenrod (loop)
 ];
 
-/// The "Сугалаат аян" section on the home screen: a full-width card styled as
-/// a lottery ticket — animated golden edge, a perforated stub with the golden
+/// Where the stub is torn off, as a fraction of the card width.
+const double _kTearFraction = 0.70;
+const double _kCornerRadius = 16.0;
+const double _kNotchRadius = 8.0;
+
+/// The ticket outline: a rounded rectangle with two concave semicircular
+/// notches punched into the top and bottom edges at the tear line. One
+/// function builds it so the clip and the painted border always agree.
+Path _ticketPath(Size size) {
+  final w = size.width;
+  final h = size.height;
+  final tearX = w * _kTearFraction;
+  const r = _kCornerRadius;
+  const n = _kNotchRadius;
+
+  return Path()
+    ..moveTo(r, 0)
+    // top edge → notch
+    ..lineTo(tearX - n, 0)
+    // concave half-circle dipping into the card
+    ..arcToPoint(
+      Offset(tearX + n, 0),
+      radius: const Radius.circular(n),
+      clockwise: false,
+    )
+    // top edge → top-right corner
+    ..lineTo(w - r, 0)
+    ..arcToPoint(Offset(w, r), radius: const Radius.circular(r))
+    ..lineTo(w, h - r)
+    ..arcToPoint(Offset(w - r, h), radius: const Radius.circular(r))
+    // bottom edge → notch (mirrored)
+    ..lineTo(tearX + n, h)
+    ..arcToPoint(
+      Offset(tearX - n, h),
+      radius: const Radius.circular(n),
+      clockwise: false,
+    )
+    ..lineTo(r, h)
+    ..arcToPoint(Offset(0, h - r), radius: const Radius.circular(r))
+    ..lineTo(0, r)
+    ..arcToPoint(const Offset(r, 0), radius: const Radius.circular(r))
+    ..close();
+}
+
+/// The "Сугалаат аян" section on the home screen: a full-width card cut in the
+/// actual shape of a lottery ticket — the border itself follows the notches —
+/// with an animated golden edge and a perforated stub carrying the golden
 /// ticket animation and the user's own count. Occupies no space at all when no
 /// current-schema campaign is active.
 ///
@@ -38,14 +83,24 @@ class CampaignBannerWidget extends StatefulWidget {
 /// every login/tab return and the popup must not follow it around.
 bool _popupShownThisLaunch = false;
 
-class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
+class _CampaignBannerWidgetState extends State<CampaignBannerWidget>
+    with SingleTickerProviderStateMixin {
   LotteryCampaignInfo? _campaign;
   int _myTickets = 0;
+  late final AnimationController _edge;
 
   @override
   void initState() {
     super.initState();
+    _edge = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _edge.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -107,72 +162,53 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: GestureDetector(
             onTap: () => _open(campaign),
-            child: RainbowEdgeLighting(
-              radius: 16,
-              thickness: 0.6,
-              speed: 0.4,
-              colors: _kGoldColors,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: AspectRatio(
-                  aspectRatio: 21 / 9,
-                  child: LayoutBuilder(builder: (context, box) {
-                    // The stub is the right ~30% of the ticket, separated by a
-                    // perforation: two notches punched through the edge and a
-                    // dashed tear line between them.
-                    final stubWidth = box.maxWidth * 0.30;
-                    final tearX = box.maxWidth - stubWidth;
-                    return Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: _coverSide(campaign)),
-                            SizedBox(width: stubWidth, child: _stub()),
-                          ],
+            child: AspectRatio(
+              aspectRatio: 21 / 9,
+              child: LayoutBuilder(builder: (context, box) {
+                final size = Size(box.maxWidth, box.maxHeight);
+                final tearX = box.maxWidth * _kTearFraction;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Content, cut to the ticket outline — notches included.
+                    ClipPath(
+                      clipper: _TicketClipper(),
+                      child: Row(
+                        children: [
+                          Expanded(child: _coverSide(campaign)),
+                          SizedBox(
+                              width: box.maxWidth - tearX, child: _stub()),
+                        ],
+                      ),
+                    ),
+                    // Dashed tear line running notch to notch.
+                    Positioned(
+                      left: tearX - 0.75,
+                      top: _kNotchRadius + 4,
+                      bottom: _kNotchRadius + 4,
+                      child: CustomPaint(
+                        size: const Size(1.5, double.infinity),
+                        painter: _DashedLinePainter(),
+                      ),
+                    ),
+                    // The border strokes the same path, so the gold line dips
+                    // around each notch exactly like a punched ticket.
+                    IgnorePointer(
+                      child: AnimatedBuilder(
+                        animation: _edge,
+                        builder: (_, __) => CustomPaint(
+                          size: size,
+                          painter: _TicketBorderPainter(t: _edge.value),
                         ),
-                        // Tear line
-                        Positioned(
-                          left: tearX - 0.75,
-                          top: 8,
-                          bottom: 8,
-                          child: CustomPaint(
-                            size: const Size(1.5, double.infinity),
-                            painter: _DashedLinePainter(),
-                          ),
-                        ),
-                        // Punched notches: circles in the scaffold colour so
-                        // they read as cut-outs through card and border alike.
-                        Positioned(
-                          left: tearX - 7,
-                          top: -7,
-                          child: _notch(),
-                        ),
-                        Positioned(
-                          left: tearX - 7,
-                          bottom: -7,
-                          child: _notch(),
-                        ),
-                      ],
-                    );
-                  }),
-                ),
-              ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _notch() {
-    return Container(
-      width: 14,
-      height: 14,
-      decoration: BoxDecoration(
-        color: CustomColors.scaffoldDarkBack,
-        shape: BoxShape.circle,
-      ),
     );
   }
 
@@ -321,6 +357,53 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
       ),
     );
   }
+}
+
+class _TicketClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) => _ticketPath(size);
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+/// Strokes the ticket outline with a slowly revolving molten-gold gradient,
+/// plus a soft glow underneath so the edge reads at a glance.
+class _TicketBorderPainter extends CustomPainter {
+  final double t;
+
+  const _TicketBorderPainter({required this.t});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _ticketPath(size);
+    final rect = Offset.zero & size;
+    final shader = SweepGradient(
+      colors: _kGoldColors,
+      transform: GradientRotation(2 * math.pi * t),
+    ).createShader(rect);
+
+    // Glow pass
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0
+        ..shader = shader
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    // Crisp line
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..shader = shader,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TicketBorderPainter old) => old.t != t;
 }
 
 /// Vertical dashed "tear here" line between ticket and stub.
