@@ -26,6 +26,9 @@ const {
 exports.saveCampaign = onRequest({
   region: "us-central1",
   timeoutSeconds: 60,
+  // Cold start loads the whole functions codebase; at 256MiB the container
+  // died before it could listen and every request answered 500.
+  memory: "512MiB",
 }, async (req, res) => {
   return cors(req, res, async () => {
     const db = admin.firestore();

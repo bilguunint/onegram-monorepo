@@ -155,7 +155,7 @@ const onUserCreatedLottery = onDocumentCreated({
   // Pinned to match the database and every other Firestore trigger here;
   // without it the deploy default put this one in another region.
   region: "us-central1",
-  memory: "256MiB",
+  memory: "512MiB",
   timeoutSeconds: 120,
 }, async (event) => {
   const db = admin.firestore();
