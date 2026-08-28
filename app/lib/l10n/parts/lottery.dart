@@ -109,6 +109,18 @@ const Map<String, Map<String, String>> kLotteryTranslations = {
     'zh': '{count}名参与者',
     'ru': 'Участников: {count}'
   },
+  'lottery.my_tickets_short': {
+    'mn': 'Миний сугалаа',
+    'en': 'My tickets',
+    'zh': '我的奖券',
+    'ru': 'Мои билеты'
+  },
+  'lottery.join_now': {
+    'mn': 'Оролцоорой!',
+    'en': 'Join now!',
+    'zh': '快来参与！',
+    'ru': 'Участвуйте!'
+  },
   'lottery.buy_gold': {
     'mn': 'Алт худалдан авах',
     'en': 'Buy gold',
