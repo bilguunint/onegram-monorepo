@@ -95,7 +95,12 @@ const {
 } = require("./services/installmentReminderService");
 const { sendCustomNotification } = require("./services/customNotificationService");
 const { scheduledBackup, manualBackup } = require("./services/backupService");
-const { scheduledCampaignStatusUpdate } = require("./payment/lotteryService");
+const {
+  scheduledCampaignStatusUpdate,
+  onUserCreatedLottery,
+} = require("./payment/lotteryService");
+const { saveCampaign } = require("./campaign/saveCampaign");
+const { campaignDraw } = require("./campaign/campaignDraw");
 const backfillLotteryTickets = require("./import/backfillLotteryTickets");
 
 if (process.env.RUN_IMPORT === "true") runImport();
@@ -142,6 +147,9 @@ exports.acceptGift = acceptGift;
 exports.withdrawRequest = withdrawRequest;
 exports.verifyWithdraw = verifyWithdraw;
 exports.updateWithdrawType = updateWithdrawType;
+exports.saveCampaign = saveCampaign;
+exports.campaignDraw = campaignDraw;
+exports.onUserCreatedLottery = onUserCreatedLottery;
 exports.makeInvest = makeInvest;
 exports.closeInvestment = closeInvestment;
 

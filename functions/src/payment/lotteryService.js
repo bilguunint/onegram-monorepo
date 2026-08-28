@@ -1,221 +1,142 @@
 const { logger } = require("firebase-functions");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
-const crypto = require("crypto");
-
-const DEFAULT_GRAMS_PER_TICKET = 3;
-const TICKET_CODE_LENGTH = 6;
-
-/**
- * Generate a random 6-character uppercase alphabetic ticket code.
- * @return {string} 6-char uppercase code
- */
-function generateTicketCode() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const bytes = crypto.randomBytes(TICKET_CODE_LENGTH);
-  let code = "";
-  for (let i = 0; i < TICKET_CODE_LENGTH; i++) {
-    code += chars[bytes[i] % chars.length];
-  }
-  return code;
-}
+const {
+  COLLECTION,
+  drawPeriodIndex,
+  generateTicketCode,
+  getActiveCampaigns,
+  isLegacyCampaign,
+  isWithinCampaignWindow,
+  ticketsForGrams,
+  toDate,
+  writeTicket,
+} = require("../campaign/campaignShared");
 
 /**
- * Get all currently active marketing campaigns.
- * Only returns campaigns with status === "active" AND end_date still in the future.
- * @param {object} db - Firestore instance
- * @return {Promise<Array>} Active campaigns
+ * Issues one participant's outstanding tickets for a campaign.
+ *
+ * Entitlement is always recomputed from the participant's cumulative grams
+ * rather than from this order alone, so a gram remainder survives a draw
+ * period boundary: 0.05g left over one week still counts toward the next.
+ * @param {object} db Firestore instance
+ * @param {object} campaign campaign doc data plus its id
+ * @param {string} userId user id
+ * @param {number} addGrams grams to add, 0 for a signup-only grant
+ * @param {string|null} orderId order that triggered this, if any
+ * @return {Promise<string[]>} codes issued in this call
  */
-async function getActiveCampaigns(db) {
-  const now = new Date();
-  const campaignsSnap = await db.collection("marketing_campaigns")
-    .where("status", "==", "active")
-    .get();
+async function grantTickets(db, campaign, userId, addGrams, orderId) {
+  const campaignRef = db.collection(COLLECTION).doc(campaign.id);
+  const participantRef = campaignRef.collection("participants").doc(String(userId));
+  const period = drawPeriodIndex(campaign, new Date());
 
-  const activeCampaigns = [];
-  for (const doc of campaignsSnap.docs) {
-    const data = doc.data();
-    const endDate = new Date(data.end_date);
-    // Double-check: skip if end_date has already passed (safety net)
-    if (endDate < now) {
-      logger.warn("Campaign marked active but end_date passed, skipping", {
-        campaign_id: doc.id,
-        end_date: data.end_date,
-      });
-      continue;
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(participantRef);
+    const prev = snap.exists ? snap.data() : null;
+
+    const totalGrams = Number(
+      ((prev ? prev.total_grams || 0 : 0) + (addGrams || 0)).toFixed(6),
+    );
+    const alreadyIssued = prev ? prev.tickets_issued || 0 : 0;
+    const signupGranted = prev ? Boolean(prev.signup_bonus_granted) : false;
+
+    // The signup grant is a one-off per participant per campaign; the purchase
+    // rate is a running total, so subtract what the grant already contributed.
+    const signupTickets = Number(campaign.signup_tickets) || 0;
+    const grantSignup = !signupGranted && signupTickets > 0;
+    const earnedFromGrams = ticketsForGrams(campaign, totalGrams);
+    const issuedFromGrams = alreadyIssued - (signupGranted ? signupTickets : 0);
+    const newFromGrams = Math.max(0, earnedFromGrams - issuedFromGrams);
+    const newCount = newFromGrams + (grantSignup ? signupTickets : 0);
+
+    const participantUpdate = {
+      user_id: String(userId),
+      total_grams: totalGrams,
+      tickets_issued: alreadyIssued + newCount,
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    if (grantSignup) participantUpdate.signup_bonus_granted = true;
+
+    if (snap.exists) {
+      tx.update(participantRef, participantUpdate);
+    } else {
+      tx.set(participantRef, { ...participantUpdate, signup_bonus_granted: grantSignup });
     }
-    activeCampaigns.push({ id: doc.id, ...data });
-  }
-  return activeCampaigns;
+
+    const codes = [];
+    for (let i = 0; i < newFromGrams; i++) codes.push(generateTicketCode());
+    for (const code of codes) {
+      writeTicket(db, tx, {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        userId,
+        code,
+        period,
+        source: "purchase",
+        orderId,
+      });
+    }
+    if (grantSignup) {
+      for (let i = 0; i < signupTickets; i++) {
+        const code = generateTicketCode();
+        codes.push(code);
+        writeTicket(db, tx, {
+          campaignId: campaign.id,
+          campaignName: campaign.name,
+          userId,
+          code,
+          period,
+          source: "signup",
+          orderId: null,
+        });
+      }
+    }
+
+    const stats = { updated_at: admin.firestore.FieldValue.serverTimestamp() };
+    if (newCount > 0) {
+      stats.total_tickets = admin.firestore.FieldValue.increment(newCount);
+    }
+    if (!snap.exists) {
+      stats.total_participants = admin.firestore.FieldValue.increment(1);
+    }
+    tx.update(campaignRef, stats);
+
+    return codes;
+  });
 }
 
 /**
- * Process lottery ticket allocation for a verified gold order.
- *
- * Logic:
- * - Track cumulative gold grams purchased per user per campaign
- * - For every GRAMS_PER_TICKET (3g), issue 1 ticket
- * - Only issue NEW tickets (total_earned - already_issued)
- *
- * Firestore structure:
- * - marketing_campaigns/{campaignId}/participants/{userId}
- *   { total_grams: number, tickets_issued: number, updated_at: timestamp }
- * - marketing_campaigns/{campaignId}/tickets/{auto}
- *   { user_id, ticket_code, order_id, created_at }
- * - users/{userId}/lottery_tickets/{auto}
- *   { campaign_id, campaign_name, ticket_code, order_id, created_at }
- *
- * @param {object} db - Firestore instance
- * @param {string} userId - User ID
- * @param {string} orderId - Order ID that was just verified
- * @param {number} goldQty - Gold grams purchased in this order
- * @return {object} { totalNewTickets, tickets: [{campaignId, ticketCode}] }
+ * Allocates lottery tickets for a verified gold order across every campaign
+ * that is running right now.
+ * @param {object} db Firestore instance
+ * @param {string} userId user id
+ * @param {string} orderId the order just verified
+ * @param {number} goldQty grams of gold bought
+ * @return {Promise<object>} {totalNewTickets, tickets}
  */
 async function processLotteryTickets(db, userId, orderId, goldQty) {
   const campaigns = await getActiveCampaigns(db);
+  if (campaigns.length === 0) return { totalNewTickets: 0, tickets: [] };
 
-  if (campaigns.length === 0) {
-    return { totalNewTickets: 0, tickets: [] };
-  }
-
-  const allNewTickets = [];
-
+  const all = [];
   for (const campaign of campaigns) {
     try {
-      const participantRef = db
-        .collection("marketing_campaigns")
-        .doc(campaign.id)
-        .collection("participants")
-        .doc(String(userId));
-
-      const newTicketsForCampaign = await db.runTransaction(async (tx) => {
-        const participantSnap = await tx.get(participantRef);
-        const campaignRef = db.collection("marketing_campaigns").doc(campaign.id);
-        const campaignSnap = await tx.get(campaignRef);
-
-        let totalGrams = 0;
-        let ticketsAlreadyIssued = 0;
-        const isNewParticipant = !participantSnap.exists;
-
-        if (participantSnap.exists) {
-          const pData = participantSnap.data();
-          totalGrams = pData.total_grams || 0;
-          ticketsAlreadyIssued = pData.tickets_issued || 0;
-        }
-
-        // Read grams_per_ticket from campaign document
-        const campaignData = campaignSnap.data() || {};
-        const gramsPerTicket = campaignData.grams_per_ticket || DEFAULT_GRAMS_PER_TICKET;
-
-        // Add current order's gold quantity
-        totalGrams = parseFloat((totalGrams + goldQty).toFixed(6));
-
-        // Calculate total tickets earned so far
-        const totalTicketsEarned = Math.floor(totalGrams / gramsPerTicket);
-
-        // How many new tickets to issue
-        const newTicketCount = totalTicketsEarned - ticketsAlreadyIssued;
-
-        if (newTicketCount <= 0) {
-          // Still update the total grams tracked
-          if (participantSnap.exists) {
-            tx.update(participantRef, {
-              total_grams: totalGrams,
-              updated_at: admin.firestore.FieldValue.serverTimestamp(),
-            });
-          } else {
-            tx.set(participantRef, {
-              user_id: String(userId),
-              total_grams: totalGrams,
-              tickets_issued: 0,
-              updated_at: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            // New participant, update campaign participant count
-            tx.update(campaignRef, {
-              total_participants: admin.firestore.FieldValue.increment(1),
-              updated_at: admin.firestore.FieldValue.serverTimestamp(),
-            });
-          }
-          return [];
-        }
-
-        // Generate ticket codes
-        const tickets = [];
-        for (let i = 0; i < newTicketCount; i++) {
-          tickets.push(generateTicketCode());
-        }
-
-        // Update participant tracking
-        if (participantSnap.exists) {
-          tx.update(participantRef, {
-            total_grams: totalGrams,
-            tickets_issued: ticketsAlreadyIssued + newTicketCount,
-            updated_at: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        } else {
-          tx.set(participantRef, {
-            user_id: String(userId),
-            total_grams: totalGrams,
-            tickets_issued: newTicketCount,
-            updated_at: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
-
-        // Write each ticket to campaign's tickets sub-collection and user's lottery_tickets
-        for (const ticketCode of tickets) {
-          const campaignTicketRef = db
-            .collection("marketing_campaigns")
-            .doc(campaign.id)
-            .collection("tickets")
-            .doc();
-
-          tx.set(campaignTicketRef, {
-            user_id: String(userId),
-            ticket_code: ticketCode,
-            order_id: String(orderId),
-            created_at: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          const userTicketRef = db
-            .collection("users")
-            .doc(String(userId))
-            .collection("lottery_tickets")
-            .doc();
-
-          tx.set(userTicketRef, {
-            campaign_id: campaign.id,
-            campaign_name: campaign.name || "",
-            ticket_code: ticketCode,
-            order_id: String(orderId),
-            created_at: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
-
-        // Update campaign-level stats
-        const campaignStatsUpdate = {
-          total_tickets: admin.firestore.FieldValue.increment(newTicketCount),
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        };
-        if (isNewParticipant) {
-          campaignStatsUpdate.total_participants = admin.firestore.FieldValue.increment(1);
-        }
-        tx.update(campaignRef, campaignStatsUpdate);
-
-        return tickets;
-      });
-
-      for (const code of newTicketsForCampaign) {
-        allNewTickets.push({ campaignId: campaign.id, campaignName: campaign.name, ticketCode: code });
+      const codes = await grantTickets(db, campaign, userId, goldQty, orderId);
+      for (const code of codes) {
+        all.push({
+          campaignId: campaign.id,
+          campaignName: campaign.name,
+          ticketCode: code,
+        });
       }
-
-      if (newTicketsForCampaign.length > 0) {
+      if (codes.length > 0) {
         logger.info("Lottery tickets issued", {
           user_id: userId,
           order_id: orderId,
           campaign_id: campaign.id,
-          campaign_name: campaign.name,
-          new_tickets: newTicketsForCampaign.length,
-          ticket_codes: newTicketsForCampaign,
+          new_tickets: codes.length,
         });
       }
     } catch (err) {
@@ -227,13 +148,53 @@ async function processLotteryTickets(db, userId, orderId, goldQty) {
       });
     }
   }
-
-  return { totalNewTickets: allNewTickets.length, tickets: allNewTickets };
+  return { totalNewTickets: all.length, tickets: all };
 }
 
 /**
- * Scheduled function: runs every hour, checks all "active" campaigns
- * and marks them "completed" if their end_date has passed.
+ * Grants the signup bonus to users who register while a campaign is running.
+ */
+const onUserCreatedLottery = onDocumentCreated({
+  document: "users/{userId}",
+  memory: "256MiB",
+  timeoutSeconds: 120,
+}, async (event) => {
+  const db = admin.firestore();
+  const userId = event.params.userId;
+  try {
+    const campaigns = await getActiveCampaigns(db);
+    for (const campaign of campaigns) {
+      if (!(Number(campaign.signup_tickets) > 0)) continue;
+      try {
+        const codes = await grantTickets(db, campaign, userId, 0, null);
+        if (codes.length > 0) {
+          logger.info("Signup lottery tickets granted", {
+            user_id: userId,
+            campaign_id: campaign.id,
+            tickets: codes.length,
+          });
+        }
+      } catch (err) {
+        logger.error("Failed to grant signup tickets", {
+          campaign_id: campaign.id,
+          user_id: userId,
+          error: err.message,
+        });
+      }
+    }
+  } catch (err) {
+    logger.error("Signup lottery hook failed", { user_id: userId, error: err.message });
+  }
+});
+
+/**
+ * Closes campaigns whose end date has passed.
+ *
+ * This ran hourly for months without ever closing anything: `end_date` is a
+ * Timestamp and the old code fed it to `new Date()`, producing Invalid Date,
+ * whose every comparison is false. Expired campaigns therefore kept issuing
+ * tickets until someone flipped the status by hand. `toDate` reads all the
+ * shapes the field actually takes.
  */
 const scheduledCampaignStatusUpdate = onSchedule({
   schedule: "every 1 hours",
@@ -242,37 +203,33 @@ const scheduledCampaignStatusUpdate = onSchedule({
 }, async () => {
   const db = admin.firestore();
   const now = new Date();
-
   try {
-    const activeCampaigns = await db.collection("marketing_campaigns")
-      .where("status", "==", "active")
-      .get();
-
-    let updatedCount = 0;
-    for (const doc of activeCampaigns.docs) {
+    const snap = await db.collection(COLLECTION).where("status", "==", "active").get();
+    let updated = 0;
+    for (const doc of snap.docs) {
       const data = doc.data();
-      const endDate = new Date(data.end_date);
-      if (endDate < now) {
-        await doc.ref.update({
-          status: "completed",
-          completed_at: admin.firestore.FieldValue.serverTimestamp(),
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        updatedCount++;
-        logger.info("Campaign marked as completed", {
-          campaign_id: doc.id,
-          name: data.name,
-          end_date: data.end_date,
-        });
-      }
+      if (isLegacyCampaign(data)) continue;
+      const end = toDate(data.end_date);
+      if (!end || end >= now) continue;
+      await doc.ref.update({
+        status: "completed",
+        completed_at: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      updated++;
+      logger.info("Campaign marked as completed", { campaign_id: doc.id, name: data.name });
     }
-
-    if (updatedCount > 0) {
-      logger.info(`Completed ${updatedCount} expired campaign(s)`);
-    }
+    if (updated > 0) logger.info(`Completed ${updated} expired campaign(s)`);
   } catch (err) {
     logger.error("Failed to update campaign statuses", { error: err.message });
   }
 });
 
-module.exports = { processLotteryTickets, generateTicketCode, scheduledCampaignStatusUpdate };
+module.exports = {
+  processLotteryTickets,
+  grantTickets,
+  generateTicketCode,
+  isWithinCampaignWindow,
+  onUserCreatedLottery,
+  scheduledCampaignStatusUpdate,
+};
