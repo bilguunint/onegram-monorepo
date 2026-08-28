@@ -149,45 +149,51 @@ function CampaignForm({
   return (
     <div className="space-y-5">
       <Section title="Зураг">
-        <div className="flex flex-wrap items-start gap-4">
-          <CampaignImageInput
-            label="Cover зураг"
-            ratio="21 / 9"
-            hint="өргөн баннер"
-            maxWidth="260px"
-            campaignId={id}
-            value={coverImage}
-            onChange={setCoverImage}
-          />
-          <CampaignImageInput
-            label="Аяны зураг"
-            ratio="3 / 4"
-            hint="босоо"
-            maxWidth="120px"
-            campaignId={id}
-            value={campaignImage}
-            onChange={setCampaignImage}
-          />
-        </div>
+        <CampaignImageInput
+          label="Cover зураг"
+          ratio="21 / 9"
+          hint="өргөн баннер"
+          maxWidth="100%"
+          campaignId={id}
+          value={coverImage}
+          onChange={setCoverImage}
+        />
       </Section>
 
       <Section title="Үндсэн мэдээлэл">
-        <div className="space-y-1.5">
-          <Label>Аяны нэр</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Жишээ: Зуны алтан сугалаа"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Тайлбар</Label>
-          <Textarea
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Шагналын жагсаалт, оролцох журам…"
-          />
+        {/* The 3:4 portrait sits beside the name and description the same way
+            the app shows them together, so the pairing is judged here too. */}
+        <div className="flex items-start gap-4">
+          <div className="w-[130px] shrink-0">
+            <CampaignImageInput
+              label="Аяны зураг"
+              ratio="3 / 4"
+              hint="босоо"
+              maxWidth="130px"
+              campaignId={id}
+              value={campaignImage}
+              onChange={setCampaignImage}
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="space-y-1.5">
+              <Label>Аяны нэр</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Жишээ: Зуны алтан сугалаа"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Тайлбар</Label>
+              <Textarea
+                rows={5}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Шагналын жагсаалт, оролцох журам…"
+              />
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
