@@ -50,11 +50,17 @@ class _LotteryWidgetState extends State<LotteryWidget> {
       final snapshot = await FirebaseFirestore.instance
           .collection('marketing_campaigns')
           .where('status', isEqualTo: 'active')
-          .limit(1)
+          .limit(5)
           .get();
 
-      if (snapshot.docs.isNotEmpty) {
-        final data = snapshot.docs.first.data();
+      // Current-schema campaigns render as the full-width home banner; this
+      // half-width card only ever served the two legacy ones, so showing a new
+      // campaign here as well would put it on screen twice.
+      final legacyDocs = snapshot.docs
+          .where((d) => d.data()['schema_version'] != 2)
+          .toList();
+      if (legacyDocs.isNotEmpty) {
+        final data = legacyDocs.first.data();
         setState(() {
           _name = data['name'] as String?;
           _description = data['description'] as String?;

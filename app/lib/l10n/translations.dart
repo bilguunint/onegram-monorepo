@@ -2,6 +2,7 @@ import 'parts/auth_pin.dart';
 import 'parts/center.dart';
 import 'parts/common.dart';
 import 'parts/home_misc.dart';
+import 'parts/lottery.dart';
 import 'parts/nav.dart';
 import 'parts/orders.dart';
 import 'parts/products_a.dart';
@@ -24,5 +25,6 @@ final Map<String, Map<String, String>> kTranslations = {
   ...kCenterTranslations,
   ...kOrdersTranslations,
   ...kHomeMiscTranslations,
+  ...kLotteryTranslations,
   ...kServerTranslations,
 };

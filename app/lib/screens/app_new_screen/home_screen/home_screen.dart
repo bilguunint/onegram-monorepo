@@ -10,6 +10,7 @@ import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/balance_view.dart';
+import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_banner_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/gold_rate_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/morin_khuur_widget.dart';
@@ -445,6 +446,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+                  // Сугалаат аян — hidden entirely when no campaign runs.
+                  const CampaignBannerWidget(),
                   Padding(
                     padding: const EdgeInsets.only(
                         left: 16.0, top: 16.0, bottom: 16.0),
