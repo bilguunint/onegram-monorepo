@@ -156,6 +156,9 @@ async function processLotteryTickets(db, userId, orderId, goldQty) {
  */
 const onUserCreatedLottery = onDocumentCreated({
   document: "users/{userId}",
+  // Pinned to match the database and every other Firestore trigger here;
+  // without it the deploy default put this one in another region.
+  region: "us-central1",
   memory: "256MiB",
   timeoutSeconds: 120,
 }, async (event) => {
