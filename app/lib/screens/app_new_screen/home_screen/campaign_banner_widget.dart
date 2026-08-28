@@ -301,7 +301,6 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget>
   // ---- right: the ticket stub --------------------------------------------
 
   Widget _stub() {
-    final hasTickets = _myTickets > 0;
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -318,41 +317,25 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget>
             child: Lottie.asset('assets/icons/golden_ticket.json'),
           ),
           const SizedBox(height: 2),
-          if (hasTickets) ...[
-            Text(
-              '$_myTickets',
-              style: TextStyle(
-                color: CustomColors.mainColor,
-                fontSize: 20,
-                fontFamily: "RubikBold",
-                height: 1.1,
-              ),
+          Text(
+            '$_myTickets',
+            style: TextStyle(
+              color: CustomColors.mainColor,
+              fontSize: 20,
+              fontFamily: "RubikBold",
+              height: 1.1,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Text(
-                tr('lottery.my_tickets_short'),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white54, fontSize: 8.5),
-              ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              tr('lottery.my_tickets_short'),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white54, fontSize: 8.5),
             ),
-          ] else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Text(
-                tr('lottery.join_now'),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: TextStyle(
-                  color: CustomColors.mainColor,
-                  fontSize: 11,
-                  fontFamily: "RubikBold",
-                  height: 1.2,
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
