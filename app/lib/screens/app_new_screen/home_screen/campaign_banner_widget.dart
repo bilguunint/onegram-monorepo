@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,16 +7,6 @@ import 'package:onegrgold/models/lottery_campaign_models.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_promo_popup.dart';
 import 'package:onegrgold/style/colors.dart';
-
-/// Molten-gold palette for the animated ticket edge (loops seamlessly).
-const List<Color> _kGoldColors = [
-  Color(0xFFB8860B), // dark goldenrod
-  Color(0xFFFFD700), // gold
-  Color(0xFFFFF3B0), // bright highlight
-  Color(0xFFFCD535), // brand gold
-  Color(0xFFFF9100), // amber flash
-  Color(0xFFB8860B), // dark goldenrod (loop)
-];
 
 /// Where the stub is torn off, as a fraction of the card width.
 const double _kTearFraction = 0.70;
@@ -66,7 +54,7 @@ Path _ticketPath(Size size) {
 
 /// The "Сугалаат аян" section on the home screen: a full-width card cut in the
 /// actual shape of a lottery ticket — the border itself follows the notches —
-/// with an animated golden edge and a perforated stub carrying the golden
+/// with a quiet gold outline and a perforated stub carrying the golden
 /// ticket animation and the user's own count. Occupies no space at all when no
 /// current-schema campaign is active.
 ///
@@ -83,24 +71,14 @@ class CampaignBannerWidget extends StatefulWidget {
 /// every login/tab return and the popup must not follow it around.
 bool _popupShownThisLaunch = false;
 
-class _CampaignBannerWidgetState extends State<CampaignBannerWidget>
-    with SingleTickerProviderStateMixin {
+class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
   LotteryCampaignInfo? _campaign;
   int _myTickets = 0;
-  late final AnimationController _edge;
 
   @override
   void initState() {
     super.initState();
-    _edge = AnimationController(vsync: this, duration: const Duration(seconds: 4))
-      ..repeat();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _edge.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -191,15 +169,12 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget>
                         painter: _DashedLinePainter(),
                       ),
                     ),
-                    // The border strokes the same path, so the gold line dips
+                    // The border strokes the same path, so the line dips
                     // around each notch exactly like a punched ticket.
                     IgnorePointer(
-                      child: AnimatedBuilder(
-                        animation: _edge,
-                        builder: (_, __) => CustomPaint(
-                          size: size,
-                          painter: _TicketBorderPainter(t: _edge.value),
-                        ),
+                      child: CustomPaint(
+                        size: size,
+                        painter: const _TicketBorderPainter(),
                       ),
                     ),
                   ],
@@ -350,43 +325,24 @@ class _TicketClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-/// Strokes the ticket outline with a slowly revolving molten-gold gradient,
-/// plus a soft glow underneath so the edge reads at a glance.
+/// Strokes the ticket outline with one quiet gold-tinted line, in keeping
+/// with the other home cards.
 class _TicketBorderPainter extends CustomPainter {
-  final double t;
-
-  const _TicketBorderPainter({required this.t});
+  const _TicketBorderPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = _ticketPath(size);
-    final rect = Offset.zero & size;
-    final shader = SweepGradient(
-      colors: _kGoldColors,
-      transform: GradientRotation(2 * math.pi * t),
-    ).createShader(rect);
-
-    // Glow pass
     canvas.drawPath(
-      path,
+      _ticketPath(size),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.0
-        ..shader = shader
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-    // Crisp line
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..shader = shader,
+        ..strokeWidth = 1.0
+        ..color = const Color(0x59FCD535), // brand gold at 35%
     );
   }
 
   @override
-  bool shouldRepaint(covariant _TicketBorderPainter old) => old.t != t;
+  bool shouldRepaint(covariant _TicketBorderPainter old) => false;
 }
 
 /// Vertical dashed "tear here" line between ticket and stub.
