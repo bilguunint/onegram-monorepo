@@ -95,11 +95,14 @@ exports.saveCampaign = onRequest({
         updated_by_name: auth.name,
       };
 
-      let ref;
-      if (id) {
-        ref = db.collection(COLLECTION).doc(id);
-        const snap = await ref.get();
-        if (!snap.exists) return res.status(404).json({ error: "Аян олдсонгүй" });
+      // The admin app allocates the id before saving so image uploads have a
+      // folder to land in — an id with no document behind it is a create, not
+      // a failed update.
+      const ref = id ?
+        db.collection(COLLECTION).doc(id) :
+        db.collection(COLLECTION).doc();
+      const snap = id ? await ref.get() : null;
+      if (snap && snap.exists) {
         if (isLegacyCampaign(snap.data())) {
           return res.status(409).json({
             error: "Хуучин хэлбэрийн аяныг засах боломжгүй. Шинээр үүсгэнэ үү.",
@@ -107,7 +110,6 @@ exports.saveCampaign = onRequest({
         }
         await ref.update(payload);
       } else {
-        ref = db.collection(COLLECTION).doc();
         await ref.set({
           ...payload,
           total_participants: 0,
@@ -120,7 +122,7 @@ exports.saveCampaign = onRequest({
       }
 
       logger.info("Campaign saved", {
-        campaign_id: ref.id, by: auth.uid, created: !id, status,
+        campaign_id: ref.id, by: auth.uid, created: !snap || !snap.exists, status,
       });
       return res.status(200).json({ id: ref.id, status });
     } catch (err) {
