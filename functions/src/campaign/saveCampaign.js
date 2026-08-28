@@ -6,7 +6,6 @@ const { resolveAdmin } = require("./adminAuth");
 const {
   CAMPAIGN_STATUSES,
   COLLECTION,
-  DRAW_FREQUENCIES,
   SCHEMA_VERSION,
   isLegacyCampaign,
   toDate,
@@ -21,8 +20,8 @@ const {
  * admin app sends its edits here.
  *
  * The two pre-existing campaigns are refused: they were written under the old
- * field names, carry no draw periods, and their 879 participants are history
- * rather than something to reinterpret.
+ * field names, carry no draws, and their 879 participants are history rather
+ * than something to reinterpret.
  */
 exports.saveCampaign = onRequest({
   region: "us-central1",
@@ -49,11 +48,6 @@ exports.saveCampaign = onRequest({
       }
       if (end <= start) {
         return res.status(400).json({ error: "Дуусах хугацаа эхлэхээс хойш байх ёстой" });
-      }
-
-      const frequency = (b.draw_frequency || "weekly").toString();
-      if (!DRAW_FREQUENCIES.includes(frequency)) {
-        return res.status(400).json({ error: "Хонжвор олгох давтамж буруу" });
       }
 
       const status = (b.status || "draft").toString();
@@ -89,7 +83,6 @@ exports.saveCampaign = onRequest({
         end_date: admin.firestore.Timestamp.fromDate(end),
         signup_tickets: signupTickets,
         tickets_per_unit: ticketsPerUnit,
-        draw_frequency: frequency,
         cover_image: b.cover_image ? String(b.cover_image) : null,
         campaign_image: b.campaign_image ? String(b.campaign_image) : null,
         modal_enabled: modalEnabled,
@@ -119,6 +112,7 @@ exports.saveCampaign = onRequest({
           ...payload,
           total_participants: 0,
           total_tickets: 0,
+          draw_count: 0,
           created_at: admin.firestore.FieldValue.serverTimestamp(),
           created_by: auth.uid,
           created_by_name: auth.name,

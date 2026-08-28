@@ -23,7 +23,6 @@ import {
   ticketsForGrams,
   type Campaign,
   type CampaignStatus,
-  type DrawFrequency,
 } from "@/lib/firestore/campaigns";
 
 type Props = {
@@ -92,9 +91,6 @@ function CampaignForm({
   const [ticketsPerUnit, setTicketsPerUnit] = useState(
     String(campaign?.tickets_per_unit ?? 1)
   );
-  const [frequency, setFrequency] = useState<DrawFrequency>(
-    campaign?.draw_frequency ?? "weekly"
-  );
   const [coverImage, setCoverImage] = useState(campaign?.cover_image ?? null);
   const [campaignImage, setCampaignImage] = useState(campaign?.campaign_image ?? null);
   const [modalEnabled, setModalEnabled] = useState(campaign?.modal_enabled ?? false);
@@ -134,7 +130,6 @@ function CampaignForm({
         end_date: new Date(endDate).toISOString(),
         signup_tickets: signup,
         tickets_per_unit: perUnit,
-        draw_frequency: frequency,
         cover_image: coverImage,
         campaign_image: campaignImage,
         modal_enabled: modalEnabled,
@@ -153,6 +148,29 @@ function CampaignForm({
 
   return (
     <div className="space-y-5">
+      <Section title="Зураг">
+        <div className="flex flex-wrap items-start gap-4">
+          <CampaignImageInput
+            label="Cover зураг"
+            ratio="21 / 9"
+            hint="өргөн баннер"
+            maxWidth="260px"
+            campaignId={id}
+            value={coverImage}
+            onChange={setCoverImage}
+          />
+          <CampaignImageInput
+            label="Аяны зураг"
+            ratio="3 / 4"
+            hint="босоо"
+            maxWidth="120px"
+            campaignId={id}
+            value={campaignImage}
+            onChange={setCampaignImage}
+          />
+        </div>
+      </Section>
+
       <Section title="Үндсэн мэдээлэл">
         <div className="space-y-1.5">
           <Label>Аяны нэр</Label>
@@ -242,40 +260,12 @@ function CampaignForm({
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <Label>Хонжвор олгох давтамж</Label>
-          <Select
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value as DrawFrequency)}
-          >
-            <option value="weekly">7 хоног тутам</option>
-            <option value="monthly">Сар тутам</option>
-          </Select>
-          <p className="text-[10px] text-muted-foreground">
-            Тухайн үеийн сугалаанууд л тохиролд орно. Үеийг хаасны дараа тэдгээр
-            сугалаа идэвхгүй болж, дараагийн үе шинээр эхэлнэ. Хүрээгүй үлдсэн
-            грамм дараагийн үе рүү шилжинэ.
-          </p>
-        </div>
-      </Section>
-
-      <Section title="Зураг">
-        <CampaignImageInput
-          label="Cover зураг"
-          ratio="21 / 9"
-          hint="өргөн баннер"
-          campaignId={id}
-          value={coverImage}
-          onChange={setCoverImage}
-        />
-        <CampaignImageInput
-          label="Аяны зураг"
-          ratio="3 / 4"
-          hint="босоо"
-          campaignId={id}
-          value={campaignImage}
-          onChange={setCampaignImage}
-        />
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          Тохирлыг хуваарьгүйгээр, аяны хугацаанд хэдэн ч удаа гараар
+          эхлүүлнэ. Эхлүүлэх бүрд тэр агшин хүртэл хуримтлагдсан сугалаа
+          тохиролд орж идэвхгүй болно; дараа нь олгогдсон сугалаа дараагийн
+          тохиролд үлдэнэ. Хүрээгүй үлдсэн грамм алдагдахгүй.
+        </p>
       </Section>
 
       <Section title="Нүүр дэлгэцийн popup">
@@ -294,6 +284,7 @@ function CampaignForm({
             <CampaignImageInput
               label="Popup зураг"
               ratio="16 / 9"
+              maxWidth="220px"
               campaignId={id}
               value={modalImage}
               onChange={setModalImage}

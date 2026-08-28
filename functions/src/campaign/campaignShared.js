@@ -9,18 +9,21 @@ const crypto = require("crypto");
  * 0.1g rather than per whole gram so a campaign can hand out tickets for the
  * small purchases that make up most of the order book.
  *
- * Tickets are grouped into draw periods — a week or a calendar month counted
- * from the campaign's start. A draw settles the tickets of its own period and
- * nothing else, so the following period starts from an empty pool. What does
- * carry across a period boundary is the gram remainder: entitlement is derived
- * from a participant's cumulative grams against the tickets already issued to
- * them, so 0.05g left over one week still counts toward the next.
+ * Draws are not scheduled. An admin starts one whenever they are ready, as
+ * often as they like while the campaign runs. Starting draw N sweeps up every
+ * ticket not yet in a draw, stamps it with N and takes it out of circulation;
+ * the codes are then exported and run through the separate system that picks
+ * the winners, and the winning codes are marked back here. Tickets issued
+ * after that sweep wait for draw N+1.
+ *
+ * A gram remainder is never lost across a draw: entitlement is derived from a
+ * participant's cumulative grams against the tickets already issued to them,
+ * so 0.05g left over before a draw still counts toward the next ticket after.
  */
 
 /** Gold is bought in fractions of a gram, so the rate is quoted per 0.1g. */
 const GRAM_UNIT = 0.1;
 const TICKET_CODE_LENGTH = 6;
-const DRAW_FREQUENCIES = ["weekly", "monthly"];
 const CAMPAIGN_STATUSES = ["draft", "active", "completed"];
 const COLLECTION = "marketing_campaigns";
 
@@ -29,8 +32,8 @@ const SCHEMA_VERSION = 2;
 
 /**
  * The two campaigns that predate this module store `grams_per_ticktes` (sic)
- * and carry no draw periods. They are read-only history; nothing here should
- * try to reinterpret them.
+ * and carry no draws. They are read-only history; nothing here should try to
+ * reinterpret them.
  * @param {object} data campaign document data
  * @return {boolean} true when the doc predates SCHEMA_VERSION 2
  */
@@ -86,68 +89,6 @@ function isWithinCampaignWindow(campaign, now = new Date()) {
 }
 
 /**
- * Which draw period a moment falls in, counted from the campaign start.
- *
- * Weekly periods are fixed 7-day blocks. Monthly periods follow the calendar
- * from the start day, so a campaign starting on the 3rd draws on the 3rd.
- * @param {object} campaign campaign document data
- * @param {Date} [when] the moment to place
- * @return {number} zero-based period index, or 0 when the start is unreadable
- */
-function drawPeriodIndex(campaign, when = new Date()) {
-  const start = toDate(campaign.start_date);
-  if (!start) return 0;
-  if (when <= start) return 0;
-  if (campaign.draw_frequency === "monthly") {
-    let months =
-      (when.getFullYear() - start.getFullYear()) * 12 +
-      (when.getMonth() - start.getMonth());
-    // Not yet past the anniversary day, so still inside the previous period.
-    if (when.getDate() < start.getDate()) months -= 1;
-    return Math.max(0, months);
-  }
-  const week = 7 * 24 * 60 * 60 * 1000;
-  return Math.max(0, Math.floor((when.getTime() - start.getTime()) / week));
-}
-
-/**
- * @param {object} campaign campaign document data
- * @param {number} index zero-based period index
- * @return {{start: Date, end: Date}|null} the period's half-open bounds
- */
-function drawPeriodBounds(campaign, index) {
-  const start = toDate(campaign.start_date);
-  if (!start) return null;
-  const from = new Date(start.getTime());
-  const to = new Date(start.getTime());
-  if (campaign.draw_frequency === "monthly") {
-    from.setMonth(from.getMonth() + index);
-    to.setMonth(to.getMonth() + index + 1);
-  } else {
-    const week = 7 * 24 * 60 * 60 * 1000;
-    from.setTime(start.getTime() + index * week);
-    to.setTime(start.getTime() + (index + 1) * week);
-  }
-  // The last period is clipped to the campaign end so a draw cannot be
-  // scheduled past it.
-  const end = toDate(campaign.end_date);
-  if (end && to > end) to.setTime(end.getTime());
-  return { start: from, end: to };
-}
-
-/**
- * How many draw periods the campaign runs for, end to end.
- * @param {object} campaign campaign document data
- * @return {number} period count, at least 1
- */
-function totalDrawPeriods(campaign) {
-  const end = toDate(campaign.end_date);
-  if (!end) return 1;
-  // The end instant belongs to the last period, not the one after it.
-  return drawPeriodIndex(campaign, new Date(end.getTime() - 1)) + 1;
-}
-
-/**
  * Tickets earned for a cumulative gram total under a campaign's rate.
  * @param {object} campaign campaign document data
  * @param {number} totalGrams cumulative grams bought during the campaign
@@ -182,32 +123,37 @@ async function getActiveCampaigns(db, now = new Date()) {
 /**
  * Writes one ticket to both places it is read from: the campaign's own
  * sub-collection (admin views, draws) and the user's list (the app).
+ *
+ * The campaign copy records where its mirror lives, so a draw can lock
+ * thousands of tickets by direct reference instead of one query each.
  * @param {object} db Firestore instance
  * @param {object} tx active transaction
  * @param {object} args ticket fields
  * @return {string} the ticket code written
  */
 function writeTicket(db, tx, args) {
-  const { campaignId, campaignName, userId, code, period, source, orderId } = args;
-  const payload = {
-    user_id: String(userId),
-    ticket_code: code,
-    campaign_id: campaignId,
-    draw_period: period,
-    source, // "purchase" | "signup"
-    status: "active", // → "won" | "expired"
-    order_id: orderId ? String(orderId) : null,
-    created_at: admin.firestore.FieldValue.serverTimestamp(),
-  };
+  const { campaignId, campaignName, userId, code, source, orderId } = args;
 
   const campaignTicketRef = db
     .collection(COLLECTION).doc(campaignId)
     .collection("tickets").doc();
-  tx.set(campaignTicketRef, payload);
-
   const userTicketRef = db
     .collection("users").doc(String(userId))
     .collection("lottery_tickets").doc();
+
+  const payload = {
+    user_id: String(userId),
+    ticket_code: code,
+    campaign_id: campaignId,
+    // Null until a draw sweeps it up; that is what marks the live pool.
+    draw_number: null,
+    status: "active", // → "drawn" | "won"
+    source, // "purchase" | "signup"
+    order_id: orderId ? String(orderId) : null,
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  tx.set(campaignTicketRef, { ...payload, user_ticket_id: userTicketRef.id });
   tx.set(userTicketRef, {
     ...payload,
     campaign_name: campaignName || "",
@@ -219,7 +165,6 @@ function writeTicket(db, tx, args) {
 
 module.exports = {
   GRAM_UNIT,
-  DRAW_FREQUENCIES,
   CAMPAIGN_STATUSES,
   COLLECTION,
   SCHEMA_VERSION,
@@ -227,9 +172,6 @@ module.exports = {
   generateTicketCode,
   toDate,
   isWithinCampaignWindow,
-  drawPeriodIndex,
-  drawPeriodBounds,
-  totalDrawPeriods,
   ticketsForGrams,
   getActiveCampaigns,
   writeTicket,

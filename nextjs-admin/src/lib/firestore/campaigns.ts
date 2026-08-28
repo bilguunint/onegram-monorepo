@@ -3,7 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  limit,
   orderBy,
   query,
   Timestamp,
@@ -15,9 +14,9 @@ import { getDb } from "@/lib/firebase/client";
 // Сугалаат аян — lottery campaigns.
 //
 // marketing_campaigns/{id}
-//   ├ tickets/{id}       one per issued ticket, stamped with its draw period
+//   ├ tickets/{id}       one per issued ticket; draw_number is null until swept
 //   ├ participants/{uid} cumulative grams and tickets issued
-//   └ draws/{period}     the settled result for one draw period
+//   └ draws/{n}          one numbered draw and the winners marked against it
 //
 // Writes all go through the saveCampaign / campaignDraw functions: the
 // collection is world-readable so the app can show the running campaign, and a
@@ -31,8 +30,7 @@ export const GRAM_UNIT = 0.1;
 export const SCHEMA_VERSION = 2;
 
 export type CampaignStatus = "draft" | "active" | "completed";
-export type DrawFrequency = "weekly" | "monthly";
-export type TicketStatus = "active" | "won" | "expired";
+export type TicketStatus = "active" | "drawn" | "won";
 
 export type Campaign = {
   id: string;
@@ -43,7 +41,6 @@ export type Campaign = {
   end_date: Timestamp | null;
   signup_tickets: number;
   tickets_per_unit: number;
-  draw_frequency: DrawFrequency;
   cover_image: string | null; // 21:9
   campaign_image: string | null; // 3:4
   modal_enabled: boolean;
@@ -52,6 +49,7 @@ export type Campaign = {
   modal_body: string;
   total_participants: number;
   total_tickets: number;
+  draw_count: number;
   schema_version?: number;
   created_at?: Timestamp;
   updated_at?: Timestamp;
@@ -62,7 +60,8 @@ export type CampaignTicket = {
   id: string;
   user_id: string;
   ticket_code: string;
-  draw_period: number;
+  /** null while the ticket is still in the live pool. */
+  draw_number: number | null;
   source: "purchase" | "signup";
   status: TicketStatus;
   order_id: string | null;
@@ -73,37 +72,26 @@ export type CampaignTicket = {
 export type DrawWinner = {
   user_id: string;
   user_name: string;
+  user_phone?: string | null;
   ticket_code: string;
   ticket_id: string;
   prize: string | null;
-  picked: "manual" | "random";
-  drawn_by_name?: string;
+  marked_by_name?: string;
 };
 
 export type CampaignDraw = {
   id: string;
-  draw_period: number;
-  status: "drawn" | "closed";
-  period_start: Timestamp | null;
-  period_end: Timestamp | null;
-  winners?: DrawWinner[];
+  draw_number: number;
+  ticket_count: number;
+  started_at: Timestamp | null;
+  started_by_name?: string;
+  winners: DrawWinner[];
 };
 
 export const STATUS_LABEL: Record<CampaignStatus, string> = {
   draft: "Ноорог",
   active: "Идэвхтэй",
   completed: "Дууссан",
-};
-
-export const FREQUENCY_LABEL: Record<DrawFrequency, string> = {
-  weekly: "7 хоног тутам",
-  monthly: "Сар тутам",
-};
-
-export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
-  active: "Идэвхтэй",
-  won: "Хожсон",
-  expired: "Дууссан",
 };
 
 /** A campaign written before the current rules — read-only history. */
@@ -121,7 +109,6 @@ function toCampaign(id: string, d: Record<string, unknown>): Campaign {
     end_date: (d.end_date as Timestamp) ?? null,
     signup_tickets: Number(d.signup_tickets ?? 0),
     tickets_per_unit: Number(d.tickets_per_unit ?? 0),
-    draw_frequency: ((d.draw_frequency as string) ?? "weekly") as DrawFrequency,
     cover_image: (d.cover_image as string) ?? null,
     campaign_image: (d.campaign_image as string) ?? null,
     modal_enabled: Boolean(d.modal_enabled),
@@ -130,6 +117,7 @@ function toCampaign(id: string, d: Record<string, unknown>): Campaign {
     modal_body: (d.modal_body as string) ?? "",
     total_participants: Number(d.total_participants ?? 0),
     total_tickets: Number(d.total_tickets ?? 0),
+    draw_count: Number(d.draw_count ?? 0),
     schema_version: d.schema_version as number | undefined,
     created_at: d.created_at as Timestamp | undefined,
     updated_at: d.updated_at as Timestamp | undefined,
@@ -158,93 +146,59 @@ export async function fetchDraws(campaignId: string): Promise<CampaignDraw[]> {
       const v = d.data();
       return {
         id: d.id,
-        draw_period: Number(v.draw_period ?? 0),
-        status: (v.status as CampaignDraw["status"]) ?? "drawn",
-        period_start: (v.period_start as Timestamp) ?? null,
-        period_end: (v.period_end as Timestamp) ?? null,
+        draw_number: Number(v.draw_number ?? 0),
+        ticket_count: Number(v.ticket_count ?? 0),
+        started_at: (v.started_at as Timestamp) ?? null,
+        started_by_name: v.started_by_name as string | undefined,
         winners: (v.winners as DrawWinner[]) ?? [],
       };
     })
-    .sort((a, b) => a.draw_period - b.draw_period);
+    .sort((a, b) => b.draw_number - a.draw_number);
 }
 
 /**
- * Tickets for one draw period. Capped because a busy period can hold thousands
- * and the table only ever shows a sample — the counts come from the draw doc
- * and the campaign totals, not from this.
+ * Every ticket of one draw, or — with `null` — the live pool that the next
+ * draw will sweep up. Uncapped on purpose: the whole set is what gets exported
+ * to the spreadsheet the winners are picked from, so a partial read would hand
+ * someone a draw that quietly left entrants out.
  */
-export async function fetchPeriodTickets(
+export async function fetchDrawTickets(
   campaignId: string,
-  period: number,
-  max = 200
+  drawNumber: number | null
 ): Promise<CampaignTicket[]> {
   const snap = await getDocs(
     query(
       collection(getDb(), "marketing_campaigns", campaignId, "tickets"),
-      where("draw_period", "==", period),
-      limit(max)
+      where("draw_number", "==", drawNumber)
     )
   );
-  return snap.docs.map((d) => {
-    const v = d.data();
-    return {
-      id: d.id,
-      user_id: (v.user_id as string) ?? "",
-      ticket_code: (v.ticket_code as string) ?? "",
-      draw_period: Number(v.draw_period ?? 0),
-      source: ((v.source as string) ?? "purchase") as CampaignTicket["source"],
-      status: ((v.status as string) ?? "active") as TicketStatus,
-      order_id: (v.order_id as string) ?? null,
-      prize: (v.prize as string) ?? null,
-      created_at: v.created_at as Timestamp | undefined,
-    };
-  });
+  return snap.docs
+    .map((d) => {
+      const v = d.data();
+      return {
+        id: d.id,
+        user_id: (v.user_id as string) ?? "",
+        ticket_code: (v.ticket_code as string) ?? "",
+        draw_number: (v.draw_number as number | null) ?? null,
+        source: ((v.source as string) ?? "purchase") as CampaignTicket["source"],
+        status: ((v.status as string) ?? "active") as TicketStatus,
+        order_id: (v.order_id as string) ?? null,
+        prize: (v.prize as string) ?? null,
+        created_at: v.created_at as Timestamp | undefined,
+      };
+    })
+    .sort((a, b) => a.ticket_code.localeCompare(b.ticket_code));
 }
 
-// ---------------------------------------------------------------------------
-// Draw period maths — mirrors functions/src/campaign/campaignShared.js.
-// Both sides must agree on which period a moment falls in, so keep them in step.
-// ---------------------------------------------------------------------------
-
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-export function drawPeriodIndex(c: Campaign, when: Date = new Date()): number {
-  const start = c.start_date?.toDate();
-  if (!start || when <= start) return 0;
-  if (c.draw_frequency === "monthly") {
-    let months =
-      (when.getFullYear() - start.getFullYear()) * 12 +
-      (when.getMonth() - start.getMonth());
-    if (when.getDate() < start.getDate()) months -= 1;
-    return Math.max(0, months);
-  }
-  return Math.max(0, Math.floor((when.getTime() - start.getTime()) / WEEK_MS));
-}
-
-export function drawPeriodBounds(
-  c: Campaign,
-  index: number
-): { start: Date; end: Date } | null {
-  const start = c.start_date?.toDate();
-  if (!start) return null;
-  const from = new Date(start.getTime());
-  const to = new Date(start.getTime());
-  if (c.draw_frequency === "monthly") {
-    from.setMonth(from.getMonth() + index);
-    to.setMonth(to.getMonth() + index + 1);
-  } else {
-    from.setTime(start.getTime() + index * WEEK_MS);
-    to.setTime(start.getTime() + (index + 1) * WEEK_MS);
-  }
-  const end = c.end_date?.toDate();
-  if (end && to > end) to.setTime(end.getTime());
-  return { start: from, end: to };
-}
-
-export function totalDrawPeriods(c: Campaign): number {
-  const end = c.end_date?.toDate();
-  if (!end) return 1;
-  return drawPeriodIndex(c, new Date(end.getTime() - 1)) + 1;
+/** How many tickets are waiting for the next draw. */
+export async function countPendingTickets(campaignId: string): Promise<number> {
+  const snap = await getDocs(
+    query(
+      collection(getDb(), "marketing_campaigns", campaignId, "tickets"),
+      where("draw_number", "==", null)
+    )
+  );
+  return snap.size;
 }
 
 /** How many tickets a purchase of `grams` earns under this campaign's rate. */

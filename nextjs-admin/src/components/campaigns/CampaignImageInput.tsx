@@ -18,6 +18,8 @@ type Props = {
   /** Aspect the app renders this slot at, e.g. "21 / 9". */
   ratio: string;
   hint?: string;
+  /** Caps the preview width so a 21:9 banner does not swallow the dialog. */
+  maxWidth: string;
   campaignId: string;
   value: string | null;
   onChange: (url: string | null) => void;
@@ -32,6 +34,7 @@ export function CampaignImageInput({
   label,
   ratio,
   hint,
+  maxWidth,
   campaignId,
   value,
   onChange,
@@ -66,7 +69,7 @@ export function CampaignImageInput({
   );
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" style={{ maxWidth }}>
       <div className="flex items-baseline justify-between gap-2">
         <Label>{label}</Label>
         <span className="text-[10px] text-muted-foreground">
@@ -87,7 +90,7 @@ export function CampaignImageInput({
             src={value}
             alt={label}
             fill
-            sizes="(max-width: 640px) 100vw, 480px"
+            sizes="240px"
             className="object-cover"
             unoptimized
           />

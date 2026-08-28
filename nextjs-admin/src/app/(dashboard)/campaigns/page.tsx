@@ -23,9 +23,6 @@ import {
   fetchCampaigns,
   isLegacyCampaign,
   isRunning,
-  drawPeriodIndex,
-  totalDrawPeriods,
-  FREQUENCY_LABEL,
   STATUS_LABEL,
   GRAM_UNIT,
   type Campaign,
@@ -133,8 +130,6 @@ function CampaignCard({
 }) {
   const legacy = isLegacyCampaign(c);
   const running = isRunning(c);
-  const periods = totalDrawPeriods(c);
-  const current = Math.min(drawPeriodIndex(c) + 1, periods);
 
   return (
     <div className="overflow-hidden rounded-xl border border-border-light bg-card">
@@ -204,9 +199,8 @@ function CampaignCard({
                 Бүртгэл → <b className="text-foreground">{c.signup_tickets}</b> сугалаа
               </span>
             )}
-            <span>{FREQUENCY_LABEL[c.draw_frequency]}</span>
             <span>
-              Үе <b className="text-foreground">{current}</b>/{periods}
+              <b className="text-foreground">{c.draw_count}</b> тохирол хийгдсэн
             </span>
           </div>
         )}

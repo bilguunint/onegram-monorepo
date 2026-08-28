@@ -4,7 +4,6 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const {
   COLLECTION,
-  drawPeriodIndex,
   generateTicketCode,
   getActiveCampaigns,
   isLegacyCampaign,
@@ -18,8 +17,8 @@ const {
  * Issues one participant's outstanding tickets for a campaign.
  *
  * Entitlement is always recomputed from the participant's cumulative grams
- * rather than from this order alone, so a gram remainder survives a draw
- * period boundary: 0.05g left over one week still counts toward the next.
+ * rather than from this order alone, so a gram remainder survives a draw:
+ * 0.05g left over before one still counts toward the next ticket after it.
  * @param {object} db Firestore instance
  * @param {object} campaign campaign doc data plus its id
  * @param {string} userId user id
@@ -30,7 +29,6 @@ const {
 async function grantTickets(db, campaign, userId, addGrams, orderId) {
   const campaignRef = db.collection(COLLECTION).doc(campaign.id);
   const participantRef = campaignRef.collection("participants").doc(String(userId));
-  const period = drawPeriodIndex(campaign, new Date());
 
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(participantRef);
@@ -73,7 +71,6 @@ async function grantTickets(db, campaign, userId, addGrams, orderId) {
         campaignName: campaign.name,
         userId,
         code,
-        period,
         source: "purchase",
         orderId,
       });
@@ -87,7 +84,6 @@ async function grantTickets(db, campaign, userId, addGrams, orderId) {
           campaignName: campaign.name,
           userId,
           code,
-          period,
           source: "signup",
           orderId: null,
         });
