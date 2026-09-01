@@ -38,6 +38,9 @@ const COUNT_LABELS: { key: string; label: string }[] = [
   { key: "notifications", label: "Мэдэгдэл" },
   { key: "lottery_tickets", label: "Сугалааны тасалбар" },
   { key: "campaign_tickets", label: "Кампанит тасалбар" },
+  { key: "center_tree_orders", label: "Мод тарих захиалга" },
+  { key: "center_donations", label: "Морин хуурын хандив" },
+  { key: "installment_cancel_requests", label: "Цуцлах хүсэлт" },
   { key: "ledger_entries", label: "Ledger бичлэг" },
   { key: "security_logs", label: "Аюулгүйн лог" },
 ];

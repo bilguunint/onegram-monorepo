@@ -27,6 +27,9 @@ export type TransferCounts = {
   lottery_tickets: number;
   campaign_tickets: number;
   campaign_participants: number;
+  center_tree_orders: number;
+  center_donations: number;
+  installment_cancel_requests: number;
   ledger_entries: number;
   investment: boolean;
 };

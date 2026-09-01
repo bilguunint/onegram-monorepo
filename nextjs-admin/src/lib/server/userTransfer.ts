@@ -46,6 +46,9 @@ export type TransferCounts = {
   lottery_tickets: number;
   campaign_tickets: number;
   campaign_participants: number;
+  center_tree_orders: number;
+  center_donations: number;
+  installment_cancel_requests: number;
   ledger_entries: number;
   investment: boolean;
 };
@@ -214,6 +217,9 @@ export async function buildPreview(
     gifts_recv_id,
     notifications,
     lottery_tickets,
+    center_tree_orders,
+    center_donations,
+    installment_cancel_requests,
     ledgerSnap,
     invSnap,
   ] = await Promise.all([
@@ -227,6 +233,9 @@ export async function buildPreview(
     countWhere("gift_orders", "receiver_id", sourceUid),
     countSubcollection(sourceUid, "notifications"),
     countSubcollection(sourceUid, "lottery_tickets"),
+    countWhere("center_tree_orders", "buyer_uid", sourceUid),
+    countWhere("center_donations", "buyer_uid", sourceUid),
+    countWhere("installment_cancel_requests", "user_id", sourceUid),
     db.collection("ledger_transactions").doc(sourceUid).get(),
     db.collection("investments").doc(sourceUid).get(),
   ]);
@@ -263,6 +272,9 @@ export async function buildPreview(
       lottery_tickets,
       campaign_tickets,
       campaign_participants: 0, // counted during execute (enumerated)
+      center_tree_orders,
+      center_donations,
+      installment_cancel_requests,
       ledger_entries: ledgerEntries,
       investment: invSnap.exists,
     },
@@ -381,6 +393,18 @@ export async function executeTransfer(
     targetSnap
   );
   counts.pending_invoices = await reassign("pending_invoices", "userId", null, null);
+  // Tree plantings and Морин хуур donations: the uid moves, but buyer_name /
+  // engrave_name stay — they are the name the donation was made (and engraved)
+  // under, not a live pointer to the account.
+  counts.center_tree_orders = await reassign("center_tree_orders", "buyer_uid", null, null);
+  counts.center_donations = await reassign("center_donations", "buyer_uid", null, null);
+  // Pending cancel requests must follow the purchases they reference.
+  counts.installment_cancel_requests = await reassign(
+    "installment_cancel_requests",
+    "user_id",
+    null,
+    null
+  );
   try {
     counts.security_logs = await reassign("security_logs", "user_id", null, null);
   } catch (e) {
@@ -474,6 +498,47 @@ export async function executeTransfer(
   } catch (e) {
     console.error("user-transfer: campaign participants move failed", e);
     skipped.push(`campaign_participants (${e instanceof Error ? e.message : "алдаа"})`);
+  }
+
+  // center_campaign donors: the per-user aggregate that powers "таны тарьсан
+  // мод" in the app. Numeric tallies add up; the target's engraving identity
+  // wins when both exist, since that account lives on.
+  try {
+    const dSrc = db
+      .collection("center_campaign")
+      .doc("main")
+      .collection("donors")
+      .doc(sourceUid);
+    const dSrcSnap = await dSrc.get();
+    if (dSrcSnap.exists) {
+      const dTgt = db
+        .collection("center_campaign")
+        .doc("main")
+        .collection("donors")
+        .doc(targetUid);
+      const dTgtSnap = await dTgt.get();
+      const sD = dSrcSnap.data() ?? {};
+      if (dTgtSnap.exists) {
+        const tD = dTgtSnap.data() ?? {};
+        bw.set(
+          dTgt,
+          {
+            amount: round6(num(tD.amount) + num(sD.amount)),
+            count: num(tD.count) + num(sD.count),
+            tree_count: num(tD.tree_count) + num(sD.tree_count),
+            updated_at: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } else {
+        bw.set(dTgt, sD);
+      }
+      bw.delete(dSrc);
+      counts.center_donor_merged = 1;
+    }
+  } catch (e) {
+    console.error("user-transfer: center donor merge failed", e);
+    skipped.push(`center_donor (${e instanceof Error ? e.message : "алдаа"})`);
   }
 
   await bw.close();
