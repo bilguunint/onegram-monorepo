@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:onegrgold/elements/gold_waves_background.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
@@ -311,62 +312,72 @@ class _HomeScreenState extends State<HomeScreen> {
                                   border: Border.all(
                                       width: 0.5,
                                       color: CustomColors.darkContainerColor),
-                                  image: const DecorationImage(
-                                      fit: BoxFit.cover,
-                                      image: AssetImage(
-                                          "assets/images/backgrounds/background-1.jpg")),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 16.0,
-                                              right: 16.0,
-                                              top: 16.0,
-                                              bottom: 16.0),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(18.0),
+                                  child: Stack(
+                                    children: [
+                                      const Positioned.fill(
+                                          child: GoldWavesBackground()),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                tr('home.my_valuables'),
-                                                style: const TextStyle(
-                                                    fontFamily: "InterBold",
-                                                    shadows: <Shadow>[
-                                                      Shadow(
-                                                        offset:
-                                                            Offset(1.0, 1.0),
-                                                        blurRadius: 3.0,
-                                                        color: Color.fromARGB(
-                                                            255, 0, 0, 0),
-                                                      ),
-                                                      Shadow(
-                                                        offset:
-                                                            Offset(2.0, 2.0),
-                                                        blurRadius: 8.0,
-                                                        color: Color.fromARGB(
-                                                            255, 0, 0, 0),
-                                                      ),
-                                                    ],
-                                                    fontSize: 14.0,
-                                                    color: Colors.white),
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    left: 16.0,
+                                                    right: 16.0,
+                                                    top: 16.0,
+                                                    bottom: 16.0),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      tr('home.my_valuables'),
+                                                      style: const TextStyle(
+                                                          fontFamily:
+                                                              "InterBold",
+                                                          shadows: <Shadow>[
+                                                            Shadow(
+                                                              offset: Offset(
+                                                                  1.0, 1.0),
+                                                              blurRadius: 3.0,
+                                                              color: Color
+                                                                  .fromARGB(255,
+                                                                      0, 0, 0),
+                                                            ),
+                                                            Shadow(
+                                                              offset: Offset(
+                                                                  2.0, 2.0),
+                                                              blurRadius: 8.0,
+                                                              color: Color
+                                                                  .fromARGB(255,
+                                                                      0, 0, 0),
+                                                            ),
+                                                          ],
+                                                          fontSize: 14.0,
+                                                          color: Colors.white),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
+                                              BalanceView(
+                                                uid: widget.uid,
+                                              )
                                             ],
                                           ),
-                                        ),
-                                        BalanceView(
-                                          uid: widget.uid,
-                                        )
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ), /* 
+                              ), /*
                           SizedBox(
                             height: 180.0,
                             width: MediaQuery.of(context).size.width - 40.0,
