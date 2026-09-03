@@ -14,18 +14,18 @@ float hash(vec2 p) {
 
 // Далайн долгион: 4 давхар синус (далайц, чиглэл, хурд)
 float waveH(vec2 p, float t) {
-    return 0.34 * sin(1.00 * p.x + 0.60 * p.y + 0.50 * t)
-         + 0.26 * sin(0.44 * p.x - 0.90 * p.y + 0.38 * t)
-         + 0.12 * sin(2.00 * p.x + 1.60 * p.y + 0.70 * t)
-         + 0.07 * sin(0.20 * p.x + 3.40 * p.y - 0.55 * t);
+    return 0.11 * sin(1.00 * p.x + 0.60 * p.y + 0.50 * t)
+         + 0.08 * sin(0.44 * p.x - 0.90 * p.y + 0.38 * t)
+         + 0.04 * sin(2.00 * p.x + 1.60 * p.y + 0.70 * t)
+         + 0.02 * sin(0.20 * p.x + 3.40 * p.y - 0.55 * t);
 }
 
 vec2 waveG(vec2 p, float t) {
     vec2 g = vec2(0.0);
-    g += 0.34 * cos(1.00 * p.x + 0.60 * p.y + 0.50 * t) * vec2(1.00, 0.60);
-    g += 0.26 * cos(0.44 * p.x - 0.90 * p.y + 0.38 * t) * vec2(0.44, -0.90);
-    g += 0.12 * cos(2.00 * p.x + 1.60 * p.y + 0.70 * t) * vec2(2.00, 1.60);
-    g += 0.07 * cos(0.20 * p.x + 3.40 * p.y - 0.55 * t) * vec2(0.20, 3.40);
+    g += 0.11 * cos(1.00 * p.x + 0.60 * p.y + 0.50 * t) * vec2(1.00, 0.60);
+    g += 0.08 * cos(0.44 * p.x - 0.90 * p.y + 0.38 * t) * vec2(0.44, -0.90);
+    g += 0.04 * cos(2.00 * p.x + 1.60 * p.y + 0.70 * t) * vec2(2.00, 1.60);
+    g += 0.02 * cos(0.20 * p.x + 3.40 * p.y - 0.55 * t) * vec2(0.20, 3.40);
     return g;
 }
 
@@ -62,25 +62,29 @@ void main() {
     att = 1.0 / (1.0 + dist * 0.02);
     vec2 grad = waveG(pos, t) * att;
 
-    // Дэлхийн координат дахь хавтангийн тор
-    float tile = 0.20;
+    // Дөрвөлжин хавтангийн тор (дэлхийн координатад)
+    vec2 tile = vec2(0.20, 0.20);
     vec2 g = pos / tile;
     vec2 cell = floor(g);
     vec2 f = fract(g) - 0.5;
-    vec2 d = abs(f);
-    float edge = max(d.x, d.y);
+    vec2 distToEdge = tile * 0.5 - abs(f) * tile;
+    float dEdge = min(distToEdge.x, distToEdge.y);
 
-    // Пикселийн мөр алслах ба налуу өнцгөөр томорно — алсын хавтан зөөлөрч бүдгэрнэ
-    float aa = clamp(dist * 1.6 * fov / (uSize.y * tile) / max(-rd.y, 0.12),
-                     0.004, 0.45);
-    float gridVis = smoothstep(0.60, 0.20, aa);
+    // Пикселийн мөр дэлхийн нэгжээр — алсын хавтан зөөлөрч бүдгэрнэ
+    float fpw = clamp(dist * 1.6 * fov / uSize.y / max(-rd.y, 0.12),
+                      0.0008, 0.09);
+    float gridVis = smoothstep(0.60, 0.20, fpw / tile.y);
 
-    float gapW = 0.045;
-    float bevelStart = 0.36;
-    float gapMask = smoothstep(0.5 - gapW - aa, 0.5 - gapW + aa, edge) * gridVis;
-    float bevelT = smoothstep(bevelStart, 0.5 - gapW, edge) * gridVis;
+    // Завсар ба налуу ирмэгийн өргөн дэлхийн нэгжээр (бүх талдаа тэнцүү)
+    float gapPhys = 0.009;
+    float bevelPhys = 0.020;
+    float gapMask =
+        (1.0 - smoothstep(gapPhys - fpw, gapPhys + fpw, dEdge)) * gridVis;
+    float bevelT =
+        (1.0 - smoothstep(gapPhys, gapPhys + bevelPhys, dEdge)) * gridVis;
 
-    vec2 bevelDir = (d.x > d.y) ? vec2(sign(f.x), 0.0) : vec2(0.0, sign(f.y));
+    vec2 bevelDir = (distToEdge.x < distToEdge.y) ? vec2(sign(f.x), 0.0)
+                                                  : vec2(0.0, sign(f.y));
     vec2 jitter = (vec2(hash(cell), hash(cell + 57.0)) - 0.5) * 0.10 * gridVis;
 
     // Дэлхийн координат дахь normal (y дээшээ)
@@ -101,7 +105,7 @@ void main() {
 
     // Долгионы хөндийд сүүдэрлэж, оройд нь гийнэ
     float hgt2 = waveH(pos, t) * att;
-    float ao = 0.44 + 0.56 * smoothstep(-1.3, 1.3, hgt2);
+    float ao = 0.44 + 0.56 * smoothstep(-0.45, 0.45, hgt2);
     float tileVar = 0.94 + 0.12 * hash(cell + 13.0) * gridVis;
 
     float L = (0.055 + diff * 0.66 + specBroad * 0.90 + fres * 0.16) * ao * tileVar
