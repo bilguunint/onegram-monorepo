@@ -20,10 +20,10 @@ class CustomColors {
   static Color textGrey = const Color(0xFF99A0B0);
   static Color lightBackground = const Color(0xFFf8f8f8);
   static Color blue = const Color(0xFF027BCE);
-  static Color bottomDarkBack = const Color(0xFF121212);
-  static Color inputDarkColor = const Color(0xFF353539);
+  static Color bottomDarkBack = const Color(0xFF1A1626);
+  static Color inputDarkColor = const Color(0xFF2A2538);
   static Color buttonBackground = const Color(0xFF121212);
-  static Color scaffoldDarkBack = const Color(0xFF1c1c1e);
+  static Color scaffoldDarkBack = const Color(0xFF14111F);
   static Color backGrey = const Color(0xFFf6f6f6);
   static Color loginGradientStart = const Color.fromARGB(255, 91, 67, 196);
   static Color loginGradientEnd = const Color(0xFF59499E);
@@ -34,7 +34,19 @@ class CustomColors {
   static Color titleColor = const Color(0xFF061857);
   static Color orange = const Color(0xFFe67e22);
   static Color darkBackground = const Color(0xFF333333);
-  static Color darkContainerColor = const Color(0xFF161618);
+  static Color darkContainerColor = const Color(0xFF1E1A2B);
+
+  // ---- Design system: Radianpay-маягийн гүн ягаан-хар dark + алтан шар accent ----
+  static Color accent = const Color(0xFFF6B800);
+  static Color accentSoft = const Color(0x26F6B800);
+  static Color appBackground = const Color(0xFF14111F);
+  static Color surface = const Color(0xFF1E1A2B);
+  static Color surfaceAlt = const Color(0xFF2A2538);
+  static Color surfaceBorder = const Color(0x12FFFFFF);
+  static Color textSecondary = const Color(0xFF9A97A8);
+  static Color textTertiary = const Color(0xFF6B6879);
+  static Color positive = const Color(0xFF34C77B);
+  static Color negative = const Color(0xFFF0524D);
 
   static LinearGradient mainGradient = const LinearGradient(
       colors: [

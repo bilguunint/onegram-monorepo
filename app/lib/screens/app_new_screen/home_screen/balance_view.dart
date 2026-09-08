@@ -1,18 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onegrgold/elements/gold_card_background.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
-import 'package:onegrgold/style/colors.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:onegrgold/repositories/user_repository.dart';
-import 'package:onegrgold/screens/app_new_screen/main_screen/make_order_screen/make_order_screen.dart';
-import 'package:onegrgold/bloc/send_gift/send_gift_bloc.dart';
-import 'package:onegrgold/screens/app_new_screen/main_screen/send_gift_screen/send_gift_screen.dart';
-import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_bloc.dart';
-import 'package:onegrgold/screens/app_new_screen/main_screen/make_withdraw_screen/make_withdraw_screen.dart';
+import 'package:onegrgold/data/gold_history.dart';
 
+/// Алтан картын агуулга: хуримтлалын дүн, төгрөгийн үнэ цэнэ ба өөрчлөлт,
+/// доод хэсэгт алтны ханшийн түүхийн муруй.
 class BalanceView extends StatefulWidget {
   const BalanceView({super.key, required this.uid});
   final String uid;
@@ -21,14 +16,23 @@ class BalanceView extends StatefulWidget {
   State<BalanceView> createState() => _BalanceViewState();
 }
 
-class _BalanceViewState extends State<BalanceView> {
+class _BalanceViewState extends State<BalanceView>
+    with AutomaticKeepAliveClientMixin {
   final currencyFormatter = NumberFormat();
-  final Shader linearGradient = CustomColors.mainGradient
-      .createShader(const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0));
-  final Shader linearSilverGradient = CustomColors.mainSilverGradient
-      .createShader(const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0));
+
+  // ListView-д гүйлгэхэд карт устгагдаж дахин үүсэхээс сэргийлнэ
+  @override
+  bool get wantKeepAlive => true;
+
+  // Таб солиход шинэ instance шууд өмнөх өгөгдлөө харуулна
+  static UserModel? _lastUser;
+  // Дэлхийн алтны бүх цаг үеийн муруй — нэг удаа тооцоод дахин ашиглана
+  static final List<Offset> _chartPoints = goldHistoryPoints();
+  static final List<MapEntry<String, double>> _chartMarkers = goldYearMarkers();
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -36,297 +40,54 @@ class _BalanceViewState extends State<BalanceView> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-          return Center(
-            child: Text(
-              tr('home.balance_load_error'),
-              style: const TextStyle(color: Colors.white),
-            ),
+          final cachedUser = _lastUser;
+          if (cachedUser != null) {
+            return _buildCard(context, cachedUser);
+          }
+          return const SizedBox(
+            height: 210.0,
+            child: Stack(children: [
+              Positioned.fill(child: GoldCardBackground()),
+              Center(child: CircularProgressIndicator(color: Colors.white)),
+            ]),
           );
         }
-
+        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          return SizedBox(
+            height: 210.0,
+            child: Stack(children: [
+              const Positioned.fill(child: GoldCardBackground()),
+              Center(
+                child: Text(tr('home.balance_load_error'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            ]),
+          );
+        }
         final userData = snapshot.data!.data() as Map<String, dynamic>;
         final userModel = UserModel.fromMap(widget.uid, userData);
-
-        return _buildBalanceView(context, userModel);
+        _lastUser = userModel;
+        return _buildCard(context, userModel);
       },
     );
   }
 
-  Widget _buildBalanceView(BuildContext context, UserModel userModel) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        tr('home.gold_label'),
-                        style: const TextStyle(shadows: <Shadow>[
-                          Shadow(
-                            offset: Offset(1.0, 1.0),
-                            blurRadius: 3.0,
-                            color: Color.fromARGB(255, 0, 0, 0),
-                          ),
-                          Shadow(
-                            offset: Offset(2.0, 2.0),
-                            blurRadius: 8.0,
-                            color: Color.fromARGB(255, 0, 0, 0),
-                          ),
-                        ], fontSize: 12.0, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 2.0,
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        tr('home.grams_short',
-                            {'quantity': userModel.balance.gold}),
-                        style: TextStyle(
-                            fontFamily: "InterBold",
-                            fontSize: 18.0,
-                            shadows: <Shadow>[
-                              Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 3.0,
-                                color: Color.fromARGB(255, 0, 0, 0),
-                              ),
-                              const Shadow(
-                                offset: Offset(2.0, 2.0),
-                                blurRadius: 8.0,
-                                color: Color.fromARGB(255, 0, 0, 0),
-                              ),
-                            ],
-                            fontWeight: FontWeight.bold,
-                            foreground: Paint()..shader = linearGradient),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 8.0,
-                  ),
-                  Text(
-                    tr('home.silver_label'),
-                    style: const TextStyle(
-                        fontSize: 12.0,
-                        shadows: <Shadow>[
-                          Shadow(
-                            offset: Offset(1.0, 1.0),
-                            blurRadius: 3.0,
-                            color: Color.fromARGB(255, 0, 0, 0),
-                          ),
-                          Shadow(
-                            offset: Offset(2.0, 2.0),
-                            blurRadius: 8.0,
-                            color: Color.fromARGB(255, 0, 0, 0),
-                          ),
-                        ],
-                        color: Colors.white),
-                  ),
-                  const SizedBox(
-                    height: 2.0,
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        tr('home.lan_short', {
-                          'quantity': (userModel.balance.silver / 37.5)
-                              .toStringAsFixed(2)
-                        }),
-                        style: TextStyle(
-                            fontFamily: "InterBold",
-                            fontSize: 18.0,
-                            shadows: <Shadow>[
-                              const Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 3.0,
-                                color: Color.fromARGB(255, 0, 0, 0),
-                              ),
-                              const Shadow(
-                                offset: Offset(2.0, 2.0),
-                                blurRadius: 8.0,
-                                color: Color.fromARGB(255, 0, 0, 0),
-                              ),
-                            ],
-                            fontWeight: FontWeight.bold,
-                            foreground: Paint()..shader = linearSilverGradient),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 32.0),
-                child: SizedBox(
-                    width: 120.0,
-                    child: Image.asset("assets/images/golden-logo.png")),
-              ),
-            ],
+  Widget _buildCard(BuildContext context, UserModel user) {
+    return SizedBox(
+      height: 210.0,
+      child: Stack(
+        children: [
+          // Алтан дэвсгэр — үлдэгдлийг картан дээр сийлж харуулна
+          Positioned.fill(
+            child: GoldCardBackground(
+              engraveValue: '${user.balance.gold}',
+              engraveUnit: tr('home.grams_unit'),
+              chartPoints: _chartPoints,
+              chartMarkers: _chartMarkers,
+            ),
           ),
-        ),
-        const Padding(
-          padding: EdgeInsets.only(
-              left: 0.0, top: 16.0, right: 0.0, bottom: 0.0),
-        ),
-        Container(
-          decoration: BoxDecoration(
-              border: Border(
-                  top: BorderSide(
-                      width: 1.0, color: CustomColors.mainColor)),
-              borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16.0),
-                  bottomRight: Radius.circular(16.0)),
-              color: CustomColors.darkContainerColor),
-          child: Row(
-            children: [
-              Expanded(
-                  child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MakeOrderScreen(
-                              userRepository: context.read<UserRepository>(),
-                              uid: userModel.uid,
-                              metalId: 1, // Gold by default
-                            ),
-                          ),
-                        );
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 2.0),
-                            child: SvgPicture.asset(
-                              "assets/icons/gold-bar-active.svg",
-                              color:  CustomColors.mainColor,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 8.0,
-                          ),
-                          Text(
-                            tr('home.action_order'),
-                            style: TextStyle(
-                                shadows: <Shadow>[
-                                  Shadow(
-                                    offset: const Offset(1.0, 1.0),
-                                    blurRadius: 2.0,
-                                    color: CustomColors.mainColor
-                                        .withOpacity(0.3),
-                                  ),
-                                ],
-                                color: CustomColors.mainColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12.0),
-                          )
-                        ],
-                      ))),
-              Container(
-                height: 20.0,
-                width: 1.0,
-                color: Colors.white,
-              ),
-              Expanded(
-                  child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider(
-                              create: (_) => SendGiftBloc(
-                                userRepository: context.read<UserRepository>(),
-                              ),
-                              child: SendGiftScreen(userModel: userModel),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 2.0),
-                            child: SvgPicture.asset(
-                              "assets/icons/gift.svg",
-                              color:  CustomColors.mainSilver,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 8.0,
-                          ),
-                           Text(
-                            tr('home.action_gift'),
-                            style: TextStyle(
-                                color:  CustomColors.mainSilver,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12.0),
-                          )
-                        ],
-                      ))),
-                      Container(
-                height: 20.0,
-                width: 1.0,
-                color: Colors.white,
-              ),
-              // Withdraw Request Button
-              
-              Expanded(
-                  child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider(
-                              create: (_) => MakeWithdrawRequestBloc(),
-                              child: MakeWithdrawScreen(userModel: userModel),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 2.0),
-                            child: SvgPicture.asset(
-                              
-                              "assets/icons/hand-gold.svg",
-                              height: 23.0,
-                              color:  CustomColors.mainSilver,
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 2.0,
-                          ),
-                           Text(
-                            tr('home.action_withdraw'),
-                            style: TextStyle(
-                                color:  CustomColors.mainSilver,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12.0),
-                          )
-                        ],
-                      ))),
-            ],
-          ),
-        )
-      ],
+        ],
+      ),
     );
   }
 }

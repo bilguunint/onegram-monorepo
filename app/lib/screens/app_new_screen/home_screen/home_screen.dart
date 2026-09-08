@@ -5,12 +5,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:onegrgold/elements/gold_waves_background.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/balance_view.dart';
+import 'package:onegrgold/screens/app_new_screen/home_screen/home_action_bar.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_banner_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/gold_rate_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_widget.dart';
@@ -22,6 +23,7 @@ import 'package:onegrgold/screens/app_new_screen/home_screen/safebox_main_widget
 import 'package:onegrgold/screens/app_new_screen/home_screen/update_registration_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/gift_screen/gift_screen.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/help_screen.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,6 +44,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _hasShownRegistrationDialog = false;
+  // build бүрт дахин татахгүй; refresh хийхэд л шинэчилнэ
+  late Future<UserModel?> _userFuture = fetchUser();
 
   void _showRegistrationNumberDialog(BuildContext context, UserModel user) {
     showDialog(
@@ -159,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return RepositoryProvider.value(
       value: widget.userRepository,
       child: FutureBuilder<UserModel?>(
-        future: fetchUser(),
+        future: _userFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CupertinoActivityIndicator());
@@ -183,20 +187,19 @@ class _HomeScreenState extends State<HomeScreen> {
           });
 
           return Scaffold(
+            backgroundColor: CustomColors.appBackground,
             appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(45.0),
+              preferredSize: const Size.fromHeight(64.0),
               child: AppBar(
                 centerTitle: false,
                 elevation: 0.0,
+                backgroundColor: CustomColors.appBackground,
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "${greeting()} 👋",
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white70),
+                      style: AppText.caption,
                     ),
                     const SizedBox(
                       height: 4.0,
@@ -205,10 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       user.firstName.isNotEmpty && user.lastName.isNotEmpty
                           ? "${user.lastName.substring(0, 1)}.${user.firstName}"
                           : "-",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.0,
-                          color: Colors.white),
+                      style: AppText.title,
                     )
                   ],
                 ),
@@ -282,10 +282,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             body: RefreshIndicator(
-              backgroundColor: CustomColors.darkContainerColor,
-              color: Colors.white,
-              onRefresh: () {
-                return fetchUser();
+              backgroundColor: CustomColors.surface,
+              color: CustomColors.accent,
+              onRefresh: () async {
+                final f = fetchUser();
+                setState(() => _userFuture = f);
+                await f;
               },
               child: ListView(
                 children: [
@@ -296,29 +298,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.only(
                             left: 16.0, right: 16.0, top: 16.0, bottom: 16.0),
                         child: Container(
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20.0),
                             boxShadow: [
+                              // Картын доорх гүн сүүдэр — биетэй харагдуулна
                               BoxShadow(
-                                  color: Colors.black26,
-                                  offset: Offset(0, 3),
-                                  blurRadius: 6.0)
+                                  color: Colors.black.withOpacity(0.55),
+                                  offset: const Offset(0, 14),
+                                  blurRadius: 28.0,
+                                  spreadRadius: -6.0),
+                              BoxShadow(
+                                  color: CustomColors.accent.withOpacity(0.10),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 18.0),
                             ],
                           ),
                           child: Stack(
                             children: [
                               Container(
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18.0),
+                                  borderRadius: BorderRadius.circular(20.0),
                                   border: Border.all(
-                                      width: 0.5,
-                                      color: CustomColors.darkContainerColor),
+                                      width: 1.0,
+                                      color: const Color(0x66120C02)),
                                 ),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(18.0),
+                                  borderRadius: BorderRadius.circular(20.0),
                                   child: Stack(
                                     children: [
-                                      const Positioned.fill(
-                                          child: GoldWavesBackground()),
                                       Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -327,46 +334,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                    left: 16.0,
-                                                    right: 16.0,
-                                                    top: 16.0,
-                                                    bottom: 16.0),
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      tr('home.my_valuables'),
-                                                      style: const TextStyle(
-                                                          fontFamily:
-                                                              "InterBold",
-                                                          shadows: <Shadow>[
-                                                            Shadow(
-                                                              offset: Offset(
-                                                                  1.0, 1.0),
-                                                              blurRadius: 3.0,
-                                                              color: Color
-                                                                  .fromARGB(255,
-                                                                      0, 0, 0),
-                                                            ),
-                                                            Shadow(
-                                                              offset: Offset(
-                                                                  2.0, 2.0),
-                                                              blurRadius: 8.0,
-                                                              color: Color
-                                                                  .fromARGB(255,
-                                                                      0, 0, 0),
-                                                            ),
-                                                          ],
-                                                          fontSize: 14.0,
-                                                          color: Colors.white),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
                                               BalanceView(
                                                 uid: widget.uid,
                                               )
@@ -446,6 +413,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   // Title for Safebox and News
 
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: HomeActionBar(userModel: user),
+                  ),
+                  const SizedBox(height: 8.0),
                   // Services row. The right slot shows the Морин хуур donation
                   // campaign while active, otherwise the loan service.
                   Row(
@@ -459,17 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   // Сугалаат аян — hidden entirely when no campaign runs.
                   const CampaignBannerWidget(),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        left: 16.0, top: 16.0, bottom: 16.0),
-                    child: Text(
-                      tr('home.todays_rate'),
-                      style: const TextStyle(
-                        fontFamily: "InterBold",
-                        fontSize: 14.0,
-                      ),
-                    ),
-                  ),
+                  AppSectionHeader(title: tr('home.todays_rate')),
                   const Padding(
                     padding: EdgeInsets.only(
                       left: 16.0,
@@ -484,34 +446,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(
                     height: 8.0,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          tr('home.orders'),
-                          style: const TextStyle(
-                            fontFamily: "InterBold",
-                            fontSize: 14.0,
-                          ),
-                        ),
-                        TextButton(
-                            onPressed: () {},
-                            child: Text(
-                              tr('home.see_all'),
-                              style: TextStyle(
-                                  fontSize: 12.0,
-                                  fontFamily: "Inter",
-                                  fontWeight: FontWeight.bold,
-                                  color: CustomColors.mainColor),
-                            ))
-                      ],
-                    ),
+                  AppSectionHeader(
+                    title: tr('home.orders'),
+                    actionLabel: tr('home.see_all'),
+                    onAction: () {},
                   ),
                   const Padding(
-                      padding:
-                          EdgeInsets.only(right: 16.0, left: 16.0, top: 16.0),
+                      padding: EdgeInsets.only(right: 16.0, left: 16.0),
                       child: OrderList())
                 ],
               ),

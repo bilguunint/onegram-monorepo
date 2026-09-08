@@ -2,12 +2,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-import 'package:ionicons/ionicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
+/// Захиалгын түүх — огноогоор бүлэглэсэн flat жагсаалт
+/// (Radianpay-ийн "Transaction history" маяг).
 class OrderList extends StatefulWidget {
   const OrderList({super.key});
 
@@ -17,8 +20,6 @@ class OrderList extends StatefulWidget {
 
 class _OrderListState extends State<OrderList> {
   final currencyFormatter = NumberFormat();
-  var inputFormat = DateFormat('dd/MM/yyyy HH:mm');
-  var outputFormat = DateFormat('MM/dd/yyyy hh:mm a');
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _ordersStream() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -41,11 +42,6 @@ class _OrderListState extends State<OrderList> {
   }
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _ordersStream(),
@@ -54,22 +50,24 @@ class _OrderListState extends State<OrderList> {
           return const CupertinoActivityIndicator();
         }
         if (snapshot.hasError) {
-          print(snapshot.error);
-          return _buildErrorWidget('error');
+          return _buildErrorWidget();
         }
         final docs = snapshot.data?.docs ?? [];
         // Filter: hide payment_status == 'pending'
-        final filtered = docs.where((d) => (d.data()['payment_status']?.toString() ?? '').toLowerCase() != 'pending').toList();
+        final filtered = docs
+            .where((d) =>
+                (d.data()['payment_status']?.toString() ?? '').toLowerCase() !=
+                'pending')
+            .toList();
         if (filtered.isEmpty) {
-          return _buildErrorWidget('empty');
+          return _buildErrorWidget();
         }
-        return _buildHomeWidget(filtered);
+        return _buildHistory(filtered);
       },
     );
   }
 
-  Widget _buildErrorWidget(String error) {
-    print(error);
+  Widget _buildErrorWidget() {
     return Center(
         child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -81,155 +79,173 @@ class _OrderListState extends State<OrderList> {
             child: SvgPicture.asset("assets/icons/no-order-dark.svg")),
         Padding(
           padding: const EdgeInsets.only(top: 16.0),
-          child: Text(
-            tr('home.no_orders'),
-            style: const TextStyle(
-                fontSize: 12.0,
-                color: Colors.white38,
-                fontWeight: FontWeight.bold),
-          ),
+          child: Text(tr('home.no_orders'), style: AppText.caption),
         ),
       ],
     ));
   }
 
-  Widget _buildHomeWidget(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+  Widget _buildHistory(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    final List<Widget> children = [];
+    String? currentGroup;
+
+    for (int i = 0; i < docs.length; i++) {
+      final data = docs[i].data();
+      final DateTime? date = _toDate(data['created_at']);
+      final String group = _dateKey(date);
+
+      if (group != currentGroup) {
+        currentGroup = group;
+        children.add(Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0.0 : 20.0, bottom: 10.0),
+          child: Text(
+            _dateLabel(date),
+            style: TextStyle(
+              fontFamily: AppText.medium,
+              fontSize: 13.0,
+              fontWeight: FontWeight.w500,
+              color: CustomColors.textSecondary,
+            ),
+          ),
+        ));
+      } else {
+        children.add(Container(
+          height: 1.0,
+          margin: const EdgeInsets.symmetric(vertical: 4.0),
+          color: CustomColors.surfaceBorder,
+        ));
+      }
+      children.add(_row(data));
+    }
     return Column(
-      children: List<Widget>.generate(docs.length, (index) {
-        final data = docs[index].data();
-        final amount = _toNum(data['amount']);
-        final quantity = data['quantity'];
-        final prodType = (data['prod_type'] ?? data['type'] ?? '').toString();
-        final adminStatus = (data['admin_status'] ?? '').toString();
-        final paymentStatus = (data['payment_status'] ?? data['status'] ?? '').toString();
-        final createdAt = _formatDate(data['created_at']);
+        crossAxisAlignment: CrossAxisAlignment.start, children: children);
+  }
 
-        // Icon by type
-        final Widget leadingIcon = prodType == 'gift'
-            ? SvgPicture.asset("assets/icons/gift-line.svg", color: Colors.white)
-            : prodType == 'withdraw'
-                ? SvgPicture.asset("assets/icons/cash.svg", color: Colors.white)
-                : SvgPicture.asset("assets/icons/gold-bar.svg", color: Colors.white);
+  Widget _row(Map<String, dynamic> data) {
+    final num amount = _toNum(data['amount']);
+    final dynamic quantity = data['quantity'];
+    final String prodType =
+        (data['prod_type'] ?? data['type'] ?? '').toString();
+    final String adminStatus =
+        (data['admin_status'] ?? '').toString().toLowerCase();
+    final String paymentStatus =
+        (data['payment_status'] ?? data['status'] ?? '')
+            .toString()
+            .toLowerCase();
 
-        // Status mapping per requirement:
-        // - payment_status: success -> show "Хүлээгдэж байна"
-        // - admin_status: success -> show "Амжилттай"
-        // Priority: if admin_status == success -> success; else if payment_status == success -> pending
-        String statusText;
-        Color statusColor;
-        IconData statusIcon;
-        if (adminStatus.toLowerCase() == 'success') {
-          statusText = tr('common.success');
-          statusColor = CustomColors.successGreen;
-          statusIcon = Ionicons.checkmark_circle_outline;
-        } else if (adminStatus.toLowerCase() == 'refund') {
-          statusText = tr('common.cancelled');
-          statusColor = CustomColors.alerRed;
-          statusIcon = Ionicons.close_circle_outline;
-        } else if (paymentStatus.toLowerCase() == 'success') {
-          statusText = tr('common.pending');
-          statusColor = CustomColors.textGrey;
-          statusIcon = Ionicons.time_outline;
-        } else {
-          // fallback
-          statusText = tr('common.pending');
-          statusColor = CustomColors.textGrey;
-          statusIcon = Ionicons.time_outline;
-        }
+    final bool isGift = prodType == 'gift';
+    final bool isWithdraw = prodType == 'withdraw';
+    final bool incoming = !isGift && !isWithdraw;
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Container(
-            padding: const EdgeInsets.all(8.0),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.0),
-                color: CustomColors.darkContainerColor),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // Төрлөөр icon, гарчиг, өнгө
+    final String asset = isGift
+        ? "assets/icons/gift-line.svg"
+        : isWithdraw
+            ? "assets/icons/cash.svg"
+            : "assets/icons/gold-bar.svg";
+    final String title = isGift
+        ? tr('home.order_type_gift')
+        : isWithdraw
+            ? tr('home.order_type_withdraw')
+            : tr('home.order_type_deposit');
+    final Color iconColor = isGift
+        ? const Color(0xFFB48CFF)
+        : isWithdraw
+            ? const Color(0xFF4FC3F7)
+            : CustomColors.accent;
+
+    // Төлөв: admin success -> амжилттай; refund -> цуцлагдсан; payment success -> хүлээгдэж байна
+    String statusText;
+    Color statusColor;
+    if (adminStatus == 'success') {
+      statusText = tr('common.success');
+      statusColor = CustomColors.textSecondary;
+    } else if (adminStatus == 'refund') {
+      statusText = tr('common.cancelled');
+      statusColor = CustomColors.negative;
+    } else {
+      statusText = tr('common.pending');
+      statusColor = paymentStatus == 'success'
+          ? CustomColors.accent
+          : CustomColors.textSecondary;
+    }
+
+    final String grams = tr('home.grams_short', {'quantity': quantity});
+    final String amountText = incoming ? "+ $grams" : "− $grams";
+    final Color amountColor = adminStatus == 'refund'
+        ? CustomColors.textTertiary
+        : incoming
+            ? CustomColors.positive
+            : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          AppIconTile(
+            size: 48.0,
+            child: Padding(
+              padding: const EdgeInsets.all(13.0),
+              child: SvgPicture.asset(asset, color: iconColor),
+            ),
+          ),
+          const SizedBox(width: 14.0),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 50.0,
-                      height: 50.0,
-                      padding: const EdgeInsets.all(14.0),
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.05)),
-                      child: leadingIcon,
-                    ),
-                    const SizedBox(width: 16.0),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "${currencyFormatter.format(amount)}₮",
-                          style: const TextStyle(
-                              fontSize: 12.0, fontFamily: "InterBold"),
-                        ),
-                        const SizedBox(height: 6.0),
-                        Row(
-                          children: [
-                            Icon(statusIcon, color: statusColor, size: 14.0),
-                            const SizedBox(width: 4.0),
-                            Text(
-                              statusText,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10.0,
-                                color: statusColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 4.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        tr('home.grams_short', {'quantity': quantity}),
-                        style: TextStyle(
-                            fontSize: 12.0,
-                            fontFamily: "InterBold",
-                            color: CustomColors.mainColor),
-                      ),
-                      const SizedBox(height: 6.0),
-                      Text(
-                        createdAt,
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 9.0,
-                            color: CustomColors.textGrey),
-                      ),
-                    ],
-                  ),
-                ),
+                Text(title, style: AppText.bodyBold),
+                const SizedBox(height: 3.0),
+                Text(statusText,
+                    style: AppText.caption.copyWith(color: statusColor)),
               ],
             ),
           ),
-        );
-      }),
+          const SizedBox(width: 12.0),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                amountText,
+                style: AppText.bodyBold.copyWith(
+                  color: amountColor,
+                  decoration: adminStatus == 'refund'
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                ),
+              ),
+              const SizedBox(height: 3.0),
+              Text(
+                "${currencyFormatter.format(amount)}₮",
+                style: AppText.caption,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  String _formatDate(dynamic v) {
-    try {
-      if (v is Timestamp) {
-        return DateFormat('yyyy-MM-dd').format(v.toDate());
-      }
-      if (v is String && v.isNotEmpty) {
-        // Try parse ISO or fallback
-        final dt = DateTime.tryParse(v);
-        if (dt != null) {
-          return DateFormat('yyyy-MM-dd').format(dt);
-        }
-      }
-    } catch (_) {}
-    return '';
+  DateTime? _toDate(dynamic v) {
+    if (v is Timestamp) return v.toDate();
+    if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+    return null;
+  }
+
+  String _dateKey(DateTime? d) =>
+      d == null ? '' : DateFormat('yyyy-MM-dd').format(d);
+
+  String _dateLabel(DateTime? d) {
+    if (d == null) return '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    final String short = DateFormat('MM.dd').format(d);
+    if (day == today) return "${tr('home.today')}, $short";
+    if (day == today.subtract(const Duration(days: 1))) {
+      return "${tr('home.yesterday')}, $short";
+    }
+    return DateFormat('yyyy.MM.dd').format(d);
   }
 
   num _toNum(dynamic v) {

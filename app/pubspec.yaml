@@ -51,6 +51,8 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   formz: ^0.7.0
   fl_chart: ^0.68.0
+  sensors_plus: ^6.1.1
+  path_provider: ^2.1.0
   pin_code_text_field: ^1.8.0
   lottie: ^2.4.0
   infinite_scroll_pagination: ^4.0.0
@@ -125,6 +127,7 @@ flutter:
     - assets/images/backgrounds/
   shaders:
     - shaders/gold_waves.frag
+    - shaders/gold_card.frag
 
 
   # To add assets to your application, add an assets section, like this:

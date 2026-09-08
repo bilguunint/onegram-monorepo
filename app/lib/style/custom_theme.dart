@@ -11,13 +11,13 @@ class CustomTheme {
         backgroundColor: Colors.white,
         elevation: 0.5,
         systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarBrightness: Brightness.light, statusBarColor: Colors.white),
+            statusBarBrightness: Brightness.light,
+            statusBarColor: Colors.white),
         titleTextStyle: TextStyle(
             fontFamily: 'Inter',
             color: Colors.black,
             fontSize: 16.0,
             fontWeight: FontWeight.bold),
-        
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
           style: ButtonStyle(
@@ -68,59 +68,72 @@ class CustomTheme {
       primaryColorDark: Colors.white,
       textTheme: ThemeData.dark()
           .textTheme
-          .apply(fontFamily: 'Inter', bodyColor: Colors.white),
+          .apply(fontFamily: 'Rubik', bodyColor: Colors.white),
       primaryTextTheme: ThemeData.dark()
           .textTheme
-          .apply(fontFamily: 'Inter', decorationColor: Colors.white),
+          .apply(fontFamily: 'Rubik', decorationColor: Colors.white),
       appBarTheme: AppBarTheme(
         surfaceTintColor: Colors.transparent,
-        backgroundColor: CustomColors.scaffoldDarkBack,
+        backgroundColor: CustomColors.appBackground,
+        elevation: 0.0,
         titleTextStyle: const TextStyle(
-            fontFamily: 'Inter', fontSize: 14.0, fontWeight: FontWeight.bold),
-        systemOverlayStyle: const SystemUiOverlayStyle(
-            statusBarBrightness: Brightness.dark, statusBarColor: Colors.black),
+            fontFamily: 'RubikBold',
+            fontSize: 16.0,
+            fontWeight: FontWeight.bold,
+            color: Colors.white),
+        systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.dark,
+            statusBarColor: CustomColors.appBackground),
       ),
       buttonTheme: const ButtonThemeData(buttonColor: Colors.white),
       elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ButtonStyle(
-        overlayColor:
-            MaterialStateProperty.all<Color>(Colors.black.withOpacity(0.0)),
-        textStyle: MaterialStateProperty.all(
-            const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-        backgroundColor: MaterialStateProperty.all(Colors.black),
+          style: ElevatedButton.styleFrom(
+        backgroundColor: CustomColors.accent,
+        foregroundColor: Colors.black,
+        elevation: 0.0,
+        minimumSize: const Size.fromHeight(52.0),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
+        textStyle: const TextStyle(
+            fontFamily: 'RubikBold',
+            fontSize: 15.0,
+            fontWeight: FontWeight.w600),
       )),
-      scaffoldBackgroundColor: CustomColors.scaffoldDarkBack,
+      scaffoldBackgroundColor: CustomColors.appBackground,
       splashColor: Colors.black.withOpacity(0.0),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-            foregroundColor: CustomColors.mainColor,
-            textStyle:
-                TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            foregroundColor: CustomColors.accent,
+            textStyle: const TextStyle(
+                fontFamily: 'RubikMedium', fontWeight: FontWeight.w500)),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        fillColor: CustomColors.inputDarkColor,
-        labelStyle: const TextStyle(
-          color: Colors.white,
-        ),
-        suffixIconColor: Colors.white,
+        filled: true,
+        fillColor: CustomColors.surfaceAlt,
+        labelStyle: TextStyle(color: CustomColors.textSecondary),
+        hintStyle: TextStyle(color: CustomColors.textTertiary),
+        prefixIconColor: CustomColors.textSecondary,
+        suffixIconColor: CustomColors.textSecondary,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: CustomColors.inputDarkColor,
-            ),
-            borderRadius: BorderRadius.circular(8.0)),
+            borderSide: BorderSide(color: CustomColors.surfaceBorder),
+            borderRadius: BorderRadius.circular(14.0)),
         focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: CustomColors.textGrey),
-            borderRadius: BorderRadius.circular(8.0)),
+            borderSide: BorderSide(color: CustomColors.accent, width: 1.2),
+            borderRadius: BorderRadius.circular(14.0)),
       ),
+      cardColor: CustomColors.surface,
+      dialogBackgroundColor: CustomColors.surface,
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: CustomColors.bottomDarkBack,
-          selectedItemColor: CustomColors.mainColor,
-          unselectedItemColor: Colors.white70,
+          selectedItemColor: CustomColors.accent,
+          unselectedItemColor: CustomColors.textSecondary,
           selectedIconTheme: const IconThemeData(color: Colors.white),
           unselectedIconTheme: const IconThemeData(color: Colors.white)),
       highlightColor: Colors.transparent,
       primaryColor: Colors.black,
-      dividerColor: Colors.white54,
+      dividerColor: CustomColors.surfaceBorder,
       iconTheme: const IconThemeData(color: Colors.white),
       primaryIconTheme: const IconThemeData(color: Colors.black87));
 }

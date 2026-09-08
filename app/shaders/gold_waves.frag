@@ -63,7 +63,7 @@ void main() {
     vec2 grad = waveG(pos, t) * att;
 
     // Дөрвөлжин хавтангийн тор (дэлхийн координатад)
-    vec2 tile = vec2(0.20, 0.20);
+    vec2 tile = vec2(0.20, 0.30);
     vec2 g = pos / tile;
     vec2 cell = floor(g);
     vec2 f = fract(g) - 0.5;
@@ -108,8 +108,8 @@ void main() {
     float ao = 0.44 + 0.56 * smoothstep(-0.45, 0.45, hgt2);
     float tileVar = 0.94 + 0.12 * hash(cell + 13.0) * gridVis;
 
-    float L = (0.055 + diff * 0.66 + specBroad * 0.90 + fres * 0.16) * ao * tileVar
-            + specTight * 0.95;
+    float L = (0.055 + diff * 0.66 + specBroad * 0.50 + fres * 0.10) * ao * tileVar
+            + specTight * 0.40;
 
     // Алтны өнгөний шат: харанхуй хүрнээс цагаан алт хүртэл
     vec3 cDark = vec3(0.085, 0.048, 0.014);
@@ -119,6 +119,19 @@ void main() {
     vec3 col = mix(cDark, cMid, smoothstep(0.02, 0.62, L));
     col = mix(col, cHi, smoothstep(0.50, 0.90, L));
     col = mix(col, cWhite, smoothstep(0.90, 1.25, L));
+
+    // Жинхэнэ алтны материал: алтан Fresnel + орчны тусгал
+    vec3 goldF0 = vec3(1.00, 0.71, 0.29);
+    vec3 refl = reflect(rd, n);
+    float envBand = smoothstep(-0.1, 0.6, refl.y);
+    float sunRef = pow(clamp(dot(refl, l1), 0.0, 1.0), 6.0);
+    vec3 envCol = mix(vec3(0.10, 0.05, 0.02), vec3(1.00, 0.85, 0.55), envBand)
+                + vec3(1.00, 0.95, 0.80) * sunRef * 0.6;
+    vec3 F = goldF0
+           + (1.0 - goldF0) * pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 5.0);
+    col += F * envCol * 0.32 * ao * ao;
+    col += vec3(1.00, 0.88, 0.60) * specBroad * 0.30 * ao;
+    col += vec3(1.00, 0.97, 0.85) * specTight * 0.55;
 
     // Хавтан хоорондын завсар: гэрэлтэй хэсэгт улбар шар, сүүдэрт хар
     vec3 waveN = normalize(vec3(-grad.x, 1.6, -grad.y));
@@ -130,6 +143,10 @@ void main() {
     // Алслах тусам гүн хүрэл манан руу уусна
     float fog = exp(-max(dist - 2.5, 0.0) * 0.012);
     col = mix(vec3(0.13, 0.075, 0.028), col, fog);
+
+    // Зүүн захаас гол хүртэл уусах сүүдэр
+    float shade = mix(0.22, 1.0, smoothstep(0.0, 0.5, uv.x));
+    col *= shade;
 
     fragColor = vec4(col, 1.0);
 }

@@ -68,6 +68,12 @@ const Map<String, Map<String, String>> kHomeMiscTranslations = {
   },
 
   // ------------------------------------------------------------- balance card
+  'home.portfolio_value': {
+    'mn': 'Миний алтан хуримтлал',
+    'en': 'My gold holdings',
+    'zh': '我的黄金持有',
+    'ru': 'Моё золото'
+  },
   'home.gold_label': {
     'mn': 'Алт:',
     'en': 'Gold:',
@@ -80,6 +86,32 @@ const Map<String, Map<String, String>> kHomeMiscTranslations = {
     'zh': '白银：',
     'ru': 'Серебро:'
   },
+  'home.today': {'mn': 'Өнөөдөр', 'en': 'Today', 'zh': '今天', 'ru': 'Сегодня'},
+  'home.yesterday': {
+    'mn': 'Өчигдөр',
+    'en': 'Yesterday',
+    'zh': '昨天',
+    'ru': 'Вчера'
+  },
+  'home.order_type_deposit': {
+    'mn': 'Алт худалдан авалт',
+    'en': 'Gold purchase',
+    'zh': '购买黄金',
+    'ru': 'Покупка золота'
+  },
+  'home.order_type_gift': {
+    'mn': 'Бэлэг илгээлт',
+    'en': 'Gift sent',
+    'zh': '赠送',
+    'ru': 'Подарок'
+  },
+  'home.order_type_withdraw': {
+    'mn': 'Биетээр авалт',
+    'en': 'Physical withdrawal',
+    'zh': '实物提取',
+    'ru': 'Физический вывод'
+  },
+  'home.grams_unit': {'mn': 'гр', 'en': 'g', 'zh': '克', 'ru': 'г'},
   'home.grams_short': {
     'mn': '{quantity}гр',
     'en': '{quantity}g',
@@ -110,6 +142,7 @@ const Map<String, Map<String, String>> kHomeMiscTranslations = {
     'zh': '实物提取',
     'ru': 'Забрать'
   },
+  'home.action_loan': {'mn': 'Зээл', 'en': 'Loan', 'zh': '贷款', 'ru': 'Кредит'},
   'home.balance_load_error': {
     'mn': 'Мэдээлэл ачаалахад алдаа гарлаа',
     'en': 'Could not load your data',
