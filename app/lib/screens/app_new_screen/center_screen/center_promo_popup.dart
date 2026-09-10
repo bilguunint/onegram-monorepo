@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
-import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart'
-    show kForestGreen, kLeafGreen;
+import 'package:onegrgold/style/app_text.dart';
+import 'package:onegrgold/style/colors.dart';
 
 /// Shows the campaign's promo modal (16:9 image + title + body). Tapping the
 /// backdrop or the ✕ dismisses it. No-op when the popup has no content.
@@ -35,44 +36,50 @@ class _CenterPromoDialog extends StatelessWidget {
       clipBehavior: Clip.none,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1C),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kForestGreen.withOpacity(0.35)),
+          color: CustomColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: CustomColors.surfaceBorder),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 16:9 image (or a green placeholder until one is uploaded), with
+            // 16:9 image (or a muted placeholder until one is uploaded), with
             // the close button floated over its top-right corner.
-            Stack(
-              children: [
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: (image != null && image.isNotEmpty)
-                      ? Image.network(
-                          image,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null ? child : _placeholder(),
-                          errorBuilder: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: _CloseButton(
-                    onTap: () => Navigator.of(context).pop(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: (image != null && image.isNotEmpty)
+                          ? Image.network(
+                              image,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) =>
+                                  progress == null ? child : _placeholder(),
+                              errorBuilder: (_, __, ___) => _placeholder(),
+                            )
+                          : _placeholder(),
+                    ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _CloseButton(
+                      onTap: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (title.isNotEmpty || body.isNotEmpty)
               Flexible(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -80,47 +87,31 @@ class _CenterPromoDialog extends StatelessWidget {
                       if (title.isNotEmpty)
                         Text(
                           title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'InterBold',
-                            fontWeight: FontWeight.w800,
-                            fontSize: 17,
-                            height: 1.25,
-                          ),
+                          style: AppText.sectionTitle
+                              .copyWith(fontSize: 17, height: 1.25),
                         ),
                       if (title.isNotEmpty && body.isNotEmpty)
                         const SizedBox(height: 8),
                       if (body.isNotEmpty)
                         Text(
                           body,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            height: 1.5,
-                          ),
+                          style: AppText.caption
+                              .copyWith(fontSize: 13, height: 1.5),
                         ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            height: 44,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [kForestGreen, kLeafGreen],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              tr('center.plant_tree'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
+                      AppPrimaryButton(
+                        label: tr('center.plant_tree'),
+                        icon: Icons.park_rounded,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      const SizedBox(height: 4),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(
+                            tr('common.close'),
+                            style: AppText.bodyBold
+                                .copyWith(color: CustomColors.textSecondary),
                           ),
                         ),
                       ),
@@ -135,17 +126,8 @@ class _CenterPromoDialog extends StatelessWidget {
   }
 
   Widget _placeholder() {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            kForestGreen.withOpacity(0.55),
-            const Color(0xFF15251A),
-          ],
-        ),
-      ),
+    return Container(
+      color: CustomColors.surfaceAlt,
       child: const Center(
         child: Icon(Icons.forest_rounded, color: Colors.white24, size: 44),
       ),

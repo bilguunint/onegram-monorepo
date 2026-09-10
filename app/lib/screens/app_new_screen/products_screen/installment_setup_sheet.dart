@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// Bottom sheet that lets the user pick how many months to split the payment
@@ -35,268 +37,161 @@ class _InstallmentSetupSheetState extends State<InstallmentSetupSheet> {
     final totalDays = totalDaysFor(_months);
     final daily = dailyAmount(p.price, _months);
 
-    return SafeArea(
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1B1B1E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          18,
-          12,
-          18,
-          MediaQuery.of(context).viewInsets.bottom + 18,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
+    return AppSheet(
+      title: tr('purchase.installment_plan_title'),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            p.name,
+            style: AppText.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+
+          // Summary
+          AppCard(
+            color: CustomColors.surfaceAlt,
+            radius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            child: Column(
+              children: [
+                AppInfoRow(
+                  label: tr('purchase.total_price'),
+                  value: formatMNT(p.price),
+                ),
+                AppInfoRow(
+                  label: tr('purchase.selected_term'),
+                  value: tr('purchase.months_days',
+                      {'months': _months, 'days': totalDays}),
+                ),
+                const AppDivider(),
+                AppInfoRow(
+                  label: tr('purchase.daily'),
+                  value: formatMNT(daily),
+                  valueColor: CustomColors.accent,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          Text(tr('purchase.select_months'), style: AppText.sectionTitle),
+          const SizedBox(height: 10),
+          _MonthChips(
+            min: minM,
+            max: maxM,
+            selected: _months,
+            onChanged: (m) => setState(() => _months = m),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Terms of service
+          Text(tr('purchase.terms_title'), style: AppText.sectionTitle),
+          const SizedBox(height: 10),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 160),
+            decoration: BoxDecoration(
+              color: CustomColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CustomColors.surfaceBorder),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                child: Text(
+                  tr('purchase.terms_text'),
+                  style: AppText.caption
+                      .copyWith(color: Colors.white.withOpacity(0.78)),
                 ),
               ),
             ),
-            Text(
-              tr('purchase.installment_plan_title'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              p.name,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 18),
+          ),
 
-            // Summary
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
+          const SizedBox(height: 10),
+          // Acceptance checkbox
+          InkWell(
+            onTap: () => setState(() => _termsAccepted = !_termsAccepted),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _Row(
-                    label: tr('purchase.total_price'),
-                    value: formatMNT(p.price),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: _termsAccepted
+                          ? CustomColors.accent
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: _termsAccepted
+                            ? CustomColors.accent
+                            : CustomColors.textTertiary,
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: _termsAccepted
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 15,
+                            color: Colors.black,
+                          )
+                        : null,
                   ),
-                  const SizedBox(height: 6),
-                  _Row(
-                    label: tr('purchase.selected_term'),
-                    value: tr('purchase.months_days',
-                        {'months': _months, 'days': totalDays}),
-                  ),
-                  const Divider(
-                    height: 18,
-                    color: Colors.white12,
-                  ),
-                  _Row(
-                    label: tr('purchase.daily'),
-                    value: formatMNT(daily),
-                    emphasised: true,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      tr('purchase.terms_accept'),
+                      style: AppText.body.copyWith(fontSize: 13),
+                    ),
                   ),
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 18),
-            Text(
-              tr('purchase.select_months'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _MonthChips(
-              min: minM,
-              max: maxM,
-              selected: _months,
-              onChanged: (m) => setState(() => _months = m),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Terms of service
-            Text(
-              tr('purchase.terms_title'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 160),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
-              ),
-              padding: const EdgeInsets.all(10),
-              child: Scrollbar(
-                child: SingleChildScrollView(
-                  child: Text(
-                    tr('purchase.terms_text'),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      height: 1.5,
-                    ),
-                  ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: AppPrimaryButton(
+                  label: tr('common.cancel'),
+                  outlined: true,
+                  onPressed: () => Navigator.of(context).pop(null),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 10),
-            // Acceptance checkbox
-            InkWell(
-              onTap: () =>
-                  setState(() => _termsAccepted = !_termsAccepted),
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: _termsAccepted
-                            ? CustomColors.mainColor
-                            : Colors.transparent,
-                        border: Border.all(
-                          color: _termsAccepted
-                              ? CustomColors.mainColor
-                              : Colors.white38,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: _termsAccepted
-                          ? Icon(
-                              Icons.check,
-                              size: 14,
-                              color: CustomColors.mainBlack,
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        tr('purchase.terms_accept'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                  ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: AppPrimaryButton(
+                  label: tr('common.confirm'),
+                  onPressed: _termsAccepted
+                      ? () => Navigator.of(context).pop(_months)
+                      : null,
                 ),
               ),
-            ),
-
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(null),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withOpacity(0.25)),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(tr('common.cancel')),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _termsAccepted
-                        ? () => Navigator.of(context).pop(_months)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: CustomColors.mainColor,
-                      foregroundColor: CustomColors.mainBlack,
-                      disabledBackgroundColor:
-                          CustomColors.mainColor.withOpacity(0.25),
-                      disabledForegroundColor: Colors.white54,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      textStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    child: Text(tr('common.confirm')),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _Row extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool emphasised;
-
-  const _Row({
-    required this.label,
-    required this.value,
-    this.emphasised = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: emphasised ? CustomColors.mainColor : Colors.white,
-            fontSize: emphasised ? 16 : 13,
-            fontWeight:
-                emphasised ? FontWeight.bold : FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
+/// Сарын сонголтын pill-үүд: сонгосон = алтан дэвсгэр хар текст,
+/// бусад = surfaceAlt дээр цагаан текст
 class _MonthChips extends StatelessWidget {
   final int min;
   final int max;
@@ -322,24 +217,18 @@ class _MonthChips extends StatelessWidget {
           onTap: () => onChanged(m),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: active
-                  ? CustomColors.mainColor
-                  : Colors.white.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: active
-                    ? CustomColors.mainColor
-                    : Colors.white.withOpacity(0.12),
-              ),
+              color: active ? CustomColors.accent : CustomColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               tr('purchase.n_months', {'n': m}),
               style: TextStyle(
-                color: active ? CustomColors.mainBlack : Colors.white,
+                fontFamily: active ? AppText.bold : AppText.medium,
+                fontSize: 12.5,
                 fontWeight: active ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12,
+                color: active ? Colors.black : Colors.white,
               ),
             ),
           ),

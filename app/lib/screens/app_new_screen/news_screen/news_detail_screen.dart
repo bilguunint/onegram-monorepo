@@ -1,3 +1,4 @@
+import 'package:onegrgold/style/app_text.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
@@ -48,9 +49,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.news.titleMn, style: TextStyle(
-          fontSize: 12.0
-        ),),
+        title: Text(widget.news.titleMn,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.appBarTitle),
       ),
       body: Container(
         color: CustomColors.darkContainerColor,

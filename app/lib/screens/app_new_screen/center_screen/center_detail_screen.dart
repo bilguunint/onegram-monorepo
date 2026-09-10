@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
@@ -8,8 +9,10 @@ import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart_scree
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_orders_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_my_tree_orders_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_promo_popup.dart';
-import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/center_screen/tree_order_screen.dart'
+    show TreeOrderScreen;
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class CenterDetailScreen extends StatefulWidget {
@@ -51,26 +54,14 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        backgroundColor: CustomColors.darkContainerColor,
-        appBar: AppBar(
-          backgroundColor: CustomColors.darkContainerColor,
-          iconTheme: const IconThemeData(color: Colors.white),
-          title: Text(
-            tr('center.complex_title'),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: 'InterBold',
-              fontSize: 13,
-              color: Colors.white,
-            ),
-          ),
-          centerTitle: false,
+        backgroundColor: CustomColors.appBackground,
+        appBar: appBar(
+          tr('center.complex_title'),
           actions: [
             IconButton(
               tooltip: tr('center.my_planted_trees'),
-              icon:
-                  const Icon(Icons.forest_rounded, color: kLeafGreen, size: 22),
+              icon: const Icon(Icons.forest_rounded,
+                  color: Colors.white, size: 22),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -105,9 +96,7 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
           builder: (context, snapshot) {
             final campaign = snapshot.data;
             if (campaign == null) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white24),
-              );
+              return const _Loading();
             }
             _maybeShowPopup(campaign);
             return NestedScrollView(
@@ -117,31 +106,20 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
                 ),
                 SliverPersistentHeader(
                   pinned: true,
-                  delegate: _TabBarDelegate(
-                    TabBar(
-                      indicatorColor: const Color(0xFFFCD535),
-                      indicatorWeight: 2.5,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white54,
-                      labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-                      labelStyle: const TextStyle(
-                        fontFamily: 'InterBold',
-                        fontSize: 12,
-                      ),
-                      tabs: [
-                        Tab(text: tr('center.plant_tree')),
-                        Tab(text: tr('center.products')),
-                        Tab(text: tr('center.about_project')),
-                        Tab(
-                            text: tr(
-                                'center.top_n', {'count': campaign.topCount})),
+                  delegate: _PillsDelegate(
+                    _TabPills(
+                      labels: [
+                        tr('center.plant_tree'),
+                        tr('center.products'),
+                        tr('center.about_project'),
+                        tr('center.top_n', {'count': campaign.topCount}),
                       ],
                     ),
                   ),
                 ),
               ],
               body: TabBarView(
-                // Tabs switch only by tapping the TabBar — swiping the
+                // Tabs switch only by tapping the pills — swiping the
                 // storefront grids should never change tab.
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
@@ -160,27 +138,94 @@ class _CenterDetailScreenState extends State<CenterDetailScreen> {
 }
 
 // ---------------------------------------------------------------------------
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  _TabBarDelegate(this.tabBar);
+class _Loading extends StatelessWidget {
+  const _Loading();
 
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  Widget build(BuildContext context) {
+    return Center(
+      child: CircularProgressIndicator(
+          color: CustomColors.accent, strokeWidth: 2),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+/// Pinned selection-pill row driving the [DefaultTabController]. Replaces the
+/// underlined TabBar with the design system's segmented pills.
+class _TabPills extends StatelessWidget {
+  static const double height = 52;
+
+  final List<String> labels;
+  const _TabPills({required this.labels});
+
   @override
-  double get maxExtent => tabBar.preferredSize.height;
+  Widget build(BuildContext context) {
+    final controller = DefaultTabController.of(context);
+    final Listenable anim = controller.animation ?? controller;
+    return Container(
+      color: CustomColors.appBackground,
+      height: height,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      child: AnimatedBuilder(
+        animation: anim,
+        builder: (context, _) {
+          final int selected =
+              (controller.animation?.value ?? controller.index.toDouble())
+                  .round();
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: labels.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final bool sel = i == selected;
+              return GestureDetector(
+                onTap: () => controller.animateTo(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: sel ? CustomColors.accent : CustomColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    labels[i],
+                    style: TextStyle(
+                      fontFamily: sel ? AppText.bold : AppText.medium,
+                      fontSize: 12.5,
+                      fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                      color: sel ? Colors.black : Colors.white,
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PillsDelegate extends SliverPersistentHeaderDelegate {
+  final _TabPills pills;
+  _PillsDelegate(this.pills);
+
+  @override
+  double get minExtent => _TabPills.height;
+  @override
+  double get maxExtent => _TabPills.height;
 
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: CustomColors.darkContainerColor,
-      child: tabBar,
-    );
+    return pills;
   }
 
   @override
-  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) =>
-      tabBar != oldDelegate.tabBar;
+  bool shouldRebuild(covariant _PillsDelegate oldDelegate) =>
+      pills.labels != oldDelegate.pills.labels;
 }
 
 // ---------------------------------------------------------------------------
@@ -194,38 +239,44 @@ class _Header extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 21:9 header banner with the user's donation stat overlaid.
-        AspectRatio(
-          aspectRatio: 21 / 9,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _banner(),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.15),
-                        Colors.black.withOpacity(0.25),
-                        Colors.black.withOpacity(0.82),
-                      ],
-                      stops: const [0.0, 0.45, 1.0],
+        // 21:9 hero banner with the user's donation stat overlaid.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AspectRatio(
+              aspectRatio: 21 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _banner(),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.15),
+                            Colors.black.withOpacity(0.25),
+                            Colors.black.withOpacity(0.82),
+                          ],
+                          stops: const [0.0, 0.45, 1.0],
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  if (stat != null) _statOverlay(stat!),
+                ],
               ),
-              if (stat != null) _statOverlay(stat!),
-            ],
+            ),
           ),
         ),
         // Below-banner strip swaps with the active tab: the "Мод тарих" tab
-        // gets a green planting panel, every other tab shows the fundraising
-        // progress. Scrolls away with the header.
+        // gets a planting banner, every other tab shows the fundraising
+        // note. Scrolls away with the header.
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: _TabAwareBody(
             treeInfo: _treeInfo(),
             progress: _campaignProgress(),
@@ -235,71 +286,28 @@ class _Header extends StatelessWidget {
     );
   }
 
-  /// Fundraising progress — shown on every tab except "Мод тарих".
+  /// Fundraising note — shown on every tab except "Мод тарих".
   /// Campaign totals, progress bar and supporter counts are intentionally not
   /// shown — only the supporting message remains.
   Widget _campaignProgress() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: CustomColors.mainColor.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: CustomColors.mainColor.withOpacity(0.25)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.favorite_rounded,
-                  size: 14, color: CustomColors.mainColor),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  tr('center.purchase_supports_note'),
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 11.5, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return AppBanner(
+      icon: Icons.favorite_rounded,
+      text: tr('center.purchase_supports_note'),
     );
   }
 
-  /// Green planting panel — shown on the "Мод тарих" tab. Tree/participant
+  /// Planting note — shown on the "Мод тарих" tab. Tree/participant
   /// counts are intentionally not shown; only the legacy message remains.
   Widget _treeInfo() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: kForestGreen.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: kForestGreen.withOpacity(0.30)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  tr('center.plant_legacy_note'),
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 11.5, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return AppBanner(
+      icon: Icons.eco_rounded,
+      color: CustomColors.positive,
+      text: tr('center.plant_legacy_note'),
     );
   }
 
   Widget _statOverlay(CenterUserHeaderStat s) {
+    const shadows = [Shadow(blurRadius: 6, color: Colors.black87)];
     return Positioned(
       left: 14,
       right: 14,
@@ -316,13 +324,7 @@ class _Header extends StatelessWidget {
                   s.name.isNotEmpty ? s.name : tr('center.user_fallback_name'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'InterBold',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
-                  ),
+                  style: AppText.sectionTitle.copyWith(shadows: shadows),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -332,36 +334,33 @@ class _Header extends StatelessWidget {
                       : tr('center.no_support_yet'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color:
-                        s.hasDonated ? CustomColors.mainColor : Colors.white70,
-                    fontWeight: FontWeight.bold,
+                  style: AppText.bodyBold.copyWith(
                     fontSize: 12.5,
-                    shadows: const [
-                      Shadow(blurRadius: 6, color: Colors.black87)
-                    ],
+                    color: s.hasDonated
+                        ? CustomColors.accent
+                        : CustomColors.textSecondary,
+                    shadows: shadows,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.park_rounded,
                       size: 13,
-                      color: kLeafGreen,
-                      shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
+                      color: CustomColors.positive,
+                      shadows: shadows,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       tr('center.your_trees_count', {'count': s.treeCount}),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: kLeafGreen,
-                        fontWeight: FontWeight.bold,
+                      style: AppText.bodyBold.copyWith(
                         fontSize: 12,
-                        shadows: [Shadow(blurRadius: 6, color: Colors.black87)],
+                        color: CustomColors.positive,
+                        shadows: shadows,
                       ),
                     ),
                   ],
@@ -384,21 +383,16 @@ class _Header extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.45),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CustomColors.mainColor.withOpacity(0.6)),
+        border: Border.all(color: CustomColors.accent.withOpacity(0.6)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.emoji_events_rounded,
-              size: 15, color: CustomColors.mainColor),
+          Icon(Icons.emoji_events_rounded, size: 15, color: CustomColors.accent),
           const SizedBox(width: 5),
           Text(
             '#$rank',
-            style: TextStyle(
-              color: CustomColors.mainColor,
-              fontFamily: 'RubikBold',
-              fontSize: 16,
-            ),
+            style: AppText.sectionTitle.copyWith(color: CustomColors.accent),
           ),
         ],
       ),
@@ -421,10 +415,10 @@ class _Header extends StatelessWidget {
 
   Widget _fallback() {
     return Container(
-      color: const Color(0xFF161922),
-      child: Center(
+      color: CustomColors.surfaceAlt,
+      child: const Center(
         child: Icon(Icons.account_balance_rounded,
-            size: 48, color: CustomColors.mainColor.withOpacity(0.4)),
+            size: 48, color: Colors.white24),
       ),
     );
   }
@@ -494,16 +488,17 @@ class _CartAction extends StatelessWidget {
                     height: 15,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: CustomColors.mainColor,
+                      color: CustomColors.accent,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: CustomColors.darkContainerColor,
+                        color: CustomColors.appBackground,
                         width: 1.5,
                       ),
                     ),
                     child: Text(
                       '$count',
                       style: const TextStyle(
+                        fontFamily: AppText.bold,
                         color: Colors.black,
                         fontSize: 9,
                         height: 1,
@@ -521,6 +516,15 @@ class _CartAction extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+const SliverGridDelegate _storeGrid = SliverGridDelegateWithFixedCrossAxisCount(
+  crossAxisCount: 2,
+  mainAxisSpacing: 12,
+  crossAxisSpacing: 12,
+  childAspectRatio: 0.62,
+);
+
+const EdgeInsets _storePadding = EdgeInsets.fromLTRB(16, 8, 16, 32);
+
 class _ProductsTab extends StatelessWidget {
   final CenterRepository repo;
   const _ProductsTab({required this.repo});
@@ -531,30 +535,158 @@ class _ProductsTab extends StatelessWidget {
       stream: repo.watchActiveProducts(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.white24),
-          );
+          return const _Loading();
         }
         final products = snapshot.data!;
         if (products.isEmpty) {
-          return Center(
-            child: Text(tr('center.no_products'),
-                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          return AppEmptyState(
+            icon: Icons.inventory_2_outlined,
+            title: tr('center.no_products'),
           );
         }
         return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.62,
-          ),
+          padding: _storePadding,
+          gridDelegate: _storeGrid,
           itemCount: products.length,
           itemBuilder: (context, i) =>
               _ProductGridCard(product: products[i], repo: repo),
         );
       },
+    );
+  }
+}
+
+/// Storefront card shell — surface, radius 16, 1px border, rounded image on
+/// top that yields space when the user's font-size setting grows the text.
+class _StoreCard extends StatelessWidget {
+  final String? cover;
+  final Widget placeholderIcon;
+  final Widget body;
+  final VoidCallback? onTap;
+  const _StoreCard({
+    required this.cover,
+    required this.placeholderIcon,
+    required this.body,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: CustomColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(width: 1, color: CustomColors.surfaceBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    color: CustomColors.surfaceAlt,
+                    child: cover != null
+                        ? Image.network(
+                            cover!,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, progress) =>
+                                progress == null
+                                    ? child
+                                    : const Center(
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white24,
+                                          ),
+                                        ),
+                                      ),
+                            errorBuilder: (_, __, ___) =>
+                                Center(child: placeholderIcon),
+                          )
+                        : Center(child: placeholderIcon),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
+                child: body,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small accent CTA at the foot of a storefront card.
+class _CardButton extends StatelessWidget {
+  static const double height = 34;
+
+  final Widget icon;
+  final String label;
+  final VoidCallback onTap;
+  const _CardButton(
+      {required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: CustomColors.accent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            icon,
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.button.copyWith(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Muted "out of stock" pill that takes the CTA's place.
+class _OutOfStockPill extends StatelessWidget {
+  const _OutOfStockPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _CardButton.height,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: CustomColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        tr('center.out_of_stock'),
+        style: AppText.caption.copyWith(color: CustomColors.textTertiary),
+      ),
     );
   }
 }
@@ -566,78 +698,28 @@ class _ProductGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cover = product.coverImage;
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _StoreCard(
+      cover: product.coverImage,
+      placeholderIcon: const Icon(Icons.inventory_2_outlined,
+          color: Colors.white24, size: 34),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Container(
-              color: const Color(0xFF252528),
-              child: cover != null
-                  ? Image.network(
-                      cover,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) =>
-                          progress == null
-                              ? child
-                              : const Center(
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white24,
-                                    ),
-                                  ),
-                                ),
-                      errorBuilder: (_, __, ___) => const Center(
-                        child: Icon(Icons.image_not_supported_outlined,
-                            color: Colors.white24, size: 30),
-                      ),
-                    )
-                  : const Center(
-                      child: Icon(Icons.inventory_2_outlined,
-                          color: Colors.white24, size: 34),
-                    ),
-            ),
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.bodyBold.copyWith(fontSize: 12.5, height: 1.25),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatMNT(product.price),
-                  style: TextStyle(
-                    color: CustomColors.mainColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _AddToCartControl(product: product, repo: repo),
-              ],
-            ),
+          const SizedBox(height: 6),
+          Text(
+            formatMNT(product.price),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.bodyBold,
           ),
+          const SizedBox(height: 8),
+          _AddToCartControl(product: product, repo: repo),
         ],
       ),
     );
@@ -652,18 +734,16 @@ class _AddToCartControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!product.inStock) {
-      return Container(
-        height: 32,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(tr('center.out_of_stock'),
-            style: const TextStyle(color: Colors.white38, fontSize: 11)),
-      );
+      return const _OutOfStockPill();
     }
-    return GestureDetector(
+    return _CardButton(
+      icon: SvgPicture.asset(
+        'assets/icons/shopping-cart-plus.svg',
+        width: 16,
+        height: 16,
+        colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+      ),
+      label: tr('center.buy'),
       onTap: () {
         if (CenterCart.instance.qtyOf(product.id) == 0) {
           CenterCart.instance.add(product);
@@ -674,32 +754,6 @@ class _AddToCartControl extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        height: 32,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: CustomColors.mainColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              'assets/icons/shopping-cart-plus.svg',
-              width: 16,
-              height: 16,
-              colorFilter:
-                  const ColorFilter.mode(Colors.black, BlendMode.srcIn),
-            ),
-            const SizedBox(width: 5),
-            Text(tr('center.buy'),
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -712,33 +766,47 @@ class _AboutTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gallery = campaign.gallery;
+    if (campaign.description.trim().isEmpty && gallery.isEmpty) {
+      return AppEmptyState(
+        icon: Icons.info_outline_rounded,
+        title: tr('center.info_coming_soon'),
+      );
+    }
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         if (campaign.description.trim().isNotEmpty) ...[
-          Text(tr('center.about_project'),
-              style: const TextStyle(
-                  color: Colors.white, fontFamily: 'InterBold', fontSize: 14)),
-          const SizedBox(height: 8),
-          Text(
-            campaign.description,
-            style: const TextStyle(
-                color: Colors.white70, fontSize: 13, height: 1.5),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr('center.about_project'), style: AppText.sectionTitle),
+                const SizedBox(height: 8),
+                Text(
+                  campaign.description,
+                  style: AppText.body.copyWith(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: CustomColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
         ],
         if (gallery.isNotEmpty) ...[
-          Text(tr('center.gallery'),
-              style: const TextStyle(
-                  color: Colors.white, fontFamily: 'InterBold', fontSize: 14)),
-          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 12),
+            child: Text(tr('center.gallery'), style: AppText.sectionTitle),
+          ),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
               childAspectRatio: 1,
             ),
             itemCount: gallery.length,
@@ -753,13 +821,13 @@ class _AboutTab extends StatelessWidget {
                 );
               },
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  gallery[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: const Color(0xFF1F1F22),
-                    child: const Center(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  color: CustomColors.surfaceAlt,
+                  child: Image.network(
+                    gallery[i],
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Center(
                       child: Icon(Icons.broken_image_outlined,
                           color: Colors.white24, size: 22),
                     ),
@@ -769,14 +837,6 @@ class _AboutTab extends StatelessWidget {
             ),
           ),
         ],
-        if (campaign.description.trim().isEmpty && gallery.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 40),
-            child: Center(
-              child: Text(tr('center.info_coming_soon'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            ),
-          ),
       ],
     );
   }
@@ -794,66 +854,40 @@ class _DonorsTab extends StatelessWidget {
       stream: repo.watchTopDonors(limit: topCount),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.white24),
-          );
+          return const _Loading();
         }
         final donors = snapshot.data!;
         return Column(
           children: [
-            _engraveInfo(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: AppBanner(
+                icon: Icons.emoji_events_rounded,
+                text: tr('center.engrave_note', {'count': topCount}),
+              ),
+            ),
             Expanded(
               child: donors.isEmpty
-                  ? Center(
-                      child: Text(tr('center.no_supporters_yet'),
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 13)),
+                  ? AppEmptyState(
+                      icon: Icons.emoji_events_outlined,
+                      title: tr('center.no_supporters_yet'),
                     )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      itemCount: donors.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, i) {
-                        final d = donors[i];
-                        final isTop = i == 0;
-                        return Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: isTop
-                                    ? CustomColors.mainColor
-                                    : Colors.white.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${i + 1}',
-                                style: TextStyle(
-                                  color: isTop ? Colors.black : Colors.white70,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                d.displayName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            // Donated amounts are intentionally not shown on
-                            // the wall — names only.
-                          ],
-                        );
-                      },
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                      children: [
+                        AppCard(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          child: Column(
+                            children: [
+                              for (int i = 0; i < donors.length; i++) ...[
+                                if (i > 0) const AppDivider(vertical: 0),
+                                _DonorRow(rank: i + 1, donor: donors[i]),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ],
@@ -861,29 +895,30 @@ class _DonorsTab extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _engraveInfo() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: CustomColors.mainColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: CustomColors.mainColor.withOpacity(0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.emoji_events_rounded,
-              size: 18, color: CustomColors.mainColor),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              tr('center.engrave_note', {'count': topCount}),
-              style: const TextStyle(
-                  color: Colors.white70, fontSize: 12, height: 1.45),
-            ),
+/// One line on the supporters wall — rank tile + name. Donated amounts are
+/// intentionally not shown — names only.
+class _DonorRow extends StatelessWidget {
+  final int rank;
+  final CenterTopDonor donor;
+  const _DonorRow({required this.rank, required this.donor});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isTop = rank == 1;
+    return AppListRow(
+      title: donor.displayName,
+      leading: AppIconTile(
+        size: 32,
+        color: isTop ? CustomColors.accent : CustomColors.surfaceAlt,
+        child: Text(
+          '$rank',
+          style: AppText.bodyBold.copyWith(
+            fontSize: 12,
+            color: isTop ? Colors.black : CustomColors.textSecondary,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -915,9 +950,9 @@ class _GalleryViewer extends StatelessWidget {
                   fit: BoxFit.contain,
                   loadingBuilder: (context, child, progress) => progress == null
                       ? child
-                      : const Center(
-                          child:
-                              CircularProgressIndicator(color: Colors.white24),
+                      : Center(
+                          child: CircularProgressIndicator(
+                              color: CustomColors.accent, strokeWidth: 2),
                         ),
                   errorBuilder: (_, __, ___) => const Center(
                     child: Icon(Icons.broken_image_outlined,
@@ -949,9 +984,9 @@ class _GalleryViewer extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-/// "Мод тарих" — tree-planting storefront with a forest vibe. Every active
-/// tree is shown in one grid (categories are an admin-side concept only).
-/// A card opens [TreeOrderScreen].
+/// "Мод тарих" — tree-planting storefront. Every active tree is shown in one
+/// grid (categories are an admin-side concept only). A card opens
+/// [TreeOrderScreen].
 class _TreesTab extends StatelessWidget {
   final CenterRepository repo;
   const _TreesTab({required this.repo});
@@ -962,31 +997,25 @@ class _TreesTab extends StatelessWidget {
       stream: repo.watchActiveTrees(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-            child: Text(tr('center.trees_load_failed'),
-                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          return AppEmptyState(
+            icon: Icons.error_outline_rounded,
+            iconColor: CustomColors.negative,
+            title: tr('center.trees_load_failed'),
           );
         }
         if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.white24),
-          );
+          return const _Loading();
         }
         final trees = snapshot.data!;
         if (trees.isEmpty) {
-          return Center(
-            child: Text(tr('center.trees_coming_soon'),
-                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          return AppEmptyState(
+            icon: Icons.forest_rounded,
+            title: tr('center.trees_coming_soon'),
           );
         }
         return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.62,
-          ),
+          padding: _storePadding,
+          gridDelegate: _storeGrid,
           itemCount: trees.length,
           itemBuilder: (context, i) => _TreeGridCard(tree: trees[i]),
         );
@@ -995,115 +1024,61 @@ class _TreesTab extends StatelessWidget {
   }
 }
 
-/// Tree card in the storefront grid — same geometry as the products grid,
-/// tinted green. Tapping anywhere opens the order screen, so the botanical
-/// details stay reachable even when the tree is out of stock.
+/// Tree card in the storefront grid — same geometry as the products grid.
+/// Tapping anywhere opens the order screen, so the botanical details stay
+/// reachable even when the tree is out of stock.
 class _TreeGridCard extends StatelessWidget {
   final CenterTreeItem tree;
   const _TreeGridCard({required this.tree});
 
+  void _open(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TreeOrderScreen(tree: tree)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cover = tree.coverImage;
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => TreeOrderScreen(tree: tree)),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F22),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: kForestGreen.withOpacity(0.35)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Expanded (not a fixed ratio) so the image yields space when the
-            // user's font-size setting grows the text block.
-            Expanded(
-              child: Container(
-                color: const Color(0xFF223022),
-                child: cover != null
-                    ? Image.network(
-                        cover,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) =>
-                            progress == null
-                                ? child
-                                : const Center(
-                                    child: SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white24,
-                                      ),
-                                    ),
-                                  ),
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.forest_rounded,
-                              color: kLeafGreen, size: 34),
-                        ),
-                      )
-                    : const Center(
-                        child: Icon(Icons.forest_rounded,
-                            color: kLeafGreen, size: 34),
-                      ),
+    return _StoreCard(
+      cover: tree.coverImage,
+      onTap: () => _open(context),
+      placeholderIcon:
+          Icon(Icons.forest_rounded, color: CustomColors.positive, size: 34),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tree.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.bodyBold.copyWith(fontSize: 12.5, height: 1.25),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  formatMNT(tree.price),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.bodyBold,
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tree.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          formatMNT(tree.price),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: kLeafGreen,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13.5,
-                          ),
-                        ),
-                      ),
-                      if (tree.stock != null) ...[
-                        const SizedBox(width: 4),
-                        _StockChip(stock: tree.stock!),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _PlantControl(tree: tree),
-                ],
-              ),
-            ),
-          ],
-        ),
+              if (tree.stock != null) ...[
+                const SizedBox(width: 4),
+                _StockChip(stock: tree.stock!),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          _PlantControl(tree: tree),
+        ],
       ),
     );
   }
 }
 
-/// Remaining-stock pill on a tree card. Turns amber once the tree is nearly
+/// Remaining-stock chip on a tree card. Turns gold once the tree is nearly
 /// gone so scarcity is visible before the user reaches the order screen.
 class _StockChip extends StatelessWidget {
   final int stock;
@@ -1113,54 +1088,32 @@ class _StockChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final low = stock <= 20;
     final color = stock <= 0
-        ? Colors.white38
+        ? CustomColors.textTertiary
         : low
-            ? const Color(0xFFFFB300)
-            : Colors.white60;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Text(
-        stock <= 0
-            ? tr('center.out_of_stock')
-            : tr('center.stock_pcs_short', {'stock': stock}),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: color,
-          fontSize: 9.5,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+            ? CustomColors.accent
+            : CustomColors.textSecondary;
+    return AppStatusChip(
+      color: color,
+      label: stock <= 0
+          ? tr('center.out_of_stock')
+          : tr('center.stock_pcs_short', {'stock': stock}),
     );
   }
 }
 
-/// Green "Мод тарих" button shared by the tree cards. Opens the order form.
+/// "Мод тарих" button shared by the tree cards. Opens the order form.
 class _PlantControl extends StatelessWidget {
-  static const double height = 30;
-
   final CenterTreeItem tree;
   const _PlantControl({required this.tree});
 
   @override
   Widget build(BuildContext context) {
     if (!tree.inStock) {
-      return Container(
-        height: height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(tr('center.out_of_stock'),
-            style: const TextStyle(color: Colors.white38, fontSize: 10.5)),
-      );
+      return const _OutOfStockPill();
     }
-    return GestureDetector(
+    return _CardButton(
+      icon: const Icon(Icons.park_rounded, size: 15, color: Colors.black),
+      label: tr('center.plant_tree'),
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -1168,25 +1121,152 @@ class _PlantControl extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        height: height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [kForestGreen, kLeafGreen]),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.park_rounded, size: 14, color: Colors.white),
-            const SizedBox(width: 4),
-            Text(tr('center.plant_tree'),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// "Бусад" дэлгэцээс орох бие даасан дэлгэцүүд — Center-ийн таб бүр тусдаа
+// Scaffold-той. Агуулга нь таб-уудтай яг ижил widget-үүд.
+// ---------------------------------------------------------------------------
+
+/// Бие даасан дэлгэцийн дээд тайлбар banner — хуучин таб-ын толгойд
+/// харагддаг байсан мессежүүд (мод тарих: ногоон өвийн тухай, бусад:
+/// худалдан авалт төслийг дэмждэг тухай).
+Widget _screenNote({required Widget note, required Widget body}) {
+  return Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: note,
+      ),
+      Expanded(child: body),
+    ],
+  );
+}
+
+Widget _plantNote() => AppBanner(
+      icon: Icons.eco_rounded,
+      color: CustomColors.positive,
+      text: tr('center.plant_legacy_note'),
+    );
+
+Widget _supportNote() => AppBanner(
+      icon: Icons.favorite_rounded,
+      text: tr('center.purchase_supports_note'),
+    );
+
+/// Мод тарих — идэвхтэй модны жагсаалт
+class CenterTreesScreen extends StatelessWidget {
+  CenterTreesScreen({super.key, CenterRepository? repo})
+      : repo = repo ?? CenterRepository();
+  final CenterRepository repo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(
+        tr('center.plant_tree'),
+        actions: [
+          IconButton(
+            tooltip: tr('center.my_planted_trees'),
+            icon: const Icon(Icons.forest_rounded,
+                color: Colors.white, size: 22),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => CenterMyTreeOrdersScreen(repo: repo)),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: _screenNote(note: _plantNote(), body: _TreesTab(repo: repo)),
+    );
+  }
+}
+
+/// Бүтээгдэхүүн — цогцолборын дэлгүүр, сагстай
+class CenterProductsScreen extends StatelessWidget {
+  CenterProductsScreen({super.key, CenterRepository? repo})
+      : repo = repo ?? CenterRepository();
+  final CenterRepository repo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(
+        tr('center.products'),
+        actions: [
+          IconButton(
+            tooltip: tr('center.my_orders'),
+            icon: SvgPicture.asset(
+              'assets/icons/document-list-check.svg',
+              width: 22,
+              height: 22,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => CenterMyOrdersScreen(repo: repo)),
+            ),
+          ),
+          _CartAction(repo: repo),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: _screenNote(
+          note: _supportNote(), body: _ProductsTab(repo: repo)),
+    );
+  }
+}
+
+/// Төслийн тухай — танилцуулга, зургийн цомог
+class CenterAboutScreen extends StatelessWidget {
+  CenterAboutScreen({super.key, CenterRepository? repo})
+      : repo = repo ?? CenterRepository();
+  final CenterRepository repo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('center.about_project')),
+      body: StreamBuilder<CenterCampaignInfo>(
+        stream: repo.watchCampaign(),
+        builder: (context, snapshot) {
+          final campaign = snapshot.data;
+          if (campaign == null) return const _Loading();
+          return _AboutTab(campaign: campaign);
+        },
+      ),
+    );
+  }
+}
+
+/// Дэмжигчид — шилдэг дэмжигчдийн самбар
+class CenterSupportersScreen extends StatelessWidget {
+  CenterSupportersScreen({super.key, CenterRepository? repo})
+      : repo = repo ?? CenterRepository();
+  final CenterRepository repo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('more.supporters')),
+      body: StreamBuilder<CenterCampaignInfo>(
+        stream: repo.watchCampaign(),
+        builder: (context, snapshot) {
+          final campaign = snapshot.data;
+          if (campaign == null) return const _Loading();
+          return _screenNote(
+            note: _supportNote(),
+            body: _DonorsTab(repo: repo, topCount: campaign.topCount),
+          );
+        },
       ),
     );
   }

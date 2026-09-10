@@ -78,7 +78,7 @@ class CustomTheme {
         elevation: 0.0,
         titleTextStyle: const TextStyle(
             fontFamily: 'RubikBold',
-            fontSize: 16.0,
+            fontSize: 17.0,
             fontWeight: FontWeight.bold,
             color: Colors.white),
         systemOverlayStyle: SystemUiOverlayStyle(
@@ -124,7 +124,11 @@ class CustomTheme {
             borderRadius: BorderRadius.circular(14.0)),
       ),
       cardColor: CustomColors.surface,
-      dialogBackgroundColor: CustomColors.surface,
+      dialogTheme: DialogThemeData(
+          backgroundColor: CustomColors.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.0))),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: CustomColors.bottomDarkBack,
           selectedItemColor: CustomColors.accent,

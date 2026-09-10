@@ -74,6 +74,44 @@ const Map<String, Map<String, String>> kHomeMiscTranslations = {
     'zh': '我的黄金持有',
     'ru': 'Моё золото'
   },
+  'home.per_gram': {'mn': '/гр', 'en': '/g', 'zh': '/克', 'ru': '/г'},
+  'home.today_change': {
+    'mn': 'Өнөөдөр',
+    'en': 'Today',
+    'zh': '今日',
+    'ru': 'Сегодня'
+  },
+  'home.growth_7d': {
+    'mn': '7 хоног',
+    'en': '7 days',
+    'zh': '7天',
+    'ru': '7 дней'
+  },
+  'home.growth_1m': {
+    'mn': '1 сар',
+    'en': '1 month',
+    'zh': '1个月',
+    'ru': '1 мес'
+  },
+  'home.growth_1y': {'mn': '1 жил', 'en': '1 year', 'zh': '1年', 'ru': '1 год'},
+  'home.growth_3y': {
+    'mn': '3 жил',
+    'en': '3 years',
+    'zh': '3年',
+    'ru': '3 года'
+  },
+  'home.rate_source': {
+    'mn': 'Монголбанкны ханш',
+    'en': 'Bank of Mongolia rate',
+    'zh': '蒙古银行汇率',
+    'ru': 'Курс Монголбанка'
+  },
+  'home.growth_3y_caption': {
+    'mn': '3 жилийн өсөлт',
+    'en': '3-year growth',
+    'zh': '3年增长',
+    'ru': 'Рост за 3 года'
+  },
   'home.gold_label': {
     'mn': 'Алт:',
     'en': 'Gold:',
@@ -184,6 +222,18 @@ const Map<String, Map<String, String>> kHomeMiscTranslations = {
     'en': 'Buy in instalments',
     'zh': '分期购买',
     'ru': 'Купить в рассрочку'
+  },
+  'home.products_count': {
+    'mn': '{n} бараа',
+    'en': '{n} products',
+    'zh': '{n}件商品',
+    'ru': '{n} товаров'
+  },
+  'home.daily_from': {
+    'mn': 'Өдөр бүр {amount}-өөс',
+    'en': 'From {amount} / day',
+    'zh': '每日{amount}起',
+    'ru': 'От {amount} в день'
   },
   'home.no_products': {
     'mn': 'Бүтээгдэхүүн алга',

@@ -11,6 +11,9 @@ import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_vi
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_card_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_detail_screen.dart';
+import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -33,84 +36,67 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(45.0),
-        child: AppBar(
-          backgroundColor: CustomColors.darkContainerColor,
-          title: Text(
-            tr('purchase.products_title'),
-            style: const TextStyle(
-              fontFamily: "InterBold",
-              fontSize: 12,
-              color: Colors.white,
-            ),
-          ),
-          centerTitle: false,
-          actions: [
-            IconButton(
-              tooltip: tr('purchase.my_purchases'),
-              icon: SvgPicture.asset(
-                'assets/icons/invoice.svg',
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MyPurchasesScreen(uid: widget.uid),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: StreamBuilder<ProductPurchase?>(
-        stream: _repo.watchMyActiveInstallment(widget.uid),
-        builder: (context, activeSnapshot) {
-          if (activeSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CupertinoActivityIndicator());
-          }
+      backgroundColor: CustomColors.appBackground,
+      body: SafeArea(
+        bottom: false,
+        child: StreamBuilder<ProductPurchase?>(
+          stream: _repo.watchMyActiveInstallment(widget.uid),
+          builder: (context, activeSnapshot) {
+            if (activeSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CupertinoActivityIndicator());
+            }
 
-          final activePurchase = activeSnapshot.data;
+            final activePurchase = activeSnapshot.data;
 
-          // When the user already has an active installment we hide the
-          // catalog grid entirely and show the full purchase detail. This
-          // keeps the user focused on completing their current commitment
-          // before browsing for more.
-          if (activePurchase != null) {
-            return PurchaseDetailView(purchase: activePurchase);
-          }
-
-          return StreamBuilder<ProductPurchase?>(
-            stream: _repo.watchMyPickupReadyPurchase(widget.uid),
-            builder: (context, pickupSnapshot) {
-              if (pickupSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CupertinoActivityIndicator());
-              }
-              // A fully-paid (pickup-ready) purchase no longer hides the
-              // catalog — it becomes a banner above the grid so the user can
-              // keep browsing and start their next purchase right away.
-              final pickup = pickupSnapshot.data;
+            // When the user already has an active installment we hide the
+            // catalog grid entirely and show the full purchase detail. This
+            // keeps the user focused on completing their current commitment
+            // before browsing for more.
+            if (activePurchase != null) {
               return Column(
                 children: [
-                  if (pickup != null) _PickupReadyBanner(purchase: pickup),
-                  Expanded(
-                    child: _ProductsGrid(
-                      repo: _repo,
-                      uid: widget.uid,
-                      userRepository: widget.userRepository,
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: _TitleRow(onMyPurchases: _openMyPurchases),
                   ),
+                  Expanded(child: PurchaseDetailView(purchase: activePurchase)),
                 ],
               );
-            },
-          );
-        },
+            }
+
+            return StreamBuilder<ProductPurchase?>(
+              stream: _repo.watchMyPickupReadyPurchase(widget.uid),
+              builder: (context, pickupSnapshot) {
+                if (pickupSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CupertinoActivityIndicator());
+                }
+                // A fully-paid (pickup-ready) purchase no longer hides the
+                // catalog — it becomes a banner above the grid so the user can
+                // keep browsing and start their next purchase right away.
+                final pickup = pickupSnapshot.data;
+                return Column(
+                  children: [
+                    if (pickup != null) _PickupReadyBanner(purchase: pickup),
+                    Expanded(
+                      child: _ProductsGrid(
+                        repo: _repo,
+                        uid: widget.uid,
+                        userRepository: widget.userRepository,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  void _openMyPurchases() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => MyPurchasesScreen(uid: widget.uid)),
     );
   }
 }
@@ -157,36 +143,148 @@ class _ProductsGrid extends StatelessWidget {
           return const _EmptyState();
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12.0,
-            crossAxisSpacing: 12.0,
-            // Taller cards so a 2-line title still leaves room for the price
-            // and daily-amount rows below the square cover image.
-            childAspectRatio: 0.65,
-          ),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            final product = products[index];
-            return ProductCardWidget(
-              product: product,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ProductDetailScreen(
-                      product: product,
-                      uid: uid,
-                      userRepository: userRepository,
+        num? minDaily;
+        for (final p in products) {
+          final d = dailyAmount(p.price, p.maxMonths.clamp(1, 12));
+          if (minDaily == null || d < minDaily) minDaily = d;
+        }
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              sliver: SliverToBoxAdapter(
+                child: _CatalogHeader(
+                  count: products.length,
+                  minDaily: minDaily,
+                  onMyPurchases: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MyPurchasesScreen(uid: uid),
                     ),
                   ),
-                );
-              },
-            );
-          },
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12.0,
+                  crossAxisSpacing: 12.0,
+                  // Зураг + 2 мөр нэр + үнэ + өдрийн chip багтах өндөр
+                  childAspectRatio: 0.62,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final product = products[index];
+                    return ProductCardWidget(
+                      product: product,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ProductDetailScreen(
+                              product: product,
+                              uid: uid,
+                              userRepository: userRepository,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  childCount: products.length,
+                ),
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+/// Каталогийн толгой: барааны тоо + хамгийн бага өдрийн төлбөр
+class _TitleRow extends StatelessWidget {
+  final VoidCallback onMyPurchases;
+  const _TitleRow({required this.onMyPurchases});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(tr('home.installment_title'), style: AppText.appBarTitle),
+        ),
+        Tooltip(
+          message: tr('purchase.my_purchases'),
+          child: InkWell(
+            onTap: onMyPurchases,
+            borderRadius: BorderRadius.circular(12),
+            child: AppIconTile(
+              size: 40,
+              child: SvgPicture.asset(
+                'assets/icons/invoice.svg',
+                height: 18,
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CatalogHeader extends StatelessWidget {
+  final int count;
+  final num? minDaily;
+  final VoidCallback onMyPurchases;
+  const _CatalogHeader(
+      {required this.count,
+      required this.minDaily,
+      required this.onMyPurchases});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 8),
+        _TitleRow(onMyPurchases: onMyPurchases),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: CustomColors.accentSoft,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Text(
+                tr('home.products_count', {'n': count}),
+                style: TextStyle(
+                  fontFamily: AppText.bold,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: CustomColors.accent,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (minDaily != null)
+              Flexible(
+                child: Text(
+                  tr('home.daily_from', {'amount': formatMNT(minDaily!)}),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption,
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -196,23 +294,9 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2_outlined,
-              size: 56, color: Colors.white.withOpacity(0.3)),
-          const SizedBox(height: 12),
-          Text(
-            tr('purchase.no_products'),
-            style: const TextStyle(
-              color: Colors.white54,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
+    return AppEmptyState(
+      icon: Icons.inventory_2_outlined,
+      title: tr('purchase.no_products'),
     );
   }
 }
@@ -223,32 +307,11 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
-            const SizedBox(height: 12),
-            Text(
-              tr('purchase.products_load_error'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: Icons.error_outline_rounded,
+      iconColor: CustomColors.negative,
+      title: tr('purchase.products_load_error'),
+      subtitle: message,
     );
   }
 }
@@ -262,80 +325,26 @@ class _PickupReadyBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => Scaffold(
-              backgroundColor: CustomColors.darkContainerColor,
-              appBar: AppBar(
-                backgroundColor: CustomColors.darkContainerColor,
-                iconTheme: const IconThemeData(color: Colors.white),
-                title: Text(
-                  tr('purchase.pickup_ready'),
-                  style: const TextStyle(
-                    fontFamily: 'InterBold',
-                    fontSize: 13,
-                    color: Colors.white,
-                  ),
-                ),
-                centerTitle: false,
-              ),
-              body: PickupReadyView(purchase: purchase),
-            ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: CustomColors.mainColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: CustomColors.mainColor.withOpacity(0.35)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: CustomColors.mainColor.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.celebration_rounded,
-                  size: 18, color: CustomColors.mainColor),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tr('purchase.pickup_ready'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    tr('purchase.view_pickup_code',
-                        {'product': purchase.productSnapshot.name}),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: AppBanner(
+        icon: Icons.celebration_rounded,
+        title: tr('purchase.pickup_ready'),
+        text: tr('purchase.view_pickup_code',
+            {'product': purchase.productSnapshot.name}),
+        trailing: Icon(Icons.chevron_right_rounded,
+            size: 20, color: CustomColors.accent),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                backgroundColor: CustomColors.appBackground,
+                appBar: appBar(tr('purchase.pickup_ready')),
+                body: PickupReadyView(purchase: purchase),
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
-                size: 20, color: CustomColors.mainColor),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

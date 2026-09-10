@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class UpdateProfileScreen extends StatefulWidget {
@@ -95,180 +96,84 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: CustomColors.darkContainerColor,
-          title: Text(
-            tr('reg.error_title'),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            message,
-            style: const TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                tr('reg.got_it'),
-                style: TextStyle(color: CustomColors.mainColor),
-              ),
-            ),
-          ],
+        return AppDialog(
+          icon: Icons.error_outline_rounded,
+          iconColor: CustomColors.negative,
+          title: tr('reg.error_title'),
+          message: message,
+          primaryLabel: tr('reg.got_it'),
+          onPrimary: () => Navigator.of(context).pop(),
         );
       },
     );
   }
 
+  /// Зөв нэр бичсэн үед оролтын баруун талд ногоон тэмдэг харуулна
+  Widget? _validSuffix(String text) {
+    if (!_isValidName(text)) return null;
+    return Icon(Icons.check_circle_rounded,
+        size: 20.0, color: CustomColors.positive);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: CustomColors.scaffoldDarkBack,
-      appBar: AppBar(
-        title: Text(tr('reg.edit_profile')),
-        centerTitle: false,
-        backgroundColor: CustomColors.scaffoldDarkBack,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              tr('reg.edit_profile_hint'),
-              style: const TextStyle(
-                fontSize: 14.0,
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(height: 32.0),
+    final bool canSave = _isValidName(_firstNameController.text) &&
+        _isValidName(_lastNameController.text) &&
+        !isLoading;
 
-            // Last Name Field
-            Text(
-              tr('reg.last_name'),
-              style: const TextStyle(
-                fontSize: 16.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8.0),
-            TextField(
-              controller: _lastNameController,
-              style: const TextStyle(
-                fontSize: 16.0,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: CustomColors.inputDarkColor,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                hintText: tr('reg.last_name_placeholder'),
-                hintStyle: TextStyle(
-                  fontSize: 14.0,
-                  color: CustomColors.grey,
-                  fontWeight: FontWeight.w400,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(
-                    color: _isValidName(_lastNameController.text) 
-                        ? Colors.green.withOpacity(0.5)
-                        : Colors.white24,
-                    width: 1.0,
+    return Scaffold(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('reg.edit_profile')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
+        children: [
+          Text(tr('reg.edit_profile_hint'), style: AppText.caption),
+          const SizedBox(height: 16.0),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Last Name Field
+                Text(tr('reg.last_name'), style: AppText.label),
+                const SizedBox(height: 8.0),
+                TextField(
+                  controller: _lastNameController,
+                  style: AppText.body,
+                  cursorColor: CustomColors.accent,
+                  decoration: appInputDecoration(
+                    hint: tr('reg.last_name_placeholder'),
+                    suffix: _validSuffix(_lastNameController.text),
                   ),
+                  onChanged: (value) => setState(() {}),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(
-                    color: _isValidName(_lastNameController.text) 
-                        ? Colors.green
-                        : Colors.white38,
-                    width: 2.0,
+                const SizedBox(height: 12.0),
+
+                // First Name Field
+                Text(tr('reg.first_name'), style: AppText.label),
+                const SizedBox(height: 8.0),
+                TextField(
+                  controller: _firstNameController,
+                  style: AppText.body,
+                  cursorColor: CustomColors.accent,
+                  decoration: appInputDecoration(
+                    hint: tr('reg.first_name_placeholder'),
+                    suffix: _validSuffix(_firstNameController.text),
                   ),
+                  onChanged: (value) => setState(() {}),
                 ),
-              ),
-              onChanged: (value) => setState(() {}),
+              ],
             ),
-            
-            const SizedBox(height: 24.0),
-            
-            // First Name Field
-            Text(
-              tr('reg.first_name'),
-              style: const TextStyle(
-                fontSize: 16.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8.0),
-            TextField(
-              controller: _firstNameController,
-              style: const TextStyle(
-                fontSize: 16.0,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: CustomColors.inputDarkColor,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                hintText: tr('reg.first_name_placeholder'),
-                hintStyle: TextStyle(
-                  fontSize: 14.0,
-                  color: CustomColors.grey,
-                  fontWeight: FontWeight.w400,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(
-                    color: _isValidName(_firstNameController.text) 
-                        ? Colors.green.withOpacity(0.5)
-                        : Colors.white24,
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(
-                    color: _isValidName(_firstNameController.text) 
-                        ? Colors.green
-                        : Colors.white38,
-                    width: 2.0,
-                  ),
-                ),
-              ),
-              onChanged: (value) => setState(() {}),
-            ),
-            
-            const Spacer(),
-            
-            SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: MainButton(
-                      title: Text(
-                        tr('common.save'),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      onPress: (_isValidName(_firstNameController.text) && 
-                                _isValidName(_lastNameController.text) && 
-                                !isLoading)
-                          ? _updateProfile
-                          : null,
-                      isLoading: isLoading,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+          child: AppPrimaryButton(
+            label: tr('common.save'),
+            onPressed: canSave ? _updateProfile : null,
+            loading: isLoading,
+          ),
         ),
       ),
     );

@@ -6,11 +6,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/models/deeplink.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -74,46 +76,40 @@ class _CenterPaymentScreenState extends State<CenterPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('center.support_payment_title'),
-          style: const TextStyle(
-            fontFamily: 'InterBold',
-            fontSize: 13,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: false,
-      ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('pending_invoices')
-            .doc(widget.pendingId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          final processed = snapshot.data?.data()?['status'] == 'processed';
-          if (processed && !_done) {
-            _done = true;
-            _poll?.cancel();
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              CenterCart.instance.clear();
-            });
-          }
-          if (processed) {
-            return _PaidView(amount: widget.amount, onClose: _close);
-          }
-          return _PendingView(
-            invoice: widget.invoice,
-            amount: widget.amount,
-            checking: _checking,
-            onCheck: () => _verify(),
-          );
-        },
-      ),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('pending_invoices')
+          .doc(widget.pendingId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final processed = snapshot.data?.data()?['status'] == 'processed';
+        if (processed && !_done) {
+          _done = true;
+          _poll?.cancel();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            CenterCart.instance.clear();
+          });
+        }
+        return Scaffold(
+          backgroundColor: CustomColors.appBackground,
+          appBar: appBar(tr('center.support_payment_title')),
+          body: processed
+              ? _PaidView(amount: widget.amount, onClose: _close)
+              : _PendingView(invoice: widget.invoice, amount: widget.amount),
+          bottomNavigationBar: processed
+              ? null
+              : SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: AppPrimaryButton(
+                      label: tr('center.check_payment'),
+                      loading: _checking,
+                      onPressed: _checking ? null : () => _verify(),
+                    ),
+                  ),
+                ),
+        );
+      },
     );
   }
 
@@ -129,14 +125,7 @@ class _CenterPaymentScreenState extends State<CenterPaymentScreen> {
 class _PendingView extends StatelessWidget {
   final MakeOrder invoice;
   final int amount;
-  final bool checking;
-  final VoidCallback onCheck;
-  const _PendingView({
-    required this.invoice,
-    required this.amount,
-    required this.checking,
-    required this.onCheck,
-  });
+  const _PendingView({required this.invoice, required this.amount});
 
   Uint8List? _decodeQr() {
     if (invoice.qrImage.isEmpty) return null;
@@ -151,170 +140,117 @@ class _PendingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final qr = _decodeQr();
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1F1F22),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
-          ),
+        // Төлөх дүн
+        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(tr('common.amount_due'),
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.55), fontSize: 11)),
-              const SizedBox(height: 4),
+              Text(tr('common.amount_due'), style: AppText.caption),
+              const SizedBox(height: 6),
               Text(
                 formatMNT(amount),
-                style: TextStyle(
-                  color: CustomColors.mainColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 26,
-                ),
+                style: AppText.display.copyWith(fontSize: 30),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        if (qr != null)
+        const SizedBox(height: 12),
+        if (qr != null) ...[
           Center(
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Image.memory(qr,
                   width: 220, height: 220, fit: BoxFit.contain),
             ),
           ),
-        const SizedBox(height: 16),
-        Text(
-          tr('common.bank_app'),
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+          const SizedBox(height: 12),
+        ],
+        // Автоматаар шалгаж байгаа тухай
+        AppBanner(
+          text: tr('center.payment_auto_refresh_note'),
+          trailing: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: CustomColors.accent),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+        Text(tr('common.bank_app'), style: AppText.sectionTitle),
+        const SizedBox(height: 12),
         if (invoice.links.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
               tr('common.scan_qr_hint'),
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
+              style: AppText.caption,
               textAlign: TextAlign.center,
             ),
           )
         else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: invoice.links.length,
-            itemBuilder: (context, i) {
-              final link = invoice.links[i];
-              return GestureDetector(
-                onTap: () => launchUrl(Uri.parse(link.deeplink)),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F1F22),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (link.logo.isNotEmpty)
-                        Container(
-                          height: 44,
-                          width: 44,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            image: DecorationImage(
-                              fit: BoxFit.cover,
-                              image: NetworkImage(link.logo),
-                            ),
-                          ),
-                        )
-                      else
-                        const Icon(Icons.account_balance,
-                            color: Colors.white54, size: 32),
-                      const SizedBox(height: 6),
-                      Text(
-                        link.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 9,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.amber.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.amber.withOpacity(0.25)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline,
-                  size: 14, color: Colors.amberAccent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  tr('center.payment_auto_refresh_note'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        OutlinedButton(
-          onPressed: checking ? null : onCheck,
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: CustomColors.mainColor.withOpacity(0.5)),
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: checking
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : Text(tr('center.check_payment'),
-                  style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13)),
-        ),
+          _BankList(links: invoice.links),
       ],
     );
   }
+}
+
+/// Банкны апп-уудын жагсаалт — нэг карт дотор мөр бүрт лого, нэр, chevron.
+class _BankList extends StatelessWidget {
+  final List<DeeplinkModel> links;
+  const _BankList({required this.links});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        children: [
+          for (int i = 0; i < links.length; i++) ...[
+            if (i > 0) const AppDivider(vertical: 0),
+            AppListRow(
+              title: links[i].description,
+              leading: _BankLogo(url: links[i].logo),
+              onTap: () => launchUrl(Uri.parse(links[i].deeplink)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BankLogo extends StatelessWidget {
+  final String url;
+  const _BankLogo({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) return _fallback();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _fallback(),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallback() => const AppIconTile(
+        size: 44,
+        child: Icon(Icons.account_balance_rounded,
+            color: Colors.white24, size: 22),
+      );
 }
 
 class _PaidView extends StatelessWidget {
@@ -346,61 +282,45 @@ class _PaidView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: CustomColors.mainColor.withOpacity(0.15),
+                      color: CustomColors.accentSoft,
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: CustomColors.mainColor.withOpacity(0.4)),
+                          color: CustomColors.accent.withOpacity(0.4)),
                     ),
                     child: Icon(Icons.favorite_rounded,
-                        color: CustomColors.mainColor, size: 52),
+                        color: CustomColors.accent, size: 52),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     tr('center.thank_you'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'InterBold',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22,
-                    ),
+                    style: AppText.title,
                   ),
                   const SizedBox(height: 6),
                   Text(
                     tr('center.support_amount', {'amount': formatMNT(amount)}),
-                    style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontFamily: 'RubikBold',
-                      fontSize: 15,
-                    ),
+                    style: AppText.bodyBold
+                        .copyWith(color: CustomColors.accent, fontSize: 15),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     tr('center.thanks_body_1'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 13, height: 1.55),
+                    style: AppText.body
+                        .copyWith(fontSize: 13, height: 1.55),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     tr('center.thanks_body_2'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 12.5, height: 1.55),
+                    style: AppText.caption.copyWith(height: 1.55),
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
-                    width: 200,
-                    child: MainButton(
-                      isLoading: false,
-                      onPress: onClose,
-                      title: Text(
-                        tr('common.ok'),
-                        style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14),
-                      ),
+                    width: 220,
+                    child: AppPrimaryButton(
+                      label: tr('common.ok'),
+                      onPressed: onClose,
                     ),
                   ),
                 ],

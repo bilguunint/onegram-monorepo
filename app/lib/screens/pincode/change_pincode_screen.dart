@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:onscreen_num_keyboard/onscreen_num_keyboard.dart';
 
@@ -26,10 +28,10 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
   PageController pageController = PageController();
   bool _loading = false;
   int _currentStep = 0; // 0: current pin, 1: new pin, 2: confirm pin
-  
+
   // Key to force PinCodeTextField rebuild
   Key _pinCodeKey = UniqueKey();
-  
+
   void _rebuildPinCodeTextField() {
     setState(() {
       _pinCodeKey = UniqueKey();
@@ -78,12 +80,14 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
   void _onKeyboardTap(String value) {
     final controller = _currentController;
     if (controller.text.length >= 6) return;
+    HapticFeedback.lightImpact();
     setState(() => controller.text = controller.text + value);
   }
 
   void _onBackspace() {
     final controller = _currentController;
     if (controller.text.isEmpty) return;
+    HapticFeedback.selectionClick();
     setState(() => controller.text =
         controller.text.substring(0, controller.text.length - 1));
   }
@@ -91,6 +95,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
   void _onClear() {
     final controller = _currentController;
     if (controller.text.isEmpty) return;
+    HapticFeedback.mediumImpact();
     setState(() => controller.text = '');
   }
 
@@ -109,7 +114,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
 
   Future<void> _onContinue() async {
     final controller = _getCurrentController();
-    
+
     if (controller.text.length != 6) {
       showAlertPopUpDialog(context, tr('auth.change_pin_must_be_6'), 60);
       return;
@@ -119,7 +124,8 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
       // Verify current PIN
       setState(() => _loading = true);
       try {
-        final isValid = await widget.userRepository.verifyPincode(controller.text);
+        final isValid =
+            await widget.userRepository.verifyPincode(controller.text);
         if (mounted) {
           if (isValid) {
             setState(() {
@@ -136,6 +142,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
               _currentPinController.clear();
             });
             _rebuildPinCodeTextField();
+            HapticFeedback.heavyImpact();
             showAlertPopUpDialog(context, tr('auth.current_pin_incorrect'), 60);
           }
         }
@@ -177,7 +184,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
           _currentPinController.text,
           _newController.text,
         );
-        
+
         if (success) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -210,7 +217,7 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
     if (_currentStep > 0) {
       setState(() {
         _currentStep--;
-        
+
         // Clear appropriate controller when going back and update UI
         if (_currentStep == 0) {
           _currentPinController.clear();
@@ -235,15 +242,23 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = _getCurrentController();
-    
+
     return Scaffold(
-      backgroundColor: CustomColors.scaffoldDarkBack,
+      backgroundColor: CustomColors.appBackground,
+      // appBar() helper has no `leading` slot; this mirrors its styling while
+      // keeping the step-aware back handler.
       appBar: AppBar(
-        backgroundColor: CustomColors.scaffoldDarkBack,
+        backgroundColor: CustomColors.appBackground,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0.0,
+        scrolledUnderElevation: 0.0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: false,
         leading: IconButton(
           onPressed: _onBack,
           icon: const Icon(Icons.arrow_back),
         ),
+        title: Text(tr('auth.change_pin'), style: AppText.appBarTitle),
       ),
       body: Column(
         children: [
@@ -253,33 +268,33 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  AppIconTile(
+                    size: 64.0,
+                    child: Icon(Icons.lock_rounded,
+                        size: 30.0, color: CustomColors.accent),
+                  ),
+                  const SizedBox(height: 20.0),
                   Text(
                     _stepTitle,
-                    style: const TextStyle(
-                      fontSize: 24.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16.0),
-                  Text(
-                    _stepDescription,
-                    style: const TextStyle(
-                      fontSize: 16.0,
-                      color: Colors.white70,
-                    ),
+                    style: AppText.title,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48.0),
+                  const SizedBox(height: 8.0),
+                  Text(
+                    _stepDescription,
+                    style: AppText.caption,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32.0),
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         tr('auth.enter_your_pin'),
-                        style: const TextStyle(
-                            fontSize: 13.0, color: Colors.white),
-                        textAlign: TextAlign.start,
+                        style: AppText.body,
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16.0),
+                      const SizedBox(height: 20.0),
                       IgnorePointer(
                         ignoring: true,
                         child: PinCodeTextField(
@@ -289,21 +304,23 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
                           autofocus: false,
                           isCupertino: true,
                           hideCharacter: true,
-                          highlightColor: CustomColors.mainColor,
-                          defaultBorderColor: Colors.white12,
-                          pinBoxColor: CustomColors.inputDarkColor,
-                          pinBoxRadius: 8.0,
+                          highlightColor: CustomColors.accent,
+                          defaultBorderColor: CustomColors.surfaceBorder,
+                          pinBoxColor: CustomColors.surfaceAlt,
+                          pinBoxRadius: 12.0,
                           pinBoxBorderWidth: 1.0,
-                          hasTextBorderColor: CustomColors.mainColor,
-                          pinBoxWidth: 40.0,
-                          pinBoxHeight: 40.0,
+                          hasTextBorderColor: CustomColors.accent,
+                          errorBorderColor: CustomColors.negative,
+                          pinBoxWidth: 44.0,
+                          pinBoxHeight: 44.0,
+                          pinTextStyle: AppText.title.copyWith(fontSize: 20.0),
                           onDone: (_) {},
                           onTextChanged: (text) {
                             setState(() {});
                           },
                           wrapAlignment: WrapAlignment.spaceAround,
-                          pinBoxDecoration: ProvidedPinBoxDecoration
-                              .defaultPinBoxDecoration,
+                          pinBoxDecoration:
+                              ProvidedPinBoxDecoration.defaultPinBoxDecoration,
                         ),
                       ),
                     ],
@@ -313,46 +330,31 @@ class _ChangePincodeScreenState extends State<ChangePincodeScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: MainButton(
-                        title: Text(
-                          _currentStep == 2
-                              ? tr('common.save')
-                              : tr('common.continue'),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        onPress: controller.text.length == 6 && !_loading
-                            ? _onContinue
-                            : null,
-                        isLoading: _loading,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16.0),
-                NumericKeyboard(
-                  onKeyboardTap: _onKeyboardTap,
-                  textStyle: const TextStyle(fontSize: 24.0, color: Colors.white),
-                  rightButtonFn: _onBackspace,
-                  rightButtonLongPressFn: _onClear,
-                  rightIcon: const Icon(Icons.backspace, color: Colors.white70),
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: NumericKeyboard(
+              onKeyboardTap: _onKeyboardTap,
+              textStyle: AppText.title.copyWith(fontSize: 26.0),
+              rightButtonFn: _onBackspace,
+              rightButtonLongPressFn: _onClear,
+              rightIcon: Icon(Icons.backspace_outlined,
+                  color: CustomColors.textSecondary),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
             ),
           ),
-          SizedBox(
-            height: 32.0,
-          )
+          const SizedBox(height: 8.0),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+          child: AppPrimaryButton(
+            label: _currentStep == 2 ? tr('common.save') : tr('common.continue'),
+            onPressed: controller.text.length == 6 && !_loading
+                ? _onContinue
+                : null,
+            loading: _loading,
+          ),
+        ),
       ),
     );
   }

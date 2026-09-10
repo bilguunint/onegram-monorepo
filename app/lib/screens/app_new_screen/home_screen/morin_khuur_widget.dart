@@ -4,34 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:rainbow_edge_lighting/rainbow_edge_lighting.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_detail_screen.dart';
-import 'package:onegrgold/screens/app_new_screen/home_screen/lease_gold_widget.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// Users for whom the donation campaign is hidden (they see the loan service).
 const Set<String> _kHiddenCampaignUids = {'user_3380'};
 
-/// Leaf-green accent for the planted-tree stat.
-const Color _kTreeGreen = Color(0xFF66BB6A);
-
-/// Burning-fire palette for the animated card edge (loops seamlessly).
-const List<Color> _kFireColors = [
-  Color(0xFFFF2D00), // red-orange
-  Color(0xFFFF5722), // deep orange
-  Color(0xFFFF9100), // orange
-  Color(0xFFFFC107), // amber
-  Color(0xFFFFEB3B), // hot yellow core
-  Color(0xFFFF9100), // orange
-  Color(0xFFFF2D00), // red-orange (loop)
+/// Gold shimmer for the animated card edge (loops seamlessly) — derived from
+/// the accent so the card reads as part of the dark-gold system.
+const List<Color> _kEdgeColors = [
+  Color(0xFFF6B800), // accent
+  Color(0xFFFFE08A), // pale gold highlight
+  Color(0xFFF6B800), // accent
+  Color(0x33F6B800), // fades out
+  Color(0xFFF6B800), // accent (loop)
 ];
 
-/// Home-screen card for the "Дэлхийн морин хуурын төв цогцолбор" fundraising
-/// campaign. It occupies the SAME half-width / 240-height slot as
-/// [LeaseGoldWidget] in the services row.
-///
-/// While loading or when no campaign is `active`, it transparently renders the
-/// original [LeaseGoldWidget] (the loan service), so the slot is never empty.
-/// When a campaign is active it shows the campaign cover with title, the total
-/// raised, the number of trees planted and the donor count.
+/// Нүүрний "Дэлхийн морин хуурын төв цогцолбор" хандивын аяны бүтэн өргөнтэй
+/// banner. Аян `active` биш эсвэл ачаалж байх үед огт зай эзлэхгүй; идэвхтэй
+/// үед зүүн талд cover зураг, баруун талд нэр, тарьсан мод, дэмжигчдийн тоо.
 class MorinKhuurWidget extends StatefulWidget {
   const MorinKhuurWidget({super.key});
 
@@ -92,29 +83,19 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // No active campaign → fall back to the original loan-service card.
-    if (_loading || !_active) {
-      return const Padding(
-        padding: EdgeInsets.only(left: 16),
-        child: LeaseGoldWidget(),
-      );
-    }
-
-    final double cardWidth = MediaQuery.of(context).size.width / 2 - 24;
+    // Аян идэвхгүй үед юу ч харуулахгүй
+    if (_loading || !_active) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(left: 16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+            padding: const EdgeInsets.only(bottom: 12.0),
             child: Text(
               tr('home.support_campaign'),
-              style: const TextStyle(
-                fontFamily: 'InterBold',
-                fontSize: 14.0,
-              ),
+              style: AppText.sectionTitle.copyWith(fontSize: 14.0),
             ),
           ),
           GestureDetector(
@@ -126,75 +107,59 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
               );
             },
             child: RainbowEdgeLighting(
-              radius: 16,
+              radius: 20,
               thickness: 0.5,
               speed: 0.5,
-              colors: _kFireColors,
+              colors: _kEdgeColors,
               child: Container(
-                width: cardWidth,
-                height: 240,
+                height: 112,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.08), width: 0.5),
+                  color: CustomColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border:
+                      Border.all(width: 1.0, color: CustomColors.surfaceBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.30),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 10),
+                      color: CustomColors.accent.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
+                child: Row(
                   children: [
-                    _cover(),
-                    // Legibility gradient — bright image, dark only behind text.
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.10),
-                              Colors.black.withOpacity(0.82),
-                            ],
-                            stops: const [0.0, 0.40, 1.0],
-                          ),
+                    // Зүүн: cover зураг
+                    SizedBox(
+                      width: 128,
+                      height: double.infinity,
+                      child: _cover(),
+                    ),
+                    // Баруун: нэр + статистик
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _name ?? tr('home.morin_khuur_center_name'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.bodyBold
+                                  .copyWith(fontSize: 12.5, height: 1.25),
+                            ),
+                            const SizedBox(height: 10),
+                            _stats(),
+                          ],
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 12,
-                      right: 12,
-                      bottom: 12,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _name ?? tr('home.morin_khuur_center_name'),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'InterBold',
-                              fontWeight: FontWeight.w800,
-                              fontSize: 10.0,
-                              height: 1.15,
-                              shadows: [
-                                Shadow(blurRadius: 6, color: Colors.black87),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _stats(),
-                        ],
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10.0),
+                      child: Icon(Icons.chevron_right_rounded,
+                          size: 22, color: CustomColors.accent),
                     ),
                   ],
                 ),
@@ -224,22 +189,18 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
 
   Widget _coverFallback() {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color.fromARGB(255, 13, 17, 21),
-            Color.fromARGB(255, 15, 17, 20),
-            Color.fromARGB(255, 9, 19, 28),
-          ],
+          colors: [CustomColors.surfaceAlt, CustomColors.surface],
         ),
       ),
       child: Center(
         child: Icon(
           Icons.account_balance_rounded,
           size: 40,
-          color: CustomColors.mainColor.withOpacity(0.45),
+          color: CustomColors.accent.withOpacity(0.45),
         ),
       ),
     );
@@ -252,8 +213,7 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _stat(Icons.park_rounded, '$_treeCount', tr('home.trees_label'),
-              iconColor: _kTreeGreen),
+          _stat(Icons.park_rounded, '$_treeCount', tr('home.trees_label')),
           const SizedBox(width: 12),
           _stat(Icons.volunteer_activism_rounded, '$_donorCount',
               tr('home.supporters_label')),
@@ -262,29 +222,15 @@ class _MorinKhuurWidgetState extends State<MorinKhuurWidget> {
     );
   }
 
-  Widget _stat(IconData icon, String value, String label, {Color? iconColor}) {
+  Widget _stat(IconData icon, String value, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: iconColor ?? CustomColors.mainColor),
+        Icon(icon, size: 14, color: CustomColors.accent),
         const SizedBox(width: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11.0,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Text(value, style: AppText.bodyBold.copyWith(fontSize: 12.5)),
         const SizedBox(width: 3),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white60,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label, style: AppText.caption.copyWith(fontSize: 10.5)),
       ],
     );
   }

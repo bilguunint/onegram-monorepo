@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,12 +21,12 @@ class PickupReadyView extends StatelessWidget {
   Widget build(BuildContext context) {
     final ps = purchase.productSnapshot;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        _CelebrationHeader(),
-        const SizedBox(height: 16),
+        const _CelebrationHeader(),
+        const SizedBox(height: 12),
         _ProductCard(purchase: purchase, productName: ps.name, image: ps.image),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         PickupInstructionsSection(code: purchase.pickupCode),
       ],
     );
@@ -46,9 +48,9 @@ class PickupInstructionsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _PickupCodeCard(code: code),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         const _StoreInfoCard(),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         const _IdNotice(),
       ],
     );
@@ -56,55 +58,31 @@ class PickupInstructionsSection extends StatelessWidget {
 }
 
 class _CelebrationHeader extends StatelessWidget {
+  const _CelebrationHeader();
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            CustomColors.mainColor.withOpacity(0.18),
-            CustomColors.mainColor.withOpacity(0.04),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: CustomColors.mainColor.withOpacity(0.35)),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
       child: Column(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: CustomColors.mainColor.withOpacity(0.22),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.celebration_rounded,
-              color: CustomColors.mainColor,
-              size: 30,
-            ),
+          AppIconTile(
+            size: 72,
+            color: CustomColors.accentSoft,
+            child: Icon(Icons.celebration_rounded,
+                size: 34, color: CustomColors.accent),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Text(
             tr('purchase.congrats'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+            textAlign: TextAlign.center,
+            style: AppText.sectionTitle.copyWith(fontSize: 18),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             tr('purchase.pickup_ready_subtitle'),
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              height: 1.4,
-            ),
+            style: AppText.caption,
           ),
         ],
       ),
@@ -125,21 +103,15 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
+    return AppCard(
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
               width: 64,
               height: 64,
-              color: const Color(0xFF252528),
+              color: CustomColors.surfaceAlt,
               child: image != null && image!.isNotEmpty
                   ? Image.network(
                       image!,
@@ -164,29 +136,20 @@ class _ProductCard extends StatelessWidget {
                   productName,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: AppText.bodyBold,
                 ),
                 const SizedBox(height: 6),
                 Text(
                   formatMNT(purchase.totalPrice),
-                  style: TextStyle(
-                    color: CustomColors.mainColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: AppText.bodyBold.copyWith(color: CustomColors.accent),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   purchase.purchaseType == PurchaseType.installment
                       ? tr('purchase.months_fully_paid',
                           {'months': purchase.months})
                       : tr('purchase.direct_purchase'),
-                  style:
-                      const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: AppText.caption,
                 ),
               ],
             ),
@@ -205,83 +168,68 @@ class _PickupCodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayCode = (code == null || code!.isEmpty) ? '------' : code!;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      decoration: BoxDecoration(
-        color: CustomColors.mainColor.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: CustomColors.mainColor.withOpacity(0.55)),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.confirmation_number_outlined,
-                  size: 16, color: CustomColors.mainColor),
+                  size: 15, color: CustomColors.textSecondary),
               const SizedBox(width: 6),
-              Text(
-                tr('purchase.pickup_code_label'),
-                style: TextStyle(
-                  color: CustomColors.mainColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
+              Text(tr('purchase.pickup_code_label'), style: AppText.caption),
             ],
           ),
           const SizedBox(height: 12),
-          Center(
-            child: Text(
-              displayCode,
-              style: TextStyle(
-                color: CustomColors.mainColor,
-                fontWeight: FontWeight.w900,
-                fontSize: 38,
-                letterSpacing: 8,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+          Text(
+            displayCode,
+            textAlign: TextAlign.center,
+            style: AppText.display.copyWith(
+              color: CustomColors.accent,
+              letterSpacing: 4,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  tr('purchase.pickup_code_hint'),
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    height: 1.4,
+          Text(
+            tr('purchase.pickup_code_hint'),
+            textAlign: TextAlign.center,
+            style: AppText.caption,
+          ),
+          if (code != null && code!.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Material(
+              color: CustomColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: code!));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(tr('purchase.code_copied')),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.copy_rounded,
+                          size: 15, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(tr('purchase.copy'),
+                          style: AppText.bodyBold.copyWith(fontSize: 13)),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              if (code != null && code!.isNotEmpty)
-                TextButton.icon(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: code!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(tr('purchase.code_copied')),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: CustomColors.mainColor,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    minimumSize: const Size(0, 28),
-                  ),
-                  icon: const Icon(Icons.copy, size: 14),
-                  label: Text(
-                    tr('purchase.copy'),
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -304,96 +252,65 @@ class _StoreInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.storefront_outlined,
-                  size: 16, color: Colors.white70),
-              const SizedBox(width: 6),
-              Text(
-                tr('purchase.store_name'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ],
+          AppListRow(
+            leading: AppIconTile(
+              size: 40,
+              child: Icon(Icons.storefront_outlined,
+                  size: 18, color: CustomColors.accent),
+            ),
+            title: tr('purchase.store_name'),
+            subtitle: _address,
           ),
-          const SizedBox(height: 12),
-          _InfoRow(icon: Icons.location_on_outlined, text: _address),
-          const SizedBox(height: 10),
-          _InfoRow(icon: Icons.access_time_rounded, text: _hours),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.phone_outlined,
-                  size: 14, color: Colors.white54),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: _phones
-                      .map((p) => GestureDetector(
-                            onTap: () => _call(p),
-                            child: Text(
-                              p,
-                              style: TextStyle(
-                                color: CustomColors.mainColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                decoration: TextDecoration.underline,
-                                decorationColor:
-                                    CustomColors.mainColor.withOpacity(0.6),
-                              ),
-                            ),
-                          ))
-                      .toList(),
+          const AppDivider(vertical: 0),
+          AppListRow(
+            leading: AppIconTile(
+              size: 40,
+              child: Icon(Icons.access_time_rounded,
+                  size: 18, color: CustomColors.textSecondary),
+            ),
+            title: _hours,
+          ),
+          const AppDivider(vertical: 0),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                AppIconTile(
+                  size: 40,
+                  child: Icon(Icons.phone_outlined,
+                      size: 18, color: CustomColors.textSecondary),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    children: _phones
+                        .map((p) => GestureDetector(
+                              onTap: () => _call(p),
+                              child: Text(
+                                p,
+                                style: AppText.link.copyWith(
+                                  fontSize: 14,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor:
+                                      CustomColors.accent.withOpacity(0.6),
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _InfoRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 14, color: Colors.white54),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -403,31 +320,9 @@ class _IdNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.amber.withOpacity(0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.badge_outlined,
-              size: 16, color: Colors.amberAccent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tr('purchase.id_required_notice'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11.5,
-                height: 1.45,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppBanner(
+      icon: Icons.badge_outlined,
+      text: tr('purchase.id_required_notice'),
     );
   }
 }

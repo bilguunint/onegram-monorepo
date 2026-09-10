@@ -1,18 +1,17 @@
-import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/l10n/language_switcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:ionicons/ionicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../bloc/auth_bloc/auth_bloc.dart';
-import '../../../elements/custom_pop_up.dart';
 import '../../../repositories/user_repository.dart';
 import '../../../style/colors.dart';
 import '../../../models/user_model.dart';
+import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/screens/app_new_screen/profile_screen/update_profile_screen.dart';
 import 'package:onegrgold/screens/pincode/change_pincode_screen.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/generate_screen.dart';
@@ -47,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .collection('users')
             .doc(authState.uid)
             .get();
-        
+
         if (doc.exists) {
           final user = UserModel.fromMap(authState.uid, doc.data()!);
           setState(() {
@@ -67,6 +66,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _openEditProfile() async {
+    if (currentUser != null) {
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => UpdateProfileScreen(user: currentUser!),
+        ),
+      );
+      // Refresh user data after update
+      if (result == true) {
+        _loadUserData();
+      }
+    }
+  }
+
+  void _openChangePincode() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ChangePincodeScreen(
+          userRepository: widget.userRepository,
+        ),
+      ),
+    );
+  }
+
+  void _confirmSignOut() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AppDialog(
+          icon: Icons.logout_rounded,
+          danger: true,
+          title: tr('reg.sign_out_title'),
+          message: tr('reg.sign_out_confirm'),
+          secondaryLabel: tr('reg.no'),
+          onSecondary: () => Navigator.pop(dialogContext),
+          primaryLabel: tr('reg.yes'),
+          onPrimary: () {
+            Navigator.pop(dialogContext);
+            // Dispatch logout; listener above will navigate
+            context.read<AuthBloc>().add(LoggedOut());
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -83,321 +128,185 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       },
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(0.0),
-          child: AppBar(
-            centerTitle: false,
-            elevation: 0.0,
-            title: const Text(''),
-            systemOverlayStyle: SystemUiOverlayStyle.light,
-          ),
-        ),
-        body: Column(
-          children: <Widget>[
-            Container(
-              height: 120.0,
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        backgroundColor: CustomColors.appBackground,
+        appBar: appBar(tr('nav.profile')),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 20.0),
+            AppCard(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 6.0),
+              child: Column(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        height: 60.0,
-                        width: 60.0,
-                        child: SvgPicture.asset(
-                          "assets/icons/user-active.svg",
-                          color: Colors.white.withOpacity(0.3),
-                        ),
-                      ),
-                      const SizedBox(
-                        width: 8.0,
-                      ),
-                      if (isLoading)
-                        const CircularProgressIndicator(strokeWidth: 2.0)
-                      else if (currentUser != null)
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              currentUser!.firstName.isNotEmpty && currentUser!.lastName.isNotEmpty
-                                  ? "${currentUser!.lastName.substring(0, 1)}.${currentUser!.firstName}"
-                                  : "-",
-                              style: const TextStyle(
-                                  fontSize: 16.0, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(
-                              height: 4.0,
-                            ),
-                            Text(
-                              currentUser!.phone.isNotEmpty 
-                                  ? currentUser!.phone 
-                                  : currentUser!.email,
-                              style: TextStyle(
-                                  fontSize: 12.0,
-                                  color: Colors.white.withOpacity(0.6)),
-                            ),
-                          ],
-                        )
-                      else
-                        Text(
-                          tr('reg.user_info_not_loaded'),
-                          style: const TextStyle(
-                              fontSize: 12.0, color: Colors.grey),
-                        ),
-                    ],
+                  AppListRow(
+                    title: tr('reg.edit_profile'),
+                    leading: const AppIconTile(
+                      size: 40.0,
+                      child: Icon(Icons.edit_outlined,
+                          size: 20.0, color: Colors.white),
+                    ),
+                    onTap: _openEditProfile,
+                  ),
+                  const AppDivider(vertical: 0.0),
+                  AppListRow(
+                    title: tr('reg.change_pincode'),
+                    leading: const AppIconTile(
+                      size: 40.0,
+                      child: Icon(Icons.lock_outline_rounded,
+                          size: 20.0, color: Colors.white),
+                    ),
+                    onTap: _openChangePincode,
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: ListView(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-                    child: Text(
-                      tr('reg.settings'),
-                      style: const TextStyle(fontFamily: "InterBold"),
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: 4.0, top: 20.0, bottom: 8.0),
+              child: Text(tr('reg.settings'), style: AppText.caption),
+            ),
+            AppCard(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 6.0),
+              child: AppListRow(
+                title: tr('language.title'),
+                leading: const AppIconTile(
+                  size: 40.0,
+                  child: Icon(Icons.language_rounded,
+                      size: 20.0, color: Colors.white),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ValueListenableBuilder<AppLanguage>(
+                      valueListenable: AppLocale.notifier,
+                      builder: (context, lang, _) =>
+                          Text(lang.label, style: AppText.caption),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(8.0),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8.0),
-                          color: CustomColors.darkContainerColor),
-                      child: Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () async {
-                              if (currentUser != null) {
-                                final result = await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => UpdateProfileScreen(user: currentUser!),
-                                  ),
-                                );
-                                // Refresh user data after update
-                                if (result == true) {
-                                  _loadUserData();
-                                }
-                              }
-                            },
-                            child: Container(
-                              height: 60.0,
-                              color: CustomColors.darkContainerColor,
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(FluentIcons
-                                          .text_bullet_list_square_edit_24_regular),
-                                      const SizedBox(
-                                        width: 8.0,
-                                      ),
-                                      Text(
-                                        tr('reg.edit_profile'),
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12.0),
-                                      ),
-                                    ],
-                                  ),
-                                  Icon(
-                                    Ionicons.chevron_forward,
-                                    color:
-                                        CustomColors.textGrey.withOpacity(0.6),
-                                    size: 18.0,
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ChangePincodeScreen(
-                                    userRepository: widget.userRepository,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              height: 60.0,
-                              color: CustomColors.darkContainerColor,
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                          FluentIcons.lock_closed_24_regular),
-                                      const SizedBox(
-                                        width: 8.0,
-                                      ),
-                                      Text(
-                                        tr('reg.change_pincode'),
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12.0),
-                                      ),
-                                    ],
-                                  ),
-                                  Icon(
-                                    Ionicons.chevron_forward,
-                                    color:
-                                        CustomColors.textGrey.withOpacity(0.6),
-                                    size: 18.0,
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => showLanguagePicker(context),
-                            child: Container(
-                              height: 60.0,
-                              color: CustomColors.darkContainerColor,
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                          FluentIcons.local_language_24_regular),
-                                      const SizedBox(
-                                        width: 8.0,
-                                      ),
-                                      Text(
-                                        tr('language.title'),
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12.0),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      ValueListenableBuilder<AppLanguage>(
-                                        valueListenable: AppLocale.notifier,
-                                        builder: (context, lang, _) => Text(
-                                          lang.label,
-                                          style: TextStyle(
-                                            fontSize: 12.0,
-                                            color: CustomColors.textGrey,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6.0),
-                                      Icon(
-                                        Ionicons.chevron_forward,
-                                        color: CustomColors.textGrey
-                                            .withOpacity(0.6),
-                                        size: 18.0,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(width: 6.0),
+                    Icon(Icons.chevron_right_rounded,
+                        size: 20.0, color: CustomColors.textSecondary),
+                  ],
+                ),
+                onTap: () => showLanguagePicker(context),
+              ),
+            ),
+            const SizedBox(height: 12.0),
+            AppCard(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 6.0),
+              child: InkWell(
+                onTap: _confirmSignOut,
+                borderRadius: BorderRadius.circular(12.0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10.0),
+                  child: Row(
+                    children: [
+                      AppIconTile(
+                        size: 40.0,
+                        color: CustomColors.negative.withOpacity(0.15),
+                        child: Icon(Icons.logout_rounded,
+                            size: 20.0, color: CustomColors.negative),
                       ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: GestureDetector(
-                      onTap: () {
-                        showPopUpDialog(context, tr('reg.sign_out_title'),
-                            tr('reg.sign_out_confirm'), [
-                          CupertinoDialogAction(
-                              child: Text(
-                                tr('reg.yes'),
-                                style: TextStyle(color: CustomColors.alerRed),
-                              ),
-                              onPressed: () {
-                                Navigator.pop(context);
-                                // Dispatch logout; listener above will navigate
-                                context.read<AuthBloc>().add(LoggedOut());
-                              }),
-                          CupertinoDialogAction(
-                            child: Text(
-                              tr('reg.no'),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          )
-                        ]);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8.0),
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8.0),
-                            color: CustomColors.darkContainerColor),
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 45.0,
-                              color: CustomColors.darkContainerColor,
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Transform.scale(
-                                        scale: 0.90,
-                                        child: SvgPicture.asset(
-                                          "assets/icons/log-out.svg",
-                                          color: CustomColors.alerRed,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 8.0,
-                                      ),
-                                      Text(
-                                        tr('reg.sign_out'),
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: CustomColors.alerRed,
-                                            fontSize: 12.0),
-                                      ),
-                                    ],
-                                  ),
-                                  Icon(
-                                    Ionicons.chevron_forward,
-                                    color:
-                                        CustomColors.alerRed.withOpacity(0.6),
-                                    size: 18.0,
-                                  )
-                                ],
-                              ),
-                            ),
-                          ],
+                      const SizedBox(width: 12.0),
+                      Expanded(
+                        child: Text(
+                          tr('reg.sign_out'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodyBold
+                              .copyWith(color: CustomColors.negative),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 10.0),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 20.0,
+                          color: CustomColors.negative.withOpacity(0.6)),
+                    ],
                   ),
-                ],
+                ),
               ),
-            )
+            ),
+            const SizedBox(height: 24.0),
+            FutureBuilder<PackageInfo>(
+              future: PackageInfo.fromPlatform(),
+              builder: (context, snapshot) {
+                final info = snapshot.data;
+                if (info == null) return const SizedBox.shrink();
+                return Center(
+                  child: Text(
+                    "${info.appName}  v${info.version} (${info.buildNumber})",
+                    style: AppText.caption
+                        .copyWith(color: CustomColors.textTertiary),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        AppIconTile(
+          size: 64.0,
+          color: CustomColors.accentSoft,
+          child: Icon(Icons.person_rounded,
+              size: 34.0, color: CustomColors.accent),
+        ),
+        const SizedBox(width: 14.0),
+        Expanded(
+          child: isLoading
+              ? const Align(
+                  alignment: Alignment.centerLeft,
+                  child: CupertinoActivityIndicator(color: Colors.white),
+                )
+              : currentUser != null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          currentUser!.firstName.isNotEmpty &&
+                                  currentUser!.lastName.isNotEmpty
+                              ? "${currentUser!.lastName.substring(0, 1)}.${currentUser!.firstName}"
+                              : "-",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.title,
+                        ),
+                        const SizedBox(height: 4.0),
+                        Text(
+                          currentUser!.phone.isNotEmpty
+                              ? currentUser!.phone
+                              : currentUser!.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption,
+                        ),
+                      ],
+                    )
+                  : Text(
+                      tr('reg.user_info_not_loaded'),
+                      style: AppText.caption,
+                    ),
+        ),
+        const SizedBox(width: 12.0),
+        InkWell(
+          onTap: _openEditProfile,
+          borderRadius: BorderRadius.circular(12.0),
+          child: const AppIconTile(
+            size: 40.0,
+            child: Icon(Icons.edit_outlined, size: 20.0, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 }

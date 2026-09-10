@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/user_reset_pin_bloc/user_reset_pin_bloc.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:onscreen_num_keyboard/onscreen_num_keyboard.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
-import 'package:simple_animation_progress_bar/simple_animation_progress_bar.dart';
 
 class PincodeResetForm extends StatefulWidget {
   const PincodeResetForm({
@@ -157,51 +157,96 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
 
   // ---- Letter picker bottom sheet ----
   void _showLetterPicker(BuildContext ctx, bool isFirst) {
+    final String selected = isFirst ? _letterA : _letterB;
     showModalBottomSheet(
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12.0),
-          topRight: Radius.circular(12.0),
-        ),
-      ),
       context: ctx,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 6,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: _letters.length,
-          itemBuilder: (_, index) {
-            final item = _letters[index];
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isFirst) {
-                    _letterA = item;
-                  } else {
-                    _letterB = item;
-                  }
-                });
-                Navigator.pop(ctx);
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white12, width: 2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    item,
-                    style: TextStyle(fontSize: 14, color: CustomColors.textGrey),
+      backgroundColor: Colors.transparent,
+      builder: (_) => AppSheet(
+        child: SizedBox(
+          height: 320.0,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 6,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: _letters.length,
+            itemBuilder: (_, index) {
+              final item = _letters[index];
+              final bool isSelected = item == selected;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isFirst) {
+                      _letterA = item;
+                    } else {
+                      _letterB = item;
+                    }
+                  });
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? CustomColors.accent
+                        : CustomColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Center(
+                    child: Text(
+                      item,
+                      style: AppText.bodyBold.copyWith(
+                          color: isSelected ? Colors.black : Colors.white),
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _letterTile(String letter, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 52.0,
+        width: 52.0,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14.0),
+          color: CustomColors.surfaceAlt,
+        ),
+        child: Center(
+          child: Text(letter, style: AppText.sectionTitle),
+        ),
+      ),
+    );
+  }
+
+  Widget _hiddenPinField(TextEditingController controller) {
+    return IgnorePointer(
+      ignoring: true,
+      child: PinCodeTextField(
+        controller: controller,
+        maxLength: 6,
+        autofocus: false,
+        isCupertino: true,
+        hideCharacter: true,
+        highlightColor: CustomColors.accent,
+        defaultBorderColor: CustomColors.surfaceBorder,
+        pinBoxColor: CustomColors.surfaceAlt,
+        pinBoxRadius: 12.0,
+        pinBoxBorderWidth: 1.0,
+        hasTextBorderColor: CustomColors.accent,
+        errorBorderColor: CustomColors.negative,
+        pinBoxWidth: 44.0,
+        pinBoxHeight: 44.0,
+        pinTextStyle: AppText.title.copyWith(fontSize: 20.0),
+        onDone: (_) {},
+        wrapAlignment: WrapAlignment.spaceAround,
+        pinBoxDecoration: ProvidedPinBoxDecoration.defaultPinBoxDecoration,
       ),
     );
   }
@@ -210,19 +255,16 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
 
   Widget _buildOtpPage() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24.0),
-          Text(
-            tr('auth.verification_code'),
-            style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-          ),
+          Text(tr('auth.verification_code'), style: AppText.title),
           const SizedBox(height: 8.0),
           Text(
             tr('auth.otp_sent_to', {'input': widget.input}),
-            style: const TextStyle(fontSize: 13.0, color: Colors.white60),
+            style: AppText.caption,
           ),
           const SizedBox(height: 32.0),
           Center(
@@ -231,22 +273,21 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
               controller: _otpController,
               hideCharacter: false,
               isCupertino: true,
-              highlightColor: CustomColors.mainColor,
-              defaultBorderColor: Colors.white12,
-              pinBoxColor: CustomColors.inputDarkColor,
-              pinBoxRadius: 6.0,
-              hasTextBorderColor: CustomColors.mainColor,
+              highlightColor: CustomColors.accent,
+              defaultBorderColor: CustomColors.surfaceBorder,
+              pinBoxColor: CustomColors.surfaceAlt,
+              pinBoxRadius: 12.0,
+              pinBoxBorderWidth: 1.0,
+              hasTextBorderColor: CustomColors.accent,
+              errorBorderColor: CustomColors.negative,
               maxLength: 4,
-              pinBoxWidth: 45.0,
-              pinBoxHeight: 45.0,
+              pinBoxWidth: 52.0,
+              pinBoxHeight: 52.0,
               onDone: (text) => setState(() => _otpController.text = text),
               wrapAlignment: WrapAlignment.spaceAround,
               pinBoxDecoration:
                   ProvidedPinBoxDecoration.defaultPinBoxDecoration,
-              pinTextStyle: const TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
+              pinTextStyle: AppText.title.copyWith(fontSize: 20.0),
               pinTextAnimatedSwitcherTransition:
                   ProvidedPinBoxTextAnimation.scalingTransition,
               pinTextAnimatedSwitcherDuration:
@@ -257,7 +298,8 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
           Center(
             child: Text(
               tr('auth.otp_not_received'),
-              style: const TextStyle(fontSize: 13.0, color: Colors.white54),
+              style: AppText.caption,
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -266,108 +308,53 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
   }
 
   Widget _buildRegisterPage(BuildContext ctx) {
+    final bool complete = _registerNumberController.text.length == 8;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24.0),
-          Text(
-            tr('auth.register_number'),
-            style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-          ),
+          Text(tr('auth.register_number'), style: AppText.title),
           const SizedBox(height: 8.0),
-          Text(
-            tr('auth.register_number_hint'),
-            style: const TextStyle(fontSize: 13.0, color: Colors.white38),
-          ),
+          Text(tr('auth.register_number_hint'), style: AppText.caption),
           const SizedBox(height: 24.0),
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => _showLetterPicker(ctx, true),
-                child: Container(
-                  height: 50.0,
-                  width: 50.0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    color: CustomColors.inputDarkColor,
-                  ),
-                  child: Center(
-                    child: Text(_letterA,
-                        style: const TextStyle(
-                            fontSize: 16.0, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8.0),
-              GestureDetector(
-                onTap: () => _showLetterPicker(ctx, false),
-                child: Container(
-                  height: 50.0,
-                  width: 50.0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    color: CustomColors.inputDarkColor,
-                  ),
-                  child: Center(
-                    child: Text(_letterB,
-                        style: const TextStyle(
-                            fontSize: 16.0, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8.0),
-              Expanded(
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: _registerNumberController,
-                  maxLength: 8,
-                  onChanged: (text) {
-                    final digitsOnly = text.replaceAll(RegExp(r'\D'), '');
-                    if (digitsOnly != text) {
-                      _registerNumberController.value = TextEditingValue(
-                        text: digitsOnly,
-                        selection: TextSelection.collapsed(
-                            offset: digitsOnly.length),
-                      );
-                    }
-                    setState(() {});
-                  },
-                  style: const TextStyle(
-                      fontSize: 14.0, fontWeight: FontWeight.bold),
-                  decoration: InputDecoration(
-                    filled: true,
-                    counterText: '',
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12.0),
-                    hintText: '12345678',
-                    hintStyle: TextStyle(
-                        fontSize: 13.0,
-                        color: CustomColors.grey,
-                        fontWeight: FontWeight.w500),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(
-                        color: _registerNumberController.text.length == 8
-                            ? Colors.green.withOpacity(0.5)
-                            : Colors.white24,
-                        width: 1.0,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(
-                        color: _registerNumberController.text.length == 8
-                            ? Colors.green
-                            : Colors.white38,
-                        width: 2.0,
-                      ),
-                    ),
+          AppCard(
+            child: Row(
+              children: [
+                _letterTile(_letterA, () => _showLetterPicker(ctx, true)),
+                const SizedBox(width: 8.0),
+                _letterTile(_letterB, () => _showLetterPicker(ctx, false)),
+                const SizedBox(width: 8.0),
+                Expanded(
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    controller: _registerNumberController,
+                    maxLength: 8,
+                    onChanged: (text) {
+                      final digitsOnly = text.replaceAll(RegExp(r'\D'), '');
+                      if (digitsOnly != text) {
+                        _registerNumberController.value = TextEditingValue(
+                          text: digitsOnly,
+                          selection: TextSelection.collapsed(
+                              offset: digitsOnly.length),
+                        );
+                      }
+                      setState(() {});
+                    },
+                    style: AppText.body,
+                    cursorColor: CustomColors.accent,
+                    decoration: appInputDecoration(
+                      hint: '12345678',
+                      suffix: complete
+                          ? Icon(Icons.check_circle_rounded,
+                              size: 18.0, color: CustomColors.positive)
+                          : null,
+                    ).copyWith(counterText: ''),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -380,31 +367,11 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
       children: [
         Text(
           tr('auth.enter_new_pin'),
-          style: const TextStyle(fontSize: 14.0, color: Colors.white70),
+          style: AppText.body,
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24.0),
-        IgnorePointer(
-          ignoring: true,
-          child: PinCodeTextField(
-            controller: _newPinController,
-            maxLength: 6,
-            autofocus: false,
-            isCupertino: true,
-            hideCharacter: true,
-            highlightColor: CustomColors.mainColor,
-            defaultBorderColor: Colors.white12,
-            pinBoxColor: CustomColors.inputDarkColor,
-            pinBoxRadius: 8.0,
-            pinBoxBorderWidth: 1.0,
-            hasTextBorderColor: CustomColors.mainColor,
-            pinBoxWidth: 44.0,
-            pinBoxHeight: 44.0,
-            onDone: (_) {},
-            wrapAlignment: WrapAlignment.spaceAround,
-            pinBoxDecoration:
-                ProvidedPinBoxDecoration.defaultPinBoxDecoration,
-          ),
-        ),
+        _hiddenPinField(_newPinController),
       ],
     );
   }
@@ -415,31 +382,11 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
       children: [
         Text(
           tr('auth.confirm_pin_again'),
-          style: const TextStyle(fontSize: 14.0, color: Colors.white70),
+          style: AppText.body,
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24.0),
-        IgnorePointer(
-          ignoring: true,
-          child: PinCodeTextField(
-            controller: _confirmPinController,
-            maxLength: 6,
-            autofocus: false,
-            isCupertino: true,
-            hideCharacter: true,
-            highlightColor: CustomColors.mainColor,
-            defaultBorderColor: Colors.white12,
-            pinBoxColor: CustomColors.inputDarkColor,
-            pinBoxRadius: 8.0,
-            pinBoxBorderWidth: 1.0,
-            hasTextBorderColor: CustomColors.mainColor,
-            pinBoxWidth: 44.0,
-            pinBoxHeight: 44.0,
-            onDone: (_) {},
-            wrapAlignment: WrapAlignment.spaceAround,
-            pinBoxDecoration:
-                ProvidedPinBoxDecoration.defaultPinBoxDecoration,
-          ),
-        ),
+        _hiddenPinField(_confirmPinController),
       ],
     );
   }
@@ -468,19 +415,24 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
           return Column(
             children: [
               // ---- Progress bar ----
-              SimpleAnimationProgressBar(
-                height: 5,
-                width: MediaQuery.of(context).size.width,
-                backgroundColor: Colors.grey.shade800,
-                ratio: _currentStep / (_totalSteps - 1),
-                direction: Axis.horizontal,
-                curve: Curves.fastLinearToSlowEaseIn,
-                duration: const Duration(milliseconds: 300),
-                borderRadius: BorderRadius.circular(10),
-                gradientColor: LinearGradient(
-                  colors: [CustomColors.mainColor, CustomColors.mainColor],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 0.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4.0),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(
+                        end: _currentStep / (_totalSteps - 1)),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.fastLinearToSlowEaseIn,
+                    builder: (_, value, __) => LinearProgressIndicator(
+                      value: value,
+                      minHeight: 6.0,
+                      backgroundColor: Colors.white.withOpacity(0.08),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(CustomColors.accent),
+                    ),
+                  ),
                 ),
-                foregrondColor: CustomColors.mainColor,
               ),
 
               // ---- Pages ----
@@ -499,53 +451,46 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
 
               // ---- NumericKeyboard (PIN step-үүдэд) ----
               if (showNumericKeyboard) ...[
-                
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: NumericKeyboard(
                     onKeyboardTap: _onKeyboardTap,
-                    textStyle:
-                        const TextStyle(fontSize: 24.0, color: Colors.white),
+                    textStyle: AppText.title.copyWith(fontSize: 26.0),
                     rightButtonFn: _onBackspace,
                     rightButtonLongPressFn: _onClear,
-                    rightIcon:
-                        const Icon(Icons.backspace, color: Colors.white70),
+                    rightIcon: Icon(Icons.backspace_outlined,
+                        color: CustomColors.textSecondary),
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   ),
                 ),
-                const SizedBox(height: 32.0),
+                const SizedBox(height: 16.0),
               ],
 
               // ---- Bottom buttons ----
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24.0, 12.0, 24.0, 16.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
                   child: Row(
                     children: [
                       if (_currentStep > 0) ...[
-                        TextButton(
-                          onPressed: _goBack,
-                          child: Text(
-                            tr('common.back'),
-                            style: const TextStyle(color: Colors.white54),
+                        Expanded(
+                          child: AppPrimaryButton(
+                            label: tr('common.back'),
+                            outlined: true,
+                            onPressed:
+                                state is UserResetPinLoading ? null : _goBack,
                           ),
                         ),
-                        const SizedBox(width: 12.0),
+                        const SizedBox(width: 8.0),
                       ],
                       Expanded(
-                        child: MainButton(
-                          title: Text(
-                            isLastStep
-                                ? tr('auth.change_pin')
-                                : tr('common.continue'),
-                            style: TextStyle(
-                              color: CustomColors.scaffoldDarkBack,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14.0,
-                            ),
-                          ),
-                          onPress: () => _nextOrSave(context),
-                          isLoading: state is UserResetPinLoading,
+                        flex: 2,
+                        child: AppPrimaryButton(
+                          label: isLastStep
+                              ? tr('auth.change_pin')
+                              : tr('common.continue'),
+                          onPressed: () => _nextOrSave(context),
+                          loading: state is UserResetPinLoading,
                         ),
                       ),
                     ],
@@ -559,4 +504,3 @@ class _PincodeResetFormState extends State<PincodeResetForm> {
     );
   }
 }
-

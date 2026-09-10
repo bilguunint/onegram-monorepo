@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_detail_screen.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class MyPurchasesScreen extends StatefulWidget {
@@ -22,25 +24,14 @@ class _MyPurchasesScreenState extends State<MyPurchasesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('purchase.my_purchases'),
-          style: const TextStyle(
-            fontFamily: 'InterBold',
-            fontSize: 13,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: false,
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('purchase.my_purchases')),
       body: StreamBuilder<List<ProductPurchase>>(
         stream: _repo.watchMyPurchases(widget.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CupertinoActivityIndicator());
+            return const Center(
+                child: CupertinoActivityIndicator(color: Colors.white));
           }
           if (snapshot.hasError) {
             final err = snapshot.error;
@@ -53,17 +44,26 @@ class _MyPurchasesScreenState extends State<MyPurchasesScreen> {
               library: 'MyPurchasesScreen',
               context: ErrorDescription('watchMyPurchases stream'),
             ));
-            return _ErrorState(message: '$err');
+            return AppEmptyState(
+              icon: Icons.error_outline_rounded,
+              iconColor: CustomColors.negative,
+              title: tr('purchase.load_error'),
+              subtitle: '$err',
+            );
           }
           final list = snapshot.data ?? const <ProductPurchase>[];
           if (list.isEmpty) {
-            return const _EmptyState();
+            return AppEmptyState(
+              icon: Icons.receipt_long_outlined,
+              title: tr('purchase.empty_title'),
+              subtitle: tr('purchase.empty_subtitle'),
+            );
           }
           final sorted = _sortByStatusPriority(list);
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             itemCount: sorted.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final p = sorted[index];
               return _PurchaseRowCard(
@@ -105,6 +105,34 @@ List<ProductPurchase> _sortByStatusPriority(List<ProductPurchase> list) {
   return sorted;
 }
 
+/// Төлөв бүрийн өнгө: active → accent, completed → positive,
+/// delivered → textSecondary, cancelled → negative
+Color _statusColor(ProductPurchaseStatus status) {
+  switch (status) {
+    case ProductPurchaseStatus.active:
+      return CustomColors.accent;
+    case ProductPurchaseStatus.completed:
+      return CustomColors.positive;
+    case ProductPurchaseStatus.delivered:
+      return CustomColors.textSecondary;
+    case ProductPurchaseStatus.cancelled:
+      return CustomColors.negative;
+  }
+}
+
+String _statusLabel(ProductPurchaseStatus status) {
+  switch (status) {
+    case ProductPurchaseStatus.active:
+      return tr('purchase.status_active');
+    case ProductPurchaseStatus.completed:
+      return tr('purchase.status_paid');
+    case ProductPurchaseStatus.delivered:
+      return tr('purchase.status_delivered');
+    case ProductPurchaseStatus.cancelled:
+      return tr('purchase.status_cancelled');
+  }
+}
+
 class _PurchaseRowCard extends StatelessWidget {
   final ProductPurchase purchase;
   final VoidCallback onTap;
@@ -119,16 +147,13 @@ class _PurchaseRowCard extends StatelessWidget {
     final ps = purchase.productSnapshot;
     final isInstallment = purchase.purchaseType == PurchaseType.installment;
     final progress = purchase.progress;
+    final Color statusColor = _statusColor(purchase.status);
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AppCard(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F22),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
+        radius: 16,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -136,11 +161,11 @@ class _PurchaseRowCard extends StatelessWidget {
               children: [
                 // Image
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     width: 56,
                     height: 56,
-                    color: const Color(0xFF252528),
+                    color: CustomColors.surfaceAlt,
                     child: ps.image != null && ps.image!.isNotEmpty
                         ? Image.network(
                             ps.image!,
@@ -156,7 +181,7 @@ class _PurchaseRowCard extends StatelessWidget {
                           ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,58 +190,47 @@ class _PurchaseRowCard extends StatelessWidget {
                         ps.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
+                        style: AppText.bodyBold,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          _StatusBadge(status: purchase.status),
-                          const SizedBox(width: 6),
-                          if (isInstallment)
-                            Text(
-                              tr('purchase.days_progress', {
-                                'paid': purchase.paidDays,
-                                'total': purchase.totalDays,
-                              }),
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 11,
-                              ),
-                            )
-                          else
-                            Text(
-                              tr('purchase.direct_short'),
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 11,
-                              ),
+                          AppStatusChip(
+                            label: _statusLabel(purchase.status),
+                            color: statusColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              isInstallment
+                                  ? tr('purchase.days_progress', {
+                                      'paid': purchase.paidDays,
+                                      'total': purchase.totalDays,
+                                    })
+                                  : tr('purchase.direct_short'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption,
                             ),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       formatMNT(purchase.paidAmount),
-                      style: TextStyle(
-                        color: CustomColors.mainColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
+                      style:
+                          AppText.bodyBold.copyWith(color: CustomColors.accent),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       '/${formatMNT(purchase.totalPrice)}',
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 10,
-                      ),
+                      style: AppText.caption.copyWith(fontSize: 11),
                     ),
                   ],
                 ),
@@ -224,34 +238,31 @@ class _PurchaseRowCard extends StatelessWidget {
             ),
             if (isInstallment &&
                 purchase.status != ProductPurchaseStatus.cancelled) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: progress,
-                  minHeight: 5,
+                  minHeight: 6,
                   backgroundColor: Colors.white.withOpacity(0.08),
-                  valueColor: AlwaysStoppedAnimation(_progressColor()),
+                  valueColor: AlwaysStoppedAnimation(statusColor),
                 ),
               ),
               if (purchase.deadline != null &&
                   purchase.status == ProductPurchaseStatus.active) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.event,
-                      size: 12,
-                      color: Colors.white54,
+                    Icon(
+                      Icons.event_rounded,
+                      size: 13,
+                      color: CustomColors.textSecondary,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 5),
                     Text(
                       tr('purchase.deadline_with_date',
                           {'date': _fmtDate(purchase.deadline!)}),
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11,
-                      ),
+                      style: AppText.caption,
                     ),
                   ],
                 ),
@@ -262,64 +273,6 @@ class _PurchaseRowCard extends StatelessWidget {
       ),
     );
   }
-
-  Color _progressColor() {
-    switch (purchase.status) {
-      case ProductPurchaseStatus.active:
-        return CustomColors.mainColor;
-      case ProductPurchaseStatus.completed:
-        return CustomColors.successGreen;
-      case ProductPurchaseStatus.delivered:
-        return CustomColors.activeGreen;
-      case ProductPurchaseStatus.cancelled:
-        return CustomColors.alerRed;
-    }
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final ProductPurchaseStatus status;
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
-    String text;
-    switch (status) {
-      case ProductPurchaseStatus.active:
-        bg = const Color(0x331E88E5);
-        fg = const Color(0xFF7CC2FF);
-        text = tr('purchase.status_active');
-        break;
-      case ProductPurchaseStatus.completed:
-        bg = const Color(0x3343A047);
-        fg = const Color(0xFF7BD389);
-        text = tr('purchase.status_paid');
-        break;
-      case ProductPurchaseStatus.delivered:
-        bg = const Color(0x33FCD535);
-        fg = CustomColors.mainColor;
-        text = tr('purchase.status_delivered');
-        break;
-      case ProductPurchaseStatus.cancelled:
-        bg = const Color(0x33C2240B);
-        fg = const Color(0xFFE57373);
-        text = tr('purchase.status_cancelled');
-        break;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
 }
 
 String _fmtDate(DateTime d) {
@@ -327,75 +280,4 @@ String _fmtDate(DateTime d) {
   final m = d.month.toString().padLeft(2, '0');
   final day = d.day.toString().padLeft(2, '0');
   return '$y.$m.$day';
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long_outlined,
-              size: 56, color: Colors.white.withOpacity(0.3)),
-          const SizedBox(height: 12),
-          Text(
-            tr('purchase.empty_title'),
-            style: const TextStyle(
-              color: Colors.white54,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              tr('purchase.empty_subtitle'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
-            const SizedBox(height: 12),
-            Text(
-              tr('purchase.load_error'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

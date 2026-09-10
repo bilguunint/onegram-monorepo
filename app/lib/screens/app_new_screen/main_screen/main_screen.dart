@@ -7,6 +7,7 @@ import 'package:onegrgold/bloc/bottom_navbar_bloc.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/elements/gold_glitter_button.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/repositories/version_service.dart';
@@ -14,7 +15,7 @@ import 'package:onegrgold/screens/app_new_screen/home_screen/home_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/make_order_screen/make_order_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/exchange_screen/exchange_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/products_screen.dart';
-import 'package:onegrgold/screens/app_new_screen/profile_screen/profile_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/more_screen/more_screen.dart';
 import 'package:onegrgold/screens/test_screen/test_screen.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -58,10 +59,20 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    BottomNavBarBloc.current = _bottomNavBarBloc;
     // Check version after a short delay to ensure widget is mounted
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkVersion();
     });
+  }
+
+  @override
+  void dispose() {
+    if (BottomNavBarBloc.current == _bottomNavBarBloc) {
+      BottomNavBarBloc.current = null;
+    }
+    _bottomNavBarBloc.close();
+    super.dispose();
   }
 
   Future<void> _checkVersion() async {
@@ -93,8 +104,8 @@ class _MainScreenState extends State<MainScreen> {
                 uid: widget.uid,
                 userRepository: widget.userRepository,
               );
-            case NavBarItem.profile:
-              return ProfileScreen(
+            case NavBarItem.more:
+              return MoreScreen(
                 userRepository: widget.userRepository,
               );
             default:
@@ -102,11 +113,22 @@ class _MainScreenState extends State<MainScreen> {
           }
         },
       ),
-      floatingActionButton: SizedBox(
-        width: 56.0,
-        height: 56.0,
-        child: FloatingActionButton(
-          onPressed: () {
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.45),
+                offset: const Offset(0, 6),
+                blurRadius: 14.0),
+            BoxShadow(
+                color: CustomColors.accent.withOpacity(0.25), blurRadius: 18.0),
+          ],
+        ),
+        child: GoldGlitterButton(
+          size: 52.0,
+          iconAsset: "assets/icons/gold-bar-active.svg",
+          onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -118,21 +140,6 @@ class _MainScreenState extends State<MainScreen> {
               ),
             );
           },
-          backgroundColor: Colors.transparent,
-          elevation: 0.0,
-          highlightElevation: 0.0,
-          shape: const CircleBorder(),
-          // add.svg өөрөө алтан gradient дугуй + "+" бүхий бүрэн товч тул
-          // өнгө tint хийхгүй; viewBox-ийн захын зайг нөхөхөөр томруулна.
-          child: OverflowBox(
-            maxWidth: 76.0,
-            maxHeight: 76.0,
-            child: SvgPicture.asset(
-              "assets/icons/add.svg",
-              height: 76.0,
-              width: 76.0,
-            ),
-          ),
         ),
       ),
       bottomNavigationBar: StreamBuilder<NavBarItem>(
@@ -164,17 +171,23 @@ class _MainScreenState extends State<MainScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                          child: _navItem(0, current, "home", tr('nav.home'))),
+                          child: _navItem(0, current, "assets/icons/home-active.svg",
+                              tr('nav.home'))),
                       Expanded(
-                          child: _navItem(1, current, "bar", tr('nav.rates'))),
+                          child: _navItem(1, current, "assets/icons/bar-active.svg",
+                              tr('nav.rates'))),
                       // Голын "Захиалах" товчны зай
                       const SizedBox(width: 64.0),
                       Expanded(
-                          child: _navItem(
-                              2, current, "shopping-bag", tr('nav.products'))),
+                          child: _navItem(2, current,
+                              "assets/icons/shopping-bag-active.svg",
+                              tr('nav.products'))),
                       Expanded(
-                          child:
-                              _navItem(3, current, "user", tr('nav.profile'))),
+                          child: _navItem(
+                              3,
+                              current,
+                              "assets/icons/more-horizontal-circle.svg",
+                              tr('nav.more'))),
                     ],
                   ),
                 ),
@@ -208,7 +221,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Semantics(
                 label: label,
                 child: SvgPicture.asset(
-                  "assets/icons/$asset-active.svg",
+                  asset,
                   color: color,
                   height: 24.0,
                   width: 24.0,

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/tree_payment_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
-/// Forest-green palette for the tree-planting flow.
+/// Forest-green palette of the legacy tree-planting flow. Kept exported for
+/// screens that still import it (center_detail_screen, center_promo_popup);
+/// this screen itself now uses the shared dark-gold design tokens.
 const kForestGreen = Color(0xFF2E7D32);
 const kLeafGreen = Color(0xFF66BB6A);
 
@@ -48,7 +52,7 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(tr('center.enter_plaque_name')),
-          backgroundColor: CustomColors.alerRed,
+          backgroundColor: CustomColors.negative,
         ),
       );
       return;
@@ -77,7 +81,7 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', '')),
-            backgroundColor: CustomColors.alerRed,
+            backgroundColor: CustomColors.negative,
           ),
         );
       }
@@ -90,159 +94,101 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
   Widget build(BuildContext context) {
     final tree = widget.tree;
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('center.tree_order_title'),
-          style: const TextStyle(
-              fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
-        ),
-        centerTitle: false,
-      ),
-      body: Column(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('center.tree_order_title')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _treeCard(tree),
-                const SizedBox(height: 14),
-                _labelSection(),
-                const SizedBox(height: 14),
-                _qtySection(),
-                const SizedBox(height: 14),
-                _vibeNote(),
-              ],
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: GestureDetector(
-                onTap: (_submitting || !tree.inStock) ? null : _submit,
-                child: Container(
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: tree.inStock
-                        ? const LinearGradient(
-                            colors: [kForestGreen, kLeafGreen],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          )
-                        : null,
-                    color: tree.inStock ? null : Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.park_rounded,
-                                size: 18,
-                                color: tree.inStock
-                                    ? Colors.white
-                                    : Colors.white38),
-                            const SizedBox(width: 8),
-                            Text(
-                              tree.inStock
-                                  ? tr('center.plant_for_amount',
-                                      {'amount': formatMNT(_total)})
-                                  : tr('center.tree_out_of_stock'),
-                              style: TextStyle(
-                                color: tree.inStock
-                                    ? Colors.white
-                                    : Colors.white38,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ),
+          _treeCard(tree),
+          const SizedBox(height: 12),
+          _labelSection(),
+          const SizedBox(height: 12),
+          _qtySection(),
+          const SizedBox(height: 12),
+          _summaryCard(),
+          const SizedBox(height: 12),
+          AppBanner(
+            icon: Icons.energy_savings_leaf_rounded,
+            text: tr('center.plant_vibe_note'),
           ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: AppPrimaryButton(
+            icon: Icons.park_rounded,
+            label: tree.inStock
+                ? tr('center.plant_for_amount', {'amount': formatMNT(_total)})
+                : tr('center.tree_out_of_stock'),
+            loading: _submitting,
+            onPressed: (_submitting || !tree.inStock) ? null : _submit,
+          ),
+        ),
       ),
     );
   }
 
   Widget _treeCard(CenterTreeItem tree) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kForestGreen.withOpacity(0.4)),
-      ),
-      clipBehavior: Clip.antiAlias,
+    final bool hasSpecs = tree.seedlingHeight.trim().isNotEmpty ||
+        tree.matureHeight.trim().isNotEmpty ||
+        tree.lifespan.trim().isNotEmpty ||
+        tree.features.trim().isNotEmpty;
+    return AppCard(
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AspectRatio(
-            aspectRatio: 4 / 3,
-            child: Container(
-              color: const Color(0xFF252528),
-              child: tree.coverImage != null
-                  ? Image.network(
-                      tree.coverImage!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Center(
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Container(
+                color: CustomColors.surfaceAlt,
+                child: tree.coverImage != null
+                    ? Image.network(
+                        tree.coverImage!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.forest_rounded,
+                              color: Colors.white24, size: 40),
+                        ),
+                      )
+                    : const Center(
                         child: Icon(Icons.forest_rounded,
-                            color: kLeafGreen, size: 40),
+                            color: Colors.white24, size: 40),
                       ),
-                    )
-                  : const Center(
-                      child: Icon(Icons.forest_rounded,
-                          color: kLeafGreen, size: 40),
-                    ),
+              ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  tree.name,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(tree.name,
+                          style: AppText.sectionTitle),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      formatMNT(tree.price),
+                      style: AppText.bodyBold.copyWith(
+                          color: CustomColors.accent, fontSize: 16),
+                    ),
+                  ],
                 ),
-                if (tree.seedlingHeight.trim().isNotEmpty ||
-                    tree.matureHeight.trim().isNotEmpty ||
-                    tree.lifespan.trim().isNotEmpty ||
-                    tree.features.trim().isNotEmpty) ...[
+                if (hasSpecs) ...[
                   const SizedBox(height: 10),
                   _specsBox(tree),
                 ],
                 if (tree.description.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    tree.description,
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 11.5, height: 1.4),
-                  ),
+                  const SizedBox(height: 10),
+                  Text(tree.description, style: AppText.caption),
                 ],
-                const SizedBox(height: 8),
-                Text(
-                  formatMNT(tree.price),
-                  style: const TextStyle(
-                    color: kLeafGreen,
-                    fontFamily: 'RubikBold',
-                    fontSize: 16,
-                  ),
-                ),
               ],
             ),
           ),
@@ -255,145 +201,99 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
   Widget _specsBox(CenterTreeItem tree) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: kForestGreen.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kForestGreen.withOpacity(0.30)),
+        color: CustomColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (tree.seedlingHeight.trim().isNotEmpty)
-            _specRow(Icons.grass_rounded, tr('center.seedling_height'),
-                tree.seedlingHeight),
-          if (tree.matureHeight.trim().isNotEmpty)
-            _specRow(Icons.height_rounded, tr('center.mature_height'),
-                tree.matureHeight),
-          if (tree.lifespan.trim().isNotEmpty)
-            _specRow(Icons.hourglass_bottom_rounded, tr('center.lifespan'),
-                tree.lifespan),
-          if (tree.features.trim().isNotEmpty)
-            _specRow(Icons.auto_awesome_rounded, tr('center.features'),
-                tree.features),
-        ],
-      ),
-    );
-  }
-
-  Widget _specRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 14, color: kLeafGreen),
-          const SizedBox(width: 7),
-          // Text.rich (not RichText) so the user's font-size setting applies.
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '$label: ',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 11.5,
-                      height: 1.4,
-                    ),
-                  ),
-                  TextSpan(
-                    text: value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
+            AppInfoRow(
+              dense: true,
+              icon: Icons.grass_rounded,
+              label: tr('center.seedling_height'),
+              value: tree.seedlingHeight,
             ),
-          ),
+          if (tree.matureHeight.trim().isNotEmpty)
+            AppInfoRow(
+              dense: true,
+              icon: Icons.height_rounded,
+              label: tr('center.mature_height'),
+              value: tree.matureHeight,
+            ),
+          if (tree.lifespan.trim().isNotEmpty)
+            AppInfoRow(
+              dense: true,
+              icon: Icons.hourglass_bottom_rounded,
+              label: tr('center.lifespan'),
+              value: tree.lifespan,
+            ),
+          if (tree.features.trim().isNotEmpty)
+            AppInfoRow(
+              dense: true,
+              icon: Icons.auto_awesome_rounded,
+              label: tr('center.features'),
+              value: tree.features,
+            ),
         ],
       ),
     );
   }
 
   Widget _labelSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    final String preview = _labelCtrl.text.trim();
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.badge_rounded, size: 15, color: kLeafGreen),
+              Icon(Icons.badge_rounded,
+                  size: 16, color: CustomColors.textSecondary),
               const SizedBox(width: 6),
-              Text(
-                tr('center.plaque_name'),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600),
-              ),
+              Text(tr('center.plaque_name'), style: AppText.bodyBold),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            tr('center.plaque_name_hint'),
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
-          ),
-          const SizedBox(height: 10),
+          Text(tr('center.plaque_name_hint'), style: AppText.caption),
+          const SizedBox(height: 12),
           TextField(
             controller: _labelCtrl,
             maxLength: 40,
             textCapitalization: TextCapitalization.words,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: AppText.body,
+            cursorColor: CustomColors.accent,
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: tr('center.plaque_name_placeholder'),
-              hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
-              counterStyle:
-                  const TextStyle(color: Colors.white38, fontSize: 10),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
+            decoration: appInputDecoration(
+              hint: tr('center.plaque_name_placeholder'),
+            ).copyWith(counterStyle: AppText.caption.copyWith(fontSize: 11)),
           ),
-          if (_labelCtrl.text.trim().isNotEmpty) ...[
-            const SizedBox(height: 6),
+          if (preview.isNotEmpty) ...[
+            const SizedBox(height: 4),
             // Live plaque preview.
             Center(
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: kForestGreen.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: kLeafGreen.withOpacity(0.5)),
+                  color: CustomColors.accentSoft,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.eco_rounded, size: 14, color: kLeafGreen),
+                    Icon(Icons.eco_rounded,
+                        size: 14, color: CustomColors.accent),
                     const SizedBox(width: 6),
-                    Text(
-                      _labelCtrl.text.trim(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'RubikBold',
-                        fontSize: 13,
+                    Flexible(
+                      child: Text(
+                        preview,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodyBold
+                            .copyWith(color: CustomColors.accent),
                       ),
                     ),
                   ],
@@ -407,13 +307,8 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
   }
 
   Widget _qtySection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    final int? stock = widget.tree.stock;
+    return AppCard(
       child: Row(
         children: [
           Expanded(
@@ -421,52 +316,41 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  tr('center.tree_qty'),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
-                ),
-                if (widget.tree.stock != null) ...[
-                  const SizedBox(height: 2),
+                Text(tr('center.tree_qty'), style: AppText.bodyBold),
+                if (stock != null) ...[
+                  const SizedBox(height: 3),
                   Text(
-                    widget.tree.stock! > 0
-                        ? tr('center.stock_left', {'stock': widget.tree.stock})
+                    stock > 0
+                        ? tr('center.stock_left', {'stock': stock})
                         : tr('center.stock_empty'),
-                    style: TextStyle(
-                      color: widget.tree.stock! <= 20
-                          ? const Color(0xFFFFB300)
-                          : Colors.white54,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                    style: AppText.caption.copyWith(
+                      color: stock <= 20
+                          ? CustomColors.accent
+                          : CustomColors.textSecondary,
                     ),
                   ),
                 ],
               ],
             ),
           ),
+          const SizedBox(width: 12),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: kLeafGreen.withOpacity(0.4)),
+              color: CustomColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _stepBtn(Icons.remove,
+                _stepBtn(Icons.remove_rounded,
                     () => setState(() => _qty = _qty > 1 ? _qty - 1 : 1)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: Text('$_qty',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold)),
+                      style: AppText.bodyBold.copyWith(fontSize: 16)),
                 ),
                 _stepBtn(
-                  Icons.add,
+                  Icons.add_rounded,
                   _qty >= _maxQty ? null : () => setState(() => _qty++),
                 ),
               ],
@@ -480,35 +364,32 @@ class _TreeOrderScreenState extends State<TreeOrderScreen> {
   Widget _stepBtn(IconData icon, VoidCallback? onTap) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        width: 36,
-        height: 34,
+        width: 40,
+        height: 40,
         child: Icon(icon,
-            size: 17, color: onTap == null ? Colors.white24 : kLeafGreen),
+            size: 20,
+            color: onTap == null ? Colors.white24 : CustomColors.accent),
       ),
     );
   }
 
-  Widget _vibeNote() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: kForestGreen.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kForestGreen.withOpacity(0.35)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  /// Захиалгын товч дүгнэлт — тоо ширхэг ба нийт дүн.
+  Widget _summaryCard() {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
         children: [
-          const Icon(Icons.energy_savings_leaf_rounded,
-              size: 16, color: kLeafGreen),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tr('center.plant_vibe_note'),
-              style: const TextStyle(
-                  color: Colors.white70, fontSize: 11.5, height: 1.5),
-            ),
+          AppInfoRow(
+            label: tr('center.tree_qty'),
+            value: '$_qty',
+          ),
+          const AppDivider(vertical: 2),
+          AppInfoRow(
+            label: tr('center.total_amount'),
+            value: formatMNT(_total),
+            valueColor: CustomColors.accent,
           ),
         ],
       ),

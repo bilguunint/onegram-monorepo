@@ -1,11 +1,9 @@
-import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/scheduler.dart';
-import 'package:sensors_plus/sensors_plus.dart';
+import 'package:onegrgold/elements/tilt_controller.dart';
 
 /// Утасны хазайлтыг мэдэрч гэрлийн туяа нь хөдөлдөг brushed gold картын дэвсгэр.
 class GoldCardBackground extends StatefulWidget {
@@ -46,16 +44,9 @@ class _GoldCardBackgroundState extends State<GoldCardBackground>
   ui.Image? _chart;
   Size? _chartSize;
   late final Ticker _ticker;
-  StreamSubscription<AccelerometerEvent>? _sensorSub;
-  StreamSubscription<GyroscopeEvent>? _gyroSub;
+  final TiltController _tilt = TiltController.instance;
 
   double _time = 0.0;
-  // Хүндийн хүчний вектор ба түүний аажим дасан зохицдог "тайван" суурь.
-  // Хазайлт = одоогийн чиглэл − суурь: утсыг яаж ч барьсан, аль ч тийш
-  // хөдөлгөхөд хариу үйлдэл үзүүлнэ, тогтоход аажмаар голдоо буцна.
-  double _gx = 0.0, _gy = 0.0, _gz = 0.0;
-  double _bx = 0.0, _by = 0.0, _bz = 0.0;
-  bool _baseInit = false;
   double _targetX = 0.0, _targetY = 0.0;
   double _tiltX = 0.0, _tiltY = 0.0;
   // Эргэлтийн хурдаас гарах хөдөлгөөний эрчим (0..1)
@@ -71,59 +62,20 @@ class _GoldCardBackgroundState extends State<GoldCardBackground>
     });
     _loadLogo();
     _rasterText();
-    try {
-      _sensorSub = accelerometerEventStream(
-        samplingPeriod: const Duration(milliseconds: 40),
-      ).listen((e) {
-        final double len = math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
-        if (len < 0.1) return;
-        _gx = e.x / len;
-        _gy = e.y / len;
-        _gz = e.z / len;
-        if (!_baseInit) {
-          _bx = _gx;
-          _by = _gy;
-          _bz = _gz;
-          _baseInit = true;
-        } else {
-          // Суурь ~2.5 секундэд одоогийн чиглэл рүү дасан зохицно
-          _bx += (_gx - _bx) * 0.016;
-          _by += (_gy - _by) * 0.016;
-          _bz += (_gz - _bz) * 0.016;
-        }
-        final double dx = _gx - _bx;
-        final double dy = _gy - _by;
-        final double dz = _gz - _bz;
-        // x = зүүн/баруун эргэлт; y+z = урагш/хойш налалт (ямар ч барилтад).
-        // Гарын чичиргээ, sensor-ийн шуугианыг үл тоох dead zone.
-        double rawX = dx * 1.7;
-        double rawY = (dz - dy) * 1.2;
-        const double dead = 0.035;
-        rawX = rawX.abs() < dead ? 0.0 : rawX - dead * rawX.sign;
-        rawY = rawY.abs() < dead ? 0.0 : rawY - dead * rawY.sign;
-        _targetX = rawX.clamp(-1.0, 1.0);
-        _targetY = rawY.clamp(-1.0, 1.0);
-      }, onError: (_) {});
-      _gyroSub = gyroscopeEventStream(
-        samplingPeriod: const Duration(milliseconds: 40),
-      ).listen((g) {
-        final double rate = math.sqrt(g.x * g.x + g.y * g.y + g.z * g.z);
-        // Жижиг чичиргээг (< 0.25 rad/s) хөдөлгөөн гэж тооцохгүй
-        _motionTarget = ((rate - 0.25) / 3.5).clamp(0.0, 1.0);
-      }, onError: (_) {});
-    } catch (_) {
-      // Sensor байхгүй орчинд зөвхөн аажим drift-ээр гялалзана
-    }
+    _tilt.acquire();
     _ticker = createTicker((elapsed) {
       if (_shader == null || _logo == null || _text == null || _chart == null) {
         return;
       }
       setState(() {
         _time = elapsed.inMicroseconds / 1e6;
-        _tiltX += (_targetX - _tiltX) * 0.14;
-        _tiltY += (_targetY - _tiltY) * 0.14;
+        _targetX = _tilt.targetX;
+        _targetY = _tilt.targetY;
+        _motionTarget = _tilt.motionTarget;
+        _tiltX += (_targetX - _tiltX) * 0.08;
+        _tiltY += (_targetY - _tiltY) * 0.08;
         _motion +=
-            (_motionTarget - _motion) * (_motionTarget > _motion ? 0.35 : 0.06);
+            (_motionTarget - _motion) * (_motionTarget > _motion ? 0.25 : 0.05);
       });
     })
       ..start();
@@ -329,8 +281,7 @@ class _GoldCardBackgroundState extends State<GoldCardBackground>
   void dispose() {
     _ticker.dispose();
     // Зургууд static кэшид амьд үлдэнэ (дараагийн instance дахин ашиглана)
-    _sensorSub?.cancel();
-    _gyroSub?.cancel();
+    _tilt.release();
     _shader?.dispose();
     super.dispose();
   }

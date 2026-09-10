@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +9,11 @@ import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_detail_screen.dart';
-import 'package:onegrgold/screens/app_new_screen/products_screen/product_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:ionicons/ionicons.dart';
+import 'package:onegrgold/bloc/bottom_navbar_bloc.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class LotteryWidget extends StatefulWidget {
@@ -56,9 +59,8 @@ class _LotteryWidgetState extends State<LotteryWidget> {
       // Current-schema campaigns render as the full-width home banner; this
       // half-width card only ever served the two legacy ones, so showing a new
       // campaign here as well would put it on screen twice.
-      final legacyDocs = snapshot.docs
-          .where((d) => d.data()['schema_version'] != 2)
-          .toList();
+      final legacyDocs =
+          snapshot.docs.where((d) => d.data()['schema_version'] != 2).toList();
       if (legacyDocs.isNotEmpty) {
         final data = legacyDocs.first.data();
         setState(() {
@@ -109,6 +111,8 @@ class _LotteryWidgetState extends State<LotteryWidget> {
       return const SizedBox.shrink();
     }
 
+    final double cardWidth = MediaQuery.of(context).size.width / 2 - 24;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -116,10 +120,7 @@ class _LotteryWidgetState extends State<LotteryWidget> {
           padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
           child: Text(
             tr('home.promotion'),
-            style: const TextStyle(
-              fontFamily: "InterBold",
-              fontSize: 14.0,
-            ),
+            style: AppText.sectionTitle.copyWith(fontSize: 14.0),
           ),
         ),
         Padding(
@@ -139,73 +140,34 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                 );
               },
               child: Container(
-                width: MediaQuery.of(context).size.width / 2 - 24,
+                width: cardWidth,
                 height: 240,
+                padding: const EdgeInsets.all(12.0),
+                // Same surface card as the rate card beside it in the row.
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color.fromARGB(255, 13, 17, 21),
-                      Color.fromARGB(255, 15, 17, 20),
-                      Color.fromARGB(255, 9, 19, 28),
-                    ],
-                  ),
+                  color: CustomColors.surface,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      width: 1.0, color: CustomColors.surfaceBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 10),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 40,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 20),
+                      color: CustomColors.accent.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
                   ],
-                  border: Border.all(
-                    color: const Color(0xFF455A64),
-                    width: 2,
-                  ),
                 ),
-                child: Stack(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: MediaQuery.of(context).size.width / 2 - 24,
-                      height: 240,
-                      padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color.fromARGB(255, 13, 17, 21),
-                            Color.fromARGB(255, 15, 17, 20),
-                            Color.fromARGB(255, 9, 19, 28),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    /* Positioned(
-              left: 0.0,
-              right: 0.0,
-              top: 10.0,
-              child: SizedBox(
-              height: 120,
-              child: Image.asset('assets/images/goldbar_black.png'))), */
-                    Positioned(
-                      right: 10.0,
-                      top: 10.0,
-                      child: Row(
-                        children: [
-                          Lottie.asset('assets/icons/clock.json',
-                              width: 20, height: 20),
-                          SizedBox(width: 4.0),
-                          Text(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Lottie.asset('assets/icons/clock.json',
+                            width: 20, height: 20),
+                        const SizedBox(width: 4.0),
+                        Flexible(
+                          child: Text(
                             _endDate != null
                                 ? tr('home.days_left', {
                                     'days': _endDate!
@@ -213,72 +175,71 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                                         .inDays
                                   })
                                 : "COMING SOON...",
-                            style: const TextStyle(
-                              fontSize: 9.0,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.caption.copyWith(
+                              fontSize: 9.5,
+                              fontFamily: AppText.bold,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white54,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Positioned(
-                        bottom: 20.0,
-                        right: 16.0,
-                        left: 16.0,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                    const Spacer(),
+                    Center(
+                      child: SizedBox(
+                          height: 100,
+                          child: Lottie.asset('assets/icons/golden_ticket.json',
+                              repeat: false)),
+                    ),
+                    const SizedBox(height: 8.0),
+                    // Ticket count pill — accent text on the soft accent tint.
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: CustomColors.accentSoft,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
-                                height: 100,
-                                child: Lottie.asset(
-                                    'assets/icons/golden_ticket.json',
-                                    repeat: false)),
-                            Container(
-                              width: 150.0,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.white24,
-                                  width: 1,
+                            Flexible(
+                              child: Text(
+                                tr('home.total_tickets'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.label.copyWith(
+                                  fontFamily: AppText.bold,
+                                  fontWeight: FontWeight.bold,
+                                  color: CustomColors.accent,
                                 ),
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    tr('home.total_tickets'),
-                                    style: TextStyle(
-                                        color: CustomColors.mainColor,
-                                        fontSize: 12,
-                                        fontFamily: "RubikBold"),
-                                  ),
-                                  SizedBox(width: 16),
-                                  Text(
-                                    '$_ticketCount',
-                                    style: TextStyle(
-                                        color: CustomColors.mainColor,
-                                        fontSize: 12,
-                                        fontFamily: "RubikBold"),
-                                  ),
-                                ],
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '$_ticketCount',
+                              style: AppText.bodyBold.copyWith(
+                                fontSize: 13,
+                                color: CustomColors.accent,
                               ),
                             ),
-                            const SizedBox(height: 16.0),
-                            Text(
-                              _name ?? "",
-                              style: TextStyle(
-                                  fontSize: 12.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white),
-                            ),
                           ],
-                        )),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12.0),
+                    Text(
+                      _name ?? "",
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppText.bodyBold.copyWith(fontSize: 12.0),
+                    ),
                   ],
                 ),
               ),
@@ -294,6 +255,9 @@ class _LotteryWidgetState extends State<LotteryWidget> {
 /// no active marketing campaign. Sized to the same half-width / 240-height
 /// slot, with a horizontal slider of products inside.
 class _ProductsPromo extends StatelessWidget {
+  /// Барааг санамсаргүй холих seed — апп нээх бүрд шинээр сонгогдоно
+  static final int _seed = Random().nextInt(1 << 30);
+
   final String uid;
   final UserRepository userRepository;
   final ProductRepository repo;
@@ -329,6 +293,21 @@ class _ProductsPromo extends StatelessWidget {
       stream: repo.watchActiveProducts(),
       builder: (context, snapshot) {
         final products = snapshot.data ?? const <Product>[];
+        // Хамгийн бага өдрийн төлбөр — "…-өөс" гэж харуулна
+        num? minDaily;
+        for (final p in products) {
+          final d = dailyAmount(p.price, p.maxMonths.clamp(1, 12));
+          if (minDaily == null || d < minDaily) minDaily = d;
+        }
+        // Санамсаргүй 4 бараа — seed нь сессийн турш тогтмол тул stream
+        // дахин ажиллах, scroll хийхэд зураг солигдохгүй
+        final shuffled = [...products]..shuffle(Random(_ProductsPromo._seed));
+        final covers = shuffled.take(4).map((p) => p.coverImage).toList();
+        final int extra = products.length - 4;
+
+        // Дэлгэрэнгүй биш — доод nav-ийн "Бүтээгдэхүүн" таб руу шууд шилжинэ
+        void openProducts() => BottomNavBarBloc.current?.pickItem(2);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -337,69 +316,113 @@ class _ProductsPromo extends StatelessWidget {
                   const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
               child: Text(
                 tr('home.installment_title'),
-                style: const TextStyle(
-                  fontFamily: 'InterBold',
-                  fontSize: 14.0,
-                ),
+                style: AppText.sectionTitle.copyWith(fontSize: 14.0),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                width: cardWidth,
-                height: 240,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color.fromARGB(255, 13, 17, 21),
-                      Color.fromARGB(255, 15, 17, 20),
-                      Color.fromARGB(255, 9, 19, 28),
+              child: GestureDetector(
+                onTap: products.isEmpty ? null : openProducts,
+                child: Container(
+                  width: cardWidth,
+                  height: 240,
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: CustomColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        width: 1.0, color: CustomColors.surfaceBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CustomColors.accent.withOpacity(0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF455A64),
-                    width: 0.5,
-                  ),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: products.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
+                  child: products.isEmpty
+                      ? Center(
                           child: Text(
                             tr('home.no_products'),
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                            ),
+                            style: AppText.caption,
                           ),
-                        ),
-                      )
-                    : PageView.builder(
-                        controller: PageController(viewportFraction: 1.0),
-                        itemCount: products.length,
-                        itemBuilder: (context, i) {
-                          return _PromoSlide(
-                            product: products[i],
-                            current: i + 1,
-                            total: products.length,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ProductDetailScreen(
-                                    product: products[i],
-                                    uid: uid,
-                                    userRepository: userRepository,
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 2×2 коллаж — олон бараа байгааг мэдрүүлнэ
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: Row(children: [
+                                      Expanded(child: _tile(covers, 0)),
+                                      const SizedBox(width: 6),
+                                      Expanded(child: _tile(covers, 1)),
+                                    ]),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Expanded(
+                                    child: Row(children: [
+                                      Expanded(child: _tile(covers, 2)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                          child: _tile(covers, 3,
+                                              extra: extra > 0 ? extra : 0)),
+                                    ]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: CustomColors.accentSoft,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    tr('home.products_count',
+                                        {'n': products.length}),
+                                    style: TextStyle(
+                                      fontFamily: AppText.bold,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: CustomColors.accent,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                                const Spacer(),
+                                Container(
+                                  width: 26,
+                                  height: 26,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: CustomColors.surfaceAlt,
+                                  ),
+                                  child: const Icon(
+                                      Ionicons.arrow_forward_outline,
+                                      size: 14,
+                                      color: Colors.white),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            if (minDaily != null)
+                              Text(
+                                tr('home.daily_from',
+                                    {'amount': formatMNT(minDaily)}),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption.copyWith(
+                                    fontSize: 11, color: Colors.white70),
+                              ),
+                          ],
+                        ),
+                ),
               ),
             ),
           ],
@@ -407,123 +430,52 @@ class _ProductsPromo extends StatelessWidget {
       },
     );
   }
-}
 
-class _PromoSlide extends StatelessWidget {
-  final Product product;
-  final int current;
-  final int total;
-  final VoidCallback onTap;
-
-  const _PromoSlide({
-    required this.product,
-    required this.current,
-    required this.total,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cover = product.coverImage;
-    final maxMonths = product.maxMonths.clamp(1, 12);
-    final daily = dailyAmount(product.price, maxMonths);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
+  /// Коллажийн нэг нүд: зураг, байхгүй бол бүдэг icon; сүүлийнх дээр "+N"
+  Widget _tile(List<String?> covers, int i, {int extra = 0}) {
+    final String? cover = i < covers.length ? covers[i] : null;
+    Widget img = Container(
+      color: CustomColors.surfaceAlt,
+      child: cover != null
+          ? Image.network(
+              cover,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.image_not_supported_outlined,
+                    color: Colors.white24, size: 18),
+              ),
+            )
+          : const Center(
+              child: Icon(Icons.inventory_2_outlined,
+                  color: Colors.white24, size: 18),
+            ),
+    );
+    if (extra > 0) {
+      img = Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        width: double.infinity,
-                        color: const Color(0xFF252528),
-                        child: cover != null
-                            ? Image.network(
-                                cover,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Center(
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: Colors.white24,
-                                    size: 28,
-                                  ),
-                                ),
-                              )
-                            : const Center(
-                                child: Icon(
-                                  Icons.inventory_2_outlined,
-                                  color: Colors.white24,
-                                  size: 30,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    tr('home.daily_amount', {'amount': formatMNT(daily)}),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontFamily: 'RubikBold',
-                      fontSize: 11.5,
-                    ),
-                  ),
-                ],
+          img,
+          Container(
+            color: Colors.black.withOpacity(0.55),
+            child: Center(
+              child: Text(
+                "+$extra",
+                style: const TextStyle(
+                  fontFamily: AppText.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
-          if (total > 1)
-            Positioned(
-              top: 8,
-              right: 10,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.35),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$current/$total',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
         ],
-      ),
-    );
+      );
+    }
+    return ClipRRect(borderRadius: BorderRadius.circular(10), child: img);
   }
 }
 
-/// Home-slot card shown instead of the products slider while the user has an
-/// ACTIVE installment: cover, progress and a next-payment shortcut. Tapping
-/// opens the full purchase detail where the next day(s) can be paid.
 class _ActiveInstallmentPromo extends StatelessWidget {
   final ProductPurchase purchase;
   final double cardWidth;
@@ -547,10 +499,7 @@ class _ActiveInstallmentPromo extends StatelessWidget {
           padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
           child: Text(
             tr('home.my_installment'),
-            style: const TextStyle(
-              fontFamily: 'InterBold',
-              fontSize: 14.0,
-            ),
+            style: AppText.sectionTitle.copyWith(fontSize: 14.0),
           ),
         ),
         Padding(
@@ -567,20 +516,17 @@ class _ActiveInstallmentPromo extends StatelessWidget {
               width: cardWidth,
               height: 240,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color.fromARGB(255, 13, 17, 21),
-                    Color.fromARGB(255, 15, 17, 20),
-                    Color.fromARGB(255, 9, 19, 28),
-                  ],
-                ),
+                color: CustomColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF455A64),
-                  width: 0.5,
-                ),
+                border:
+                    Border.all(width: 1.0, color: CustomColors.surfaceBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: CustomColors.accent.withOpacity(0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               clipBehavior: Clip.antiAlias,
               child: Padding(
@@ -593,7 +539,7 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
                           width: double.infinity,
-                          color: const Color(0xFF252528),
+                          color: CustomColors.surfaceAlt,
                           child: ps.image != null
                               ? Image.network(
                                   ps.image!,
@@ -621,11 +567,7 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                       ps.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppText.bodyBold.copyWith(fontSize: 11),
                     ),
                     const SizedBox(height: 6),
                     ClipRRect(
@@ -635,9 +577,9 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                             ? purchase.paidDays / purchase.totalDays
                             : 0,
                         minHeight: 5,
-                        backgroundColor: Colors.white.withOpacity(0.15),
+                        backgroundColor: Colors.white.withOpacity(0.08),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                            CustomColors.mainColor),
+                            CustomColors.accent),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -649,39 +591,37 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                             'paid': purchase.paidDays,
                             'total': purchase.totalDays
                           }),
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 9.5,
-                          ),
+                          style: AppText.caption.copyWith(fontSize: 9.5),
                         ),
                         Text(
                           '${pct.toStringAsFixed(pct < 10 ? 1 : 0)}%',
                           style: TextStyle(
-                            color: CustomColors.mainColor,
+                            fontFamily: AppText.bold,
                             fontSize: 9.5,
                             fontWeight: FontWeight.bold,
+                            color: CustomColors.accent,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
+                    // Compact accent pill — the card is too small for the
+                    // full-height primary button.
                     Container(
                       height: 30,
                       width: double.infinity,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: CustomColors.mainColor,
+                        color: CustomColors.accent,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         purchase.hasPendingCancelRequest
                             ? tr('home.view_details')
                             : tr('home.make_next_payment'),
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.button.copyWith(fontSize: 11),
                       ),
                     ),
                   ],

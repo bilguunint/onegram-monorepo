@@ -1068,6 +1068,34 @@ const Map<String, Map<String, String>> kOrdersTranslations = {
     'ru': 'Данные не найдены'
   },
   'order.chart': {'mn': 'График', 'en': 'Chart', 'zh': '图表', 'ru': 'График'},
+  'order.p_1m': {'mn': '1С', 'en': '1M', 'zh': '1月', 'ru': '1М'},
+  'order.p_3m': {'mn': '3С', 'en': '3M', 'zh': '3月', 'ru': '3М'},
+  'order.p_6m': {'mn': '6С', 'en': '6M', 'zh': '6月', 'ru': '6М'},
+  'order.p_1y': {'mn': '1Ж', 'en': '1Y', 'zh': '1年', 'ru': '1Г'},
+  'order.p_3y': {'mn': '3Ж', 'en': '3Y', 'zh': '3年', 'ru': '3Г'},
+  'order.p_all': {'mn': 'Бүгд', 'en': 'All', 'zh': '全部', 'ru': 'Все'},
+  'order.period_change': {
+    'mn': 'Хугацааны өөрчлөлт',
+    'en': 'Period change',
+    'zh': '区间变化',
+    'ru': 'Изменение за период'
+  },
+  'order.high': {'mn': 'Дээд', 'en': 'High', 'zh': '最高', 'ru': 'Макс'},
+  'order.low': {'mn': 'Доод', 'en': 'Low', 'zh': '最低', 'ru': 'Мин'},
+  'order.avg': {'mn': 'Дундаж', 'en': 'Avg', 'zh': '平均', 'ru': 'Средн.'},
+  'order.week52': {
+    'mn': '52 долоо хоног',
+    'en': '52 weeks',
+    'zh': '52周',
+    'ru': '52 недели'
+  },
+  'order.growth': {'mn': 'Өсөлт', 'en': 'Growth', 'zh': '增长', 'ru': 'Рост'},
+  'order.last_days': {
+    'mn': 'Сүүлийн {n} өдөр',
+    'en': 'Last {n} days',
+    'zh': '最近{n}天',
+    'ru': 'Последние {n} дн.'
+  },
   'order.daily': {
     'mn': 'Өдрөөр',
     'en': 'Day by day',

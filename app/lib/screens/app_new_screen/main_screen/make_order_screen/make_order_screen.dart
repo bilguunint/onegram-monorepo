@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/make_order_bloc/make_order_bloc.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/make_order_screen/make_order_view.dart';
+import 'package:onegrgold/style/colors.dart';
 
 class MakeOrderScreen extends StatefulWidget {
   const MakeOrderScreen(
@@ -25,10 +27,8 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('order.make_order_title')),
-        centerTitle: false,
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('order.make_order_title')),
       body: BlocProvider(
         create: (context) {
           return MakeOrderBloc(

@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/lottery_campaign_models.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// The campaign screen: cover, rules, the user's own tickets grouped by state
@@ -63,54 +65,35 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
   Widget build(BuildContext context) {
     final campaign = _campaign;
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
-        title: Text(tr('lottery.section_title'),
-            style: const TextStyle(fontFamily: "InterBold", fontSize: 16)),
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('lottery.section_title')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                  color: CustomColors.accent, strokeWidth: 2),
+            )
           : campaign == null
               ? const SizedBox.shrink()
               : RefreshIndicator(
                   onRefresh: _load,
-                  color: CustomColors.mainColor,
+                  color: CustomColors.accent,
+                  backgroundColor: CustomColors.surface,
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 32),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                     children: [
                       _cover(campaign),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _header(campaign),
-                            const SizedBox(height: 12),
-                            _rules(campaign),
-                            if (campaign.description.trim().isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                campaign.description,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            _sectionTitle(tr('lottery.my_tickets')),
-                            const SizedBox(height: 10),
-                            _myTickets(),
-                            const SizedBox(height: 24),
-                            _sectionTitle(tr('lottery.winners')),
-                            const SizedBox(height: 10),
-                            _drawsList(),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 12),
+                      _header(campaign),
+                      const SizedBox(height: 24),
+                      Text(tr('lottery.my_tickets'),
+                          style: AppText.sectionTitle),
+                      const SizedBox(height: 12),
+                      _myTickets(),
+                      const SizedBox(height: 24),
+                      Text(tr('lottery.winners'), style: AppText.sectionTitle),
+                      const SizedBox(height: 12),
+                      _drawsList(),
                     ],
                   ),
                 ),
@@ -121,150 +104,147 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
   Widget _cover(LotteryCampaignInfo campaign) {
     final url = campaign.coverImage;
-    return AspectRatio(
-      aspectRatio: 21 / 9,
-      child: (url != null && url.isNotEmpty)
-          ? Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _coverPlaceholder(),
-            )
-          : _coverPlaceholder(),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio(
+        aspectRatio: 21 / 9,
+        child: (url != null && url.isNotEmpty)
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _coverPlaceholder(),
+              )
+            : _coverPlaceholder(),
+      ),
     );
   }
 
   Widget _coverPlaceholder() {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2A2410), Color(0xFF161618)],
-        ),
-      ),
+    return ColoredBox(
+      color: CustomColors.surfaceAlt,
       child: Center(
         child: Icon(Icons.confirmation_number_outlined,
-            color: CustomColors.mainColor.withOpacity(0.35), size: 48),
+            color: CustomColors.accent.withOpacity(0.35), size: 48),
       ),
     );
   }
 
+  /// Name, days-left chip, rule chips, description and the campaign stats in
+  /// one card.
   Widget _header(LotteryCampaignInfo campaign) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
+    final rules = _ruleChips(campaign);
+    final String? endDate = campaign.endDate == null
+        ? null
+        : "${campaign.endDate!.year}.${campaign.endDate!.month.toString().padLeft(2, '0')}.${campaign.endDate!.day.toString().padLeft(2, '0')}";
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                campaign.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontFamily: "InterBold",
-                  fontSize: 17,
-                  height: 1.3,
+              Expanded(
+                child: Text(
+                  campaign.name,
+                  style: AppText.sectionTitle.copyWith(height: 1.3),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                tr('lottery.participants',
-                    {'count': campaign.totalParticipants}),
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              const SizedBox(width: 10),
+              AppStatusChip(
+                label: campaign.daysLeft > 0
+                    ? tr('lottery.days_left', {'days': campaign.daysLeft})
+                    : tr('lottery.ends_today'),
+                icon: Icons.schedule_rounded,
               ),
             ],
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: CustomColors.mainColor.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            campaign.daysLeft > 0
-                ? tr('lottery.days_left', {'days': campaign.daysLeft})
-                : tr('lottery.ends_today'),
-            style: TextStyle(
-              color: CustomColors.mainColor,
-              fontSize: 11,
-              fontFamily: "RubikBold",
+          if (rules.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: rules),
+          ],
+          if (campaign.description.trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              campaign.description,
+              style: AppText.body.copyWith(color: CustomColors.textSecondary),
             ),
+          ],
+          const AppDivider(vertical: 10),
+          AppInfoRow(
+            dense: true,
+            icon: Icons.confirmation_number_outlined,
+            label: tr('lottery.my_tickets'),
+            value: '${_tickets.length}',
+            valueColor: CustomColors.accent,
           ),
-        ),
-      ],
+          // These strings already carry their number/date, so they are shown
+          // as one muted line each rather than a label/value pair.
+          _infoLine(
+            Icons.people_outline_rounded,
+            tr('lottery.participants', {'count': campaign.totalParticipants}),
+          ),
+          if (endDate != null)
+            _infoLine(Icons.event_outlined,
+                tr('home.lottery_ends_on', {'date': endDate})),
+        ],
+      ),
     );
   }
 
-  Widget _rules(LotteryCampaignInfo campaign) {
-    final chips = <String>[
+  Widget _infoLine(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15.0, color: CustomColors.textSecondary),
+          const SizedBox(width: 8.0),
+          Expanded(
+            child: Text(text, style: AppText.caption.copyWith(fontSize: 13.0)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _ruleChips(LotteryCampaignInfo campaign) {
+    final labels = <String>[
       if (campaign.ticketsPerUnit > 0)
         tr('lottery.rule_per_unit', {'n': campaign.ticketsPerUnit}),
       if (campaign.signupTickets > 0)
         tr('lottery.rule_signup', {'n': campaign.signupTickets}),
     ];
-    if (chips.isEmpty) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: chips
-          .map((label) => Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Text(
-                  label,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-              ))
-          .toList(),
-    );
-  }
-
-  Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white,
-        fontFamily: "InterBold",
-        fontSize: 14,
-      ),
-    );
+    return labels
+        .map((label) =>
+            AppStatusChip(label: label, color: CustomColors.textSecondary))
+        .toList();
   }
 
   // ---- my tickets --------------------------------------------------------
 
   Widget _myTickets() {
     if (_tickets.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Text(
-          tr('lottery.no_tickets_yet'),
-          style: const TextStyle(
-              color: Colors.white54, fontSize: 12, height: 1.5),
-          textAlign: TextAlign.center,
+      return AppCard(
+        padding: const EdgeInsets.all(4),
+        child: AppEmptyState(
+          icon: Icons.confirmation_number_outlined,
+          title: tr('lottery.no_tickets_yet'),
         ),
       );
     }
-    return Column(
-      children: _tickets.map(_ticketRow).toList(),
+    final rows = <Widget>[];
+    for (int i = 0; i < _tickets.length; i++) {
+      if (i > 0) rows.add(const AppDivider(vertical: 0));
+      rows.add(_ticketRow(_tickets[i]));
+    }
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(children: rows),
     );
   }
 
   Widget _ticketRow(LotteryTicketInfo t) {
     final won = t.isWon;
-    final Color border =
-        won ? CustomColors.mainColor.withOpacity(0.7) : Colors.white12;
     final String statusText = won
         ? (t.prize != null && t.prize!.trim().isNotEmpty
             ? tr('lottery.won_prize', {'prize': t.prize})
@@ -273,49 +253,24 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
             ? tr('lottery.status_pending')
             : tr('lottery.status_in_draw', {'n': t.drawNumber});
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: won
-            ? CustomColors.mainColor.withOpacity(0.10)
-            : Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
+    return AppListRow(
+      title: t.code,
+      subtitle: statusText,
+      leading: AppIconTile(
+        size: 40,
+        color: won ? CustomColors.accentSoft : null,
+        child: Icon(
+          won ? Icons.emoji_events_rounded : Icons.confirmation_number_outlined,
+          size: 20,
+          color: won ? CustomColors.accent : CustomColors.textSecondary,
+        ),
       ),
-      child: Row(
-        children: [
-          Icon(
-            won
-                ? Icons.emoji_events_rounded
-                : Icons.confirmation_number_outlined,
-            size: 18,
-            color: won ? CustomColors.mainColor : Colors.white38,
-          ),
-          const SizedBox(width: 10),
-          Text(
-            t.code,
-            style: TextStyle(
-              color: won ? CustomColors.mainColor : Colors.white,
-              fontSize: 14,
-              fontFamily: "RubikBold",
-              letterSpacing: 2,
-            ),
-          ),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              statusText,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: won ? CustomColors.mainColor : Colors.white54,
-                fontSize: 10.5,
-                fontWeight: won ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
+      trailing: won
+          ? AppStatusChip(
+              label: tr('lottery.you_won'),
+              icon: Icons.emoji_events_rounded,
+            )
+          : null,
     );
   }
 
@@ -323,9 +278,12 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
   Widget _drawsList() {
     if (_draws.isEmpty) {
-      return Text(
-        tr('lottery.no_draws_yet'),
-        style: const TextStyle(color: Colors.white38, fontSize: 12),
+      return AppCard(
+        padding: const EdgeInsets.all(4),
+        child: AppEmptyState(
+          icon: Icons.emoji_events_outlined,
+          title: tr('lottery.no_draws_yet'),
+        ),
       );
     }
     return Column(
@@ -334,77 +292,72 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
   }
 
   Widget _drawCard(LotteryDrawInfo draw) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                tr('lottery.draw_n', {'n': draw.drawNumber}),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontFamily: "InterBold",
-                  fontSize: 12.5,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                tr('lottery.draw_tickets', {'count': draw.ticketCount}),
-                style: const TextStyle(color: Colors.white38, fontSize: 10.5),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (draw.winners.isEmpty)
-            Text(
-              tr('lottery.no_winners_yet'),
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
-            )
-          else
-            ...draw.winners.map((w) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.emoji_events_rounded,
-                          size: 14, color: CustomColors.mainColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        w.ticketCode,
-                        style: TextStyle(
-                          color: CustomColors.mainColor,
-                          fontSize: 12,
-                          fontFamily: "RubikBold",
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          w.displayName,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
-                        ),
-                      ),
-                      if (w.prize != null && w.prize!.trim().isNotEmpty)
-                        Text(
-                          w.prize!,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11),
-                        ),
-                    ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    tr('lottery.draw_n', {'n': draw.drawNumber}),
+                    style: AppText.bodyBold,
                   ),
-                )),
-        ],
+                ),
+                AppStatusChip(
+                  label:
+                      tr('lottery.draw_tickets', {'count': draw.ticketCount}),
+                  color: CustomColors.textSecondary,
+                ),
+              ],
+            ),
+            const AppDivider(vertical: 10),
+            if (draw.winners.isEmpty)
+              Text(tr('lottery.no_winners_yet'), style: AppText.caption)
+            else
+              ...draw.winners.map((w) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      children: [
+                        Icon(Icons.emoji_events_rounded,
+                            size: 14, color: CustomColors.accent),
+                        const SizedBox(width: 8),
+                        Text(
+                          w.ticketCode,
+                          style: AppText.bodyBold.copyWith(
+                            fontSize: 12.5,
+                            color: CustomColors.accent,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            w.displayName,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.caption.copyWith(
+                                fontSize: 12.5, color: Colors.white70),
+                          ),
+                        ),
+                        if (w.prize != null && w.prize!.trim().isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              w.prize!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption
+                                  .copyWith(color: CustomColors.accent),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )),
+          ],
+        ),
       ),
     );
   }

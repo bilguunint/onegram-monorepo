@@ -1,12 +1,12 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
-import 'package:onegrgold/elements/main_button.dart';
 import 'package:onegrgold/models/make_order_model.dart';
 import 'package:onegrgold/models/order_model.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -45,486 +45,292 @@ class _PaymentScreenState extends State<PaymentScreen>
     _tabController = TabController(vsync: this, length: tabs.length);
   }
 
+  /// Хуулсны дараах snackbar — өмнөх шигээ, зөвхөн дэвсгэр өнгө токенжсон
+  void _copy(String value) {
+    Clipboard.setData(ClipboardData(text: value));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+            backgroundColor: CustomColors.surface,
+            content: Text(
+              tr('order.copied', {'value': value}),
+              style: const TextStyle(color: Colors.white),
+            )),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final String transactionText = widget.order.client!.phone.isNotEmpty
+        ? "${widget.order.client!.phone}-${widget.order.quantity}"
+        : "${widget.order.client!.email}-${widget.order.quantity}";
+    final String totalText =
+        currencyFormatter.format(widget.order.amount.toInt());
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('order.payment_title')),
-        centerTitle: false,
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('order.payment_title')),
       body: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Төлөх дүн — caption + display
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tr('order.amount_due_label'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+              padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(tr('order.amount_due_label'), style: AppText.caption),
+                    const SizedBox(height: 6.0),
+                    Text(
+                      "${currencyFormatter.format(widget.order.amount)}₮",
+                      style: AppText.display.copyWith(fontSize: 32.0),
                     ),
-                  ),
-                  const SizedBox(
-                    height: 4.0,
-                  ),
-                  Text(
-                    "${currencyFormatter.format(widget.order.amount)}₮",
-                    style: TextStyle(
-                        color: CustomColors.mainColor,
-                        fontSize: 20.0,
-                        fontFamily: "InterBold"),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            TabBar(
-              controller: _tabController,
-              indicatorColor: CustomColors.mainColor,
-              indicatorSize: TabBarIndicatorSize.tab,
-              padding: const EdgeInsets.all(8.0),
-              indicatorWeight: 3.0,
-              unselectedLabelColor:
-                  Colors.white38,
-              labelColor: Colors.white,
-              tabs: tabs.map((String tab) {
-                return Container(
-                    padding: const EdgeInsets.only(bottom: 10.0, top: 8.0),
-                    child: Text(tab.toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 12.0, fontWeight: FontWeight.bold)));
-              }).toList(),
+            // Төлбөрийн арга сонгох — pill маягийн segmented TabBar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(
+                padding: const EdgeInsets.all(4.0),
+                decoration: BoxDecoration(
+                  color: CustomColors.surface,
+                  borderRadius: BorderRadius.circular(14.0),
+                  border:
+                      Border.all(width: 1.0, color: CustomColors.surfaceBorder),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: CustomColors.accent,
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicatorColor: Colors.transparent,
+                  dividerColor: Colors.transparent,
+                  splashBorderRadius: BorderRadius.circular(10.0),
+                  overlayColor:
+                      WidgetStateProperty.all(Colors.transparent),
+                  labelColor: Colors.black,
+                  unselectedLabelColor: CustomColors.textSecondary,
+                  labelStyle: const TextStyle(
+                      fontFamily: AppText.bold,
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.bold),
+                  unselectedLabelStyle: const TextStyle(
+                      fontFamily: AppText.medium,
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.w500),
+                  labelPadding: EdgeInsets.zero,
+                  tabs: tabs.map((String tab) {
+                    return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        alignment: Alignment.center,
+                        child: Text(tab.toUpperCase()));
+                  }).toList(),
+                ),
+              ),
             ),
             Expanded(
               child: TabBarView(controller: _tabController, children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, // number of items in each row
-                      mainAxisSpacing: 8.0, // spacing between rows
-                      crossAxisSpacing: 8.0, // spacing between columns
-                    ),
-                    itemCount: widget.makeOrder.links.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () {
-                          final Uri url =
-                              Uri.parse(widget.makeOrder.links[index].deeplink);
-                          launchUrl(url);
-                        },
-                        child: Container(
-                            padding: const EdgeInsets.all(8.0),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8.0),
-                              color:  CustomColors.darkContainerColor,
-                            ), // color of grid items
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  height: 50.0,
-                                  width: 50.0,
-                                  decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                      image: DecorationImage(
-                                          fit: BoxFit.cover,
-                                          image: NetworkImage(widget
-                                              .makeOrder.links[index].logo))),
-                                ),
-                                const SizedBox(
-                                  height: 12.0,
-                                ),
-                                Text(
-                                  widget.makeOrder.links[index].description,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10.0),
-                                )
-                              ],
-                            )),
-                      );
-                    },
-                  ),
+                // ------------------------------------------ Банкны апп
+                ListView(
+                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 32.0),
+                  children: [
+                    if (widget.makeOrder.links.isNotEmpty)
+                      AppCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 4.0),
+                        child: Column(
+                          children: List.generate(
+                            widget.makeOrder.links.length,
+                            (index) {
+                              final link = widget.makeOrder.links[index];
+                              return Column(
+                                children: [
+                                  if (index > 0) const AppDivider(vertical: 0),
+                                  AppListRow(
+                                    title: link.description.isNotEmpty
+                                        ? link.description
+                                        : link.name,
+                                    leading: _BankLogo(url: link.logo),
+                                    onTap: () {
+                                      final Uri url = Uri.parse(link.deeplink);
+                                      launchUrl(url);
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
+                // ------------------------------------------ Шилжүүлэг
+                ListView(
+                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 32.0),
+                  children: [
+                    AppCard(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            tr('order.bank_label'),
-                            style: TextStyle(
-                                fontSize: 13.0,
-                                color: Colors.white70),
+                          _TransferRow(
+                            label: tr('order.bank_label'),
+                            value: tr('order.khan_bank'),
                           ),
-                          const SizedBox(
-                            height: 5.0,
+                          const AppDivider(vertical: 10.0),
+                          _TransferRow(
+                            label: tr('order.account_holder_label'),
+                            value: "УАН ГРАММ ГОУЛД СТОНЕ ХХК",
+                            onCopy: () => _copy("УАН ГРАММ ГОУЛД СТОНЕ ХХК"),
                           ),
-                          Text(
-                            tr('order.khan_bank'),
-                            style: TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    Colors.white),
+                          const AppDivider(vertical: 10.0),
+                          _TransferRow(
+                            label: tr('order.account_number_label'),
+                            value: "190005005926653395",
+                            onCopy: () => _copy("190005005926653395"),
+                          ),
+                          const AppDivider(vertical: 10.0),
+                          _TransferRow(
+                            label: tr('order.transaction_note_label'),
+                            value: transactionText,
+                            onCopy: () => _copy(transactionText),
+                          ),
+                          const AppDivider(vertical: 10.0),
+                          _TransferRow(
+                            label: tr('order.total_amount_label'),
+                            value: "$totalText₮",
+                            valueColor: CustomColors.accent,
+                            onCopy: () => _copy(totalText),
                           ),
                         ],
                       ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 0.5,
-                        color: Colors.white12,
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tr('order.account_holder_label'),
-                                style: TextStyle(
-                                    fontSize: 13.0,
-                                    color: Colors.white70),
-                              ),
-                              const SizedBox(
-                                height: 5.0,
-                              ),
-                              Text(
-                                "УАН ГРАММ ГОУЛД СТОНЕ ХХК",
-                                style: TextStyle(
-                                    fontSize: 14.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(
-                                  ClipboardData(text: "УАН ГРАММ ГОУЛД СТОНЕ ХХК"));
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                      backgroundColor:
-                                          CustomColors.darkContainerColor,
-                                      content: Text(
-                                        tr('order.copied', {
-                                          'value': 'УАН ГРАММ ГОУЛД СТОНЕ ХХК'
-                                        }),
-                                        style: TextStyle(color: Colors.white),
-                                      )),
-                                );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.only(
-                                  left: 15.0,
-                                  right: 15.0,
-                                  top: 6.0,
-                                  bottom: 6.0),
-                              decoration: BoxDecoration(
-                                  color: CustomColors.mainColor,
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10.0))),
-                              child: Text(
-                                tr('order.copy').toUpperCase(),
-                                style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10.0),
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 0.5,
-                        color: Colors.white12,
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tr('order.account_number_label'),
-                                style: TextStyle(
-                                    fontSize: 13.0,
-                                    color: Colors.white70),
-                              ),
-                              const SizedBox(
-                                height: 5.0,
-                              ),
-                              Text(
-                                "190005005926653395",
-                                style: TextStyle(
-                                    fontSize: 14.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(
-                                  ClipboardData(text: "190005005926653395"));
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                      backgroundColor:
-                                          CustomColors.darkContainerColor,
-                                      content: Text(
-                                        tr('order.copied',
-                                            {'value': '190005005926653395'}),
-                                        style: TextStyle(color: Colors.white),
-                                      )),
-                                );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.only(
-                                  left: 15.0,
-                                  right: 15.0,
-                                  top: 6.0,
-                                  bottom: 6.0),
-                              decoration: BoxDecoration(
-                                  color: CustomColors.mainColor,
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10.0))),
-                              child: Text(
-                                tr('order.copy').toUpperCase(),
-                                style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10.0),
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 0.5,
-                        color: Colors.white12,
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tr('order.transaction_note_label'),
-                                style: TextStyle(
-                                    fontSize: 13.0,
-                                    color: Colors.white70),
-                              ),
-                              const SizedBox(
-                                height: 5.0,
-                              ),
-                              Text(
-                                widget.order.client!.phone.isNotEmpty
-                                    ? "${widget.order.client!.phone}-${widget.order.quantity}"
-                                    : "${widget.order.client!.email}-${widget.order.quantity}",
-                                style: TextStyle(
-                                    fontSize: 14.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              final transactionText = widget.order.client!.phone.isNotEmpty
-                                  ? "${widget.order.client!.phone}-${widget.order.quantity}"
-                                  : "${widget.order.client!.email}-${widget.order.quantity}";
-                              
-                              Clipboard.setData(ClipboardData(text: transactionText));
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                      backgroundColor:
-                                          CustomColors.darkContainerColor,
-                                      content: Text(
-                                        tr('order.copied',
-                                            {'value': transactionText}),
-                                        style: TextStyle(color: Colors.white),
-                                      )),
-                                );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.only(
-                                  left: 15.0,
-                                  right: 15.0,
-                                  top: 6.0,
-                                  bottom: 6.0),
-                              decoration: BoxDecoration(
-                                  color: CustomColors.mainColor,
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10.0))),
-                              child: Text(
-                                tr('order.copy').toUpperCase(),
-                                style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10.0),
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 0.5,
-                        color: Colors.white12,
-                      ),
-                      const SizedBox(
-                        height: 16.0,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tr('order.total_amount_label'),
-                                style: TextStyle(
-                                    fontSize: 13.0,
-                                    color: Colors.white70),
-                              ),
-                              const SizedBox(
-                                height: 5.0,
-                              ),
-                              Text(
-                                "${currencyFormatter.format(widget.order.amount.toInt())}₮",
-                                style: TextStyle(
-                                    fontSize: 14.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(ClipboardData(
-                                  text: currencyFormatter.format(
-                                      widget.order.amount.toInt())));
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                      backgroundColor:
-                                          CustomColors.darkContainerColor,
-                                      content: Text(
-                                        tr('order.copied', {
-                                          'value': currencyFormatter.format(
-                                              widget.order.amount.toInt())
-                                        }),
-                                        style: const TextStyle(
-                                            color: Colors.white),
-                                      )),
-                                );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.only(
-                                  left: 15.0,
-                                  right: 15.0,
-                                  top: 6.0,
-                                  bottom: 6.0),
-                              decoration: BoxDecoration(
-                                  color: CustomColors.mainColor,
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10.0))),
-                              child: Text(
-                                tr('order.copy').toUpperCase(),
-                                style: const TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10.0),
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 8.0,
-                      ),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 0.5,
-                        color: Colors.white12,
-                      ),
-                      const SizedBox(
-                        height: 8.0,
-                      ),
-                    ],
-                  ),
-                )
+                    ),
+                  ],
+                ),
               ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: 32.0, right: 32.0, top: 8.0, bottom: 8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: MainButton(
-                        title: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              tr('common.ok'),
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black),
-                            ),
-                          ],
-                        ),
-                        onPress: () {
-                          Navigator.pop(context);
-                        },
-                        isLoading: false),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
       ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+          child: AppPrimaryButton(
+            label: tr('common.ok'),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Банкны лого — 44px бөөрөнхий tile, зураг ачаалахгүй бол fallback icon
+class _BankLogo extends StatelessWidget {
+  const _BankLogo({required this.url});
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12.0),
+      child: SizedBox(
+        width: 44.0,
+        height: 44.0,
+        child: url.isEmpty
+            ? const AppIconTile(
+                size: 44.0,
+                child: Icon(Icons.account_balance_outlined,
+                    color: Colors.white24, size: 22.0),
+              )
+            : Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const AppIconTile(
+                  size: 44.0,
+                  child: Icon(Icons.account_balance_outlined,
+                      color: Colors.white24, size: 22.0),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Шилжүүлгийн мэдээллийн мөр — шошго/утга зүүн, баруун талд "Хуулах" chip
+class _TransferRow extends StatelessWidget {
+  const _TransferRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.onCopy,
+  });
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final VoidCallback? onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AppText.caption),
+              const SizedBox(height: 4.0),
+              Text(
+                value,
+                style: AppText.bodyBold
+                    .copyWith(color: valueColor ?? Colors.white),
+              ),
+            ],
+          ),
+        ),
+        if (onCopy != null) ...[
+          const SizedBox(width: 12.0),
+          InkWell(
+            onTap: onCopy,
+            borderRadius: BorderRadius.circular(10.0),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+              decoration: BoxDecoration(
+                color: CustomColors.accentSoft,
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.copy_rounded,
+                      size: 12.0, color: CustomColors.accent),
+                  const SizedBox(width: 4.0),
+                  Text(
+                    tr('order.copy').toUpperCase(),
+                    style: TextStyle(
+                      fontFamily: AppText.bold,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: CustomColors.accent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

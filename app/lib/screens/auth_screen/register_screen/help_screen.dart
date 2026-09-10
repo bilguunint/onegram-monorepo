@@ -1,11 +1,10 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:ionicons/ionicons.dart';
-import 'package:onegrgold/screens/app_new_screen/main_screen/make_order_screen/order_agreement_screen.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/privacy_screen.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,286 +21,116 @@ class _HelpScreenState extends State<HelpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('reg.help_title')),
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('reg.help_title')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0, bottom: 8.0, top: 16.0),
-            child: Text(
-              tr('reg.help_about'),
-              style: const TextStyle(fontFamily: "InterBold"),
+          _sectionTitle(tr('reg.help_about')),
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            child: Column(
+              children: [
+                AppListRow(
+                  title: tr('reg.help_project_intro'),
+                  leading: const _HelpIcon(FluentIcons.book_information_24_regular),
+                  onTap: () {
+                    final Uri url = Uri.parse(
+                        'https://oggspace.sgp1.digitaloceanspaces.com/one-intro.pdf');
+                    launchUrl(url);
+                  },
+                ),
+                const AppDivider(vertical: 2.0),
+                AppListRow(
+                  title: tr('purchase.terms_title'),
+                  leading: const _HelpIcon(
+                      FluentIcons.clipboard_task_list_rtl_24_regular),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                    );
+                  },
+                ),
+                const AppDivider(vertical: 2.0),
+                AppListRow(
+                  title: tr('reg.help_privacy_policy'),
+                  leading: const _HelpIcon(FluentIcons.shield_keyhole_24_regular),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.0),
-                  color: CustomColors.darkContainerColor),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      final Uri _url = Uri.parse(
-                          'https://oggspace.sgp1.digitaloceanspaces.com/one-intro.pdf');
-                      launchUrl(_url);
-                    },
-                    child: Container(
-                      height: 60.0,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(FluentIcons.book_information_24_regular),
-                              const SizedBox(
-                                width: 8.0,
-                              ),
-                              Text(
-                                tr('reg.help_project_intro'),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12.0),
-                              ),
-                            ],
-                          ),
-                          Icon(
-                            Ionicons.chevron_forward,
-                            color: CustomColors.textGrey.withOpacity(0.6),
-                            size: 18.0,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => PrivacyScreen(
-                                )),
-                      );
-                    },
-                    child: Container(
-                      height: 60.0,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(FluentIcons
-                                  .clipboard_task_list_rtl_24_regular),
-                              const SizedBox(
-                                width: 8.0,
-                              ),
-                              Text(
-                                tr('purchase.terms_title'),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12.0),
-                              ),
-                            ],
-                          ),
-                          Icon(
-                            Ionicons.chevron_forward,
-                            color: CustomColors.textGrey.withOpacity(0.6),
-                            size: 18.0,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => PrivacyScreen(
-                                )),
-                      );
-                    },
-                    child: Container(
-                      height: 60.0,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(FluentIcons.shield_keyhole_24_regular),
-                              const SizedBox(
-                                width: 8.0,
-                              ),
-                              Text(
-                                tr('reg.help_privacy_policy'),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12.0),
-                              ),
-                            ],
-                          ),
-                          Icon(
-                            Ionicons.chevron_forward,
-                            color: CustomColors.textGrey.withOpacity(0.6),
-                            size: 18.0,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+          _sectionTitle(tr('reg.help_contact')),
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            child: Column(
+              children: [
+                AppListRow(
+                  title: tr('reg.help_call'),
+                  leading: const _HelpIcon(FluentIcons.call_24_regular),
+                  onTap: () => launchUrl(Uri(scheme: 'tel', path: '75888888')),
+                ),
+                const AppDivider(vertical: 2.0),
+                AppListRow(
+                  title: tr('reg.help_email'),
+                  leading: const _HelpIcon(FluentIcons.mail_24_regular),
+                  onTap: () => launchUrl(Uri(
+                    scheme: 'mailto',
+                    path: 'info@999.mn',
+                  )),
+                ),
+              ],
+            ),
+          ),
+          _sectionTitle(tr('reg.help_social')),
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            child: AppListRow(
+              title: "Facebook",
+              leading: AppIconTile(
+                size: 40.0,
+                child: SizedBox(
+                  width: 20.0,
+                  height: 20.0,
+                  child: SvgPicture.asset("assets/icons/facebook.svg"),
+                ),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0, bottom: 8.0, top: 16.0),
-            child: Text(
-              tr('reg.help_contact'),
-              style: const TextStyle(fontFamily: "InterBold"),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.0),
-                  color: CustomColors.darkContainerColor),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () =>
-                        launchUrl(Uri(scheme: 'tel', path: '75888888')),
-                    child: Container(
-                      height: 60.0,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(FluentIcons.call_24_regular),
-                              const SizedBox(
-                                width: 8.0,
-                              ),
-                              Text(
-                                tr('reg.help_call'),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12.0),
-                              ),
-                            ],
-                          ),
-                          Icon(
-                            Ionicons.chevron_forward,
-                            color: CustomColors.textGrey.withOpacity(0.6),
-                            size: 18.0,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => launchUrl(Uri(
-                      scheme: 'mailto',
-                      path: 'info@999.mn',
-                    )),
-                    child: Container(
-                      height: 60.0,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(FluentIcons.mail_24_regular),
-                              const SizedBox(
-                                width: 8.0,
-                              ),
-                              Text(
-                                tr('reg.help_email'),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12.0),
-                              ),
-                            ],
-                          ),
-                          Icon(
-                            Ionicons.chevron_forward,
-                            color: CustomColors.textGrey.withOpacity(0.6),
-                            size: 18.0,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0, bottom: 8.0, top: 16.0),
-            child: Text(
-              tr('reg.help_social'),
-              style: const TextStyle(fontFamily: "InterBold"),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.0),
-                  color: CustomColors.darkContainerColor),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      final Uri url = Uri.parse(
-                          'https://www.facebook.com/onegramgold1');
-                      launchUrl(url);
-                    },
-                    child: Container(
-                      height: 60.0,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              SvgPicture.asset("assets/icons/facebook.svg"),
-                              const SizedBox(
-                                width: 8.0,
-                              ),
-                              const Text(
-                                "Facebook",
-                                style: TextStyle(
-                                    fontSize: 12.0,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Icon(
-                            Ionicons.chevron_forward,
-                            color: CustomColors.textGrey.withOpacity(0.6),
-                            size: 18.0,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              onTap: () {
+                final Uri url =
+                    Uri.parse('https://www.facebook.com/onegramgold1');
+                launchUrl(url);
+              },
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0, bottom: 10.0),
+      child: Text(text, style: AppText.sectionTitle),
+    );
+  }
+}
+
+/// Тусламжийн мөрийн зүүн icon tile
+class _HelpIcon extends StatelessWidget {
+  const _HelpIcon(this.icon);
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppIconTile(
+      size: 40.0,
+      child: Icon(icon, size: 20.0, color: CustomColors.accent),
     );
   }
 }

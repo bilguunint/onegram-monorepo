@@ -81,18 +81,12 @@ class HomeActionBar extends StatelessWidget {
   void _showLoanComingSoon(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: CustomColors.surface,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-        title: Text(tr('home.loan_service'), style: AppText.sectionTitle),
-        content: Text(tr('home.loan_coming_soon_body'), style: AppText.caption),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(tr('home.got_it'), style: AppText.link),
-          ),
-        ],
+      builder: (_) => AppDialog(
+        icon: Icons.schedule_rounded,
+        title: tr('home.loan_service'),
+        message: tr('home.loan_coming_soon_body'),
+        primaryLabel: tr('home.got_it'),
+        onPrimary: () => Navigator.of(context).pop(),
       ),
     );
   }

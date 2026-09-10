@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ionicons/ionicons.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class MetalPriceWidget extends StatefulWidget {
@@ -48,6 +51,7 @@ Future<double> _getRateByMetalId(int metalId) async {
   }
 }
 
+/// Өнөөдрийн ханш, татвар/шимтгэл, нийт дүн — нэг картанд.
 class DetailView extends StatelessWidget {
   const DetailView(
       {super.key, required this.userRepository, required this.quantity, required this.metalId});
@@ -63,47 +67,19 @@ class DetailView extends StatelessWidget {
       future: _getRateByMetalId(metalId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-              child: Text(
-            tr('order.detail_load_error'),
-            style: const TextStyle(color: Colors.black),
-          ));
+          return AppBanner(
+            text: tr('order.detail_load_error'),
+            icon: Icons.error_outline_rounded,
+            color: CustomColors.negative,
+          );
         }
 
         if (snapshot.connectionState != ConnectionState.done) {
           // loading state - show placeholders (unchanged UI)
-          return Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(tr('order.todays_rate_label'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 12.0)),
-                  const Text("-")
-                ],
-              ),
-              const SizedBox(height: 8.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(tr('order.tax_and_fee_label'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 12.0)),
-                  const Text("-")
-                ],
-              ),
-              const SizedBox(height: 8.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(tr('order.total_amount_label'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 12.0)),
-                  const Text("-")
-                ],
-              ),
-            ],
+          return _card(
+            rate: "-",
+            fee: "-",
+            total: "-",
           );
         }
 
@@ -116,53 +92,66 @@ class DetailView extends StatelessWidget {
             ? 1120.0 * quantity * 37.5
             : (quantity * rate + serviceFee) / 100 * 20;
 
-        return Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  tr('order.todays_rate_label'),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 12.0),
-                ),
-                isGoldLan
-                    ? Text(tr('order.rate_per_lan', {
-                        'amount': currencyFormatter.format(rate * 37.5)
-                      }))
-                    : Text(tr('order.rate_per_gram',
-                        {'amount': currencyFormatter.format(rate)}))
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(tr('order.tax_and_fee_label'),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 12.0)),
-                Text("${currencyFormatter.format(serviceFee + noat)}₮")
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            const SizedBox(height: 0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(tr('order.total_amount_label'),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 12.0)),
-                Text(
-                  isGoldLan
-                      ? "${currencyFormatter.format((quantity * rate * 37.5 + serviceFee + noat))}₮"
-                      : "${currencyFormatter.format((quantity * rate + serviceFee + noat))}₮",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: CustomColors.mainColor),
-                )
-              ],
-            ),
-          ],
+        return _card(
+          rate: isGoldLan
+              ? tr('order.rate_per_lan',
+                  {'amount': currencyFormatter.format(rate * 37.5)})
+              : tr('order.rate_per_gram',
+                  {'amount': currencyFormatter.format(rate)}),
+          fee: "${currencyFormatter.format(serviceFee + noat)}₮",
+          total: isGoldLan
+              ? "${currencyFormatter.format((quantity * rate * 37.5 + serviceFee + noat))}₮"
+              : "${currencyFormatter.format((quantity * rate + serviceFee + noat))}₮",
         );
       },
+    );
+  }
+
+  Widget _card({
+    required String rate,
+    required String fee,
+    required String total,
+  }) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Ханшийн толгой мөр: icon tile + шошго, баруун талд ханш
+          Row(
+            children: [
+              AppIconTile(
+                size: 40.0,
+                child: Icon(Ionicons.diamond_outline,
+                    size: 18.0, color: CustomColors.accent),
+              ),
+              const SizedBox(width: 12.0),
+              Expanded(
+                child: Text(tr('order.todays_rate_label'),
+                    style: AppText.bodyBold),
+              ),
+              const SizedBox(width: 12.0),
+              Flexible(
+                child: Text(
+                  rate,
+                  textAlign: TextAlign.right,
+                  style: AppText.bodyBold.copyWith(fontSize: 15.0),
+                ),
+              ),
+            ],
+          ),
+          const AppDivider(vertical: 10.0),
+          AppInfoRow(
+            label: tr('order.tax_and_fee_label'),
+            value: fee,
+          ),
+          const AppDivider(),
+          AppInfoRow(
+            label: tr('order.total_amount_label'),
+            value: total,
+            valueColor: CustomColors.accent,
+          ),
+        ],
+      ),
     );
   }
 }

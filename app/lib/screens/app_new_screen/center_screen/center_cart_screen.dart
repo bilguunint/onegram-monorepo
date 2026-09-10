@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_cart.dart';
 import 'package:onegrgold/screens/app_new_screen/center_screen/center_payment_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class CenterCartScreen extends StatefulWidget {
@@ -43,7 +44,7 @@ class _CenterCartScreenState extends State<CenterCartScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', '')),
-            backgroundColor: CustomColors.alerRed,
+            backgroundColor: CustomColors.negative,
           ),
         );
       }
@@ -55,93 +56,71 @@ class _CenterCartScreenState extends State<CenterCartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('center.cart'),
-          style: const TextStyle(
-              fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
-        ),
-        centerTitle: false,
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('center.cart')),
       body: AnimatedBuilder(
         animation: CenterCart.instance,
         builder: (context, _) {
           final cart = CenterCart.instance;
           if (cart.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.shopping_cart_outlined,
-                      color: Colors.white24, size: 48),
-                  const SizedBox(height: 12),
-                  Text(tr('center.cart_empty'),
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 13)),
-                ],
-              ),
+            return AppEmptyState(
+              icon: Icons.shopping_bag_outlined,
+              title: tr('center.cart_empty'),
             );
           }
-          return Column(
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    ...cart.lines.map((line) => _CartLineTile(line: line)),
-                  ],
-                ),
-              ),
-              SafeArea(top: false, child: _bottomBar(cart.total)),
+              ...cart.lines.map((line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _CartLineTile(line: line),
+                  )),
+              _SummaryCard(cart: cart),
             ],
           );
         },
       ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: AnimatedBuilder(
+            animation: CenterCart.instance,
+            builder: (context, _) => AppPrimaryButton(
+              label: tr('common.confirm'),
+              loading: _submitting,
+              onPressed: CenterCart.instance.isEmpty || _submitting
+                  ? null
+                  : _checkout,
+            ),
+          ),
+        ),
+      ),
     );
   }
+}
 
-  Widget _bottomBar(int total) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1C),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
-      ),
-      child: Row(
+/// Order summary — one line per cart item, divider, accent total.
+class _SummaryCard extends StatelessWidget {
+  final CenterCart cart;
+  const _SummaryCard({required this.cart});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(tr('center.total_amount'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
-              const SizedBox(height: 2),
-              Text(
-                formatMNT(total),
-                style: TextStyle(
-                  color: CustomColors.mainColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: MainButton(
-              isLoading: _submitting,
-              onPress: _submitting ? null : _checkout,
-              title: Text(
-                tr('common.confirm'),
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14),
-              ),
+          for (final line in cart.lines)
+            AppInfoRow(
+              dense: true,
+              label: '${line.product.name} × ${line.qty}',
+              value: formatMNT(line.lineTotal),
             ),
+          const AppDivider(vertical: 8),
+          AppInfoRow(
+            label: tr('center.total_amount'),
+            value: formatMNT(cart.total),
+            valueColor: CustomColors.accent,
           ),
         ],
       ),
@@ -157,22 +136,17 @@ class _CartLineTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = line.product;
     final cover = p.coverImage;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+    return AppCard(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
+      radius: 16,
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             child: Container(
               width: 56,
               height: 56,
-              color: const Color(0xFF252528),
+              color: CustomColors.surfaceAlt,
               child: cover != null
                   ? Image.network(cover,
                       fit: BoxFit.cover,
@@ -184,7 +158,7 @@ class _CartLineTile extends StatelessWidget {
                       color: Colors.white24, size: 22),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,22 +167,20 @@ class _CartLineTile extends StatelessWidget {
                   p.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600),
+                  style: AppText.bodyBold.copyWith(fontSize: 13, height: 1.25),
                 ),
                 const SizedBox(height: 3),
+                Text(formatMNT(p.price), style: AppText.caption),
+                const SizedBox(height: 4),
                 Text(
                   formatMNT(line.lineTotal),
-                  style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13),
+                  style: AppText.bodyBold
+                      .copyWith(color: CustomColors.accent, fontSize: 13.5),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           _qtyStepper(p.id, line.qty),
         ],
       ),
@@ -218,22 +190,19 @@ class _CartLineTile extends StatelessWidget {
   Widget _qtyStepper(String id, int qty) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        color: CustomColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _btn(Icons.remove, () => CenterCart.instance.setQty(id, qty - 1)),
+          _btn(Icons.remove_rounded,
+              () => CenterCart.instance.setQty(id, qty - 1)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text('$qty',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold)),
+            child: Text('$qty', style: AppText.bodyBold),
           ),
-          _btn(Icons.add, () => CenterCart.instance.setQty(id, qty + 1)),
+          _btn(Icons.add_rounded, () => CenterCart.instance.setQty(id, qty + 1)),
         ],
       ),
     );
@@ -242,10 +211,11 @@ class _CartLineTile extends StatelessWidget {
   Widget _btn(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
       child: SizedBox(
-        width: 30,
-        height: 30,
-        child: Icon(icon, size: 15, color: CustomColors.mainColor),
+        width: 32,
+        height: 32,
+        child: Icon(icon, size: 17, color: CustomColors.accent),
       ),
     );
   }

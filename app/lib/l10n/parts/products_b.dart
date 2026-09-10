@@ -8,6 +8,12 @@ const Map<String, Map<String, String>> kProductsBTranslations = {
   // ---------------------------------------------------------------------
   // Catalog (products_screen.dart, product_card_widget.dart)
   // ---------------------------------------------------------------------
+  'purchase.months_short': {
+    'mn': '{months} сар',
+    'en': '{months} mo',
+    'zh': '{months}个月',
+    'ru': '{months} мес'
+  },
   'purchase.products_title': {
     'mn': 'Бүтээгдэхүүн',
     'en': 'Products',

@@ -4,9 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/auth_bloc/auth_bloc.dart';
 import 'package:onegrgold/bloc/verify_bloc/verify_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
 
@@ -162,132 +163,106 @@ class _VerifyViewState extends State<VerifyView> {
       ],
       child: BlocBuilder<VerifyBloc, VerifyState>(
         builder: (context, state) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 32.0, left: 32.0),
-            child: Form(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          return Form(
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 8.0, top: 16.0, right: 32.0),
-                        child: Text(
-                          tr('reg.verification_code'),
-                          style: const TextStyle(
-                              fontSize: 18.0, fontFamily: "InterBold"),
-                        ),
+                      Text(
+                        tr('reg.verification_code_sent',
+                            {'phone': widget.phoneNum}),
+                        style: AppText.caption.copyWith(fontSize: 14.0),
                       ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          tr('reg.verification_code_sent',
-                              {'phone': widget.phoneNum}),
-                          style: const TextStyle(
-                              fontSize: 14.0, color: Colors.white60),
+                      const SizedBox(height: 24.0),
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            PinCodeTextField(
+                              autofocus: true,
+                              controller: _code,
+                              hideCharacter: false,
+                              isCupertino: true,
+                              highlightColor: CustomColors.accent,
+                              defaultBorderColor: CustomColors.surfaceBorder,
+                              pinBoxColor: CustomColors.surfaceAlt,
+                              highlightPinBoxColor: CustomColors.surfaceAlt,
+                              pinBoxRadius: 12.0,
+                              pinBoxBorderWidth: 1.0,
+                              hasTextBorderColor: CustomColors.accent,
+                              maxLength: 4,
+                              pinBoxWidth: 56.0,
+                              pinBoxHeight: 56.0,
+                              pinBoxOuterPadding:
+                                  const EdgeInsets.symmetric(horizontal: 6.0),
+                              onDone: (text) {
+                                if (mounted) {
+                                  setState(() {
+                                    _code.text = text;
+                                  });
+                                }
+                              },
+                              wrapAlignment: WrapAlignment.center,
+                              pinBoxDecoration: ProvidedPinBoxDecoration
+                                  .defaultPinBoxDecoration,
+                              pinTextStyle: AppText.displayUnit,
+                              pinTextAnimatedSwitcherTransition:
+                                  ProvidedPinBoxTextAnimation
+                                      .scalingTransition,
+                              pinTextAnimatedSwitcherDuration:
+                                  const Duration(milliseconds: 10),
+                            ),
+                            const SizedBox(height: 20.0),
+                            Text(
+                              tr('reg.otp_not_received'),
+                              textAlign: TextAlign.center,
+                              style: AppText.caption,
+                            ),
+                            const SizedBox(height: 6.0),
+                            if (_start > 0)
+                              Text(
+                                '${tr('reg.resend_code')}  ·  ${_start}s',
+                                textAlign: TextAlign.center,
+                                style: AppText.caption
+                                    .copyWith(color: CustomColors.textTertiary),
+                              )
+                            else
+                              Text(
+                                tr('reg.resend_code'),
+                                textAlign: TextAlign.center,
+                                style: AppText.link,
+                              ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(
-                    height: 16.0,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
-                    child: PinCodeTextField(
-                      autofocus: true,
-                      controller: _code,
-                      hideCharacter: false,
-                      isCupertino: true,
-                      highlightColor: CustomColors.mainColor,
-                      defaultBorderColor: Colors.white12,
-                      pinBoxColor: CustomColors.inputDarkColor,
-                      pinBoxRadius: 3.0,
-                      hasTextBorderColor: CustomColors.mainColor,
-                      maxLength: 4,
-                      pinBoxWidth: 45.0,
-                      pinBoxHeight: 45.0,
-                      onDone: (text) {
-                        if (mounted) {
-                          setState(() {
-                            _code.text = text;
-                          });
-                        }
-                      },
-                      wrapAlignment: WrapAlignment.spaceAround,
-                      pinBoxDecoration:
-                          ProvidedPinBoxDecoration.defaultPinBoxDecoration,
-                      pinTextStyle: const TextStyle(
-                          fontSize: 18.0, fontWeight: FontWeight.bold),
-                      pinTextAnimatedSwitcherTransition:
-                          ProvidedPinBoxTextAnimation.scalingTransition,
-                      pinTextAnimatedSwitcherDuration:
-                          const Duration(milliseconds: 10),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+                    child: AppPrimaryButton(
+                      label: tr('common.confirm'),
+                      loading: isLoading || isClicked,
+                      onPressed: _code.value.text.length == 4 && !isClicked
+                          ? () {
+                              if (mounted) {
+                                setState(() {
+                                  isLoading = true;
+                                  isClicked = true;
+                                });
+                                context.read<VerifyBloc>().add(
+                                    VerifyPressed(widget.phoneNum, _code.text));
+                              }
+                            }
+                          : null,
                     ),
                   ),
-                  const SizedBox(
-                    height: 16.0,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        tr('reg.otp_not_received'),
-                        style: const TextStyle(
-                            fontSize: 14.0, color: Colors.white54),
-                      ),
-                      const SizedBox(
-                        height: 4.0,
-                      ),
-                      Text(
-                        tr('reg.resend_code'),
-                        style: const TextStyle(
-                            fontSize: 14.0,
-                            decoration: TextDecoration.underline,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 32.0,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: MainButton(
-                            isLoading: isLoading || isClicked,
-                            title: Text(
-                              tr('common.confirm'),
-                              style: TextStyle(
-                                  color: CustomColors.scaffoldDarkBack,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.0),
-                            ),
-                            onPress: _code.value.text.length == 4 && !isClicked
-                                ? () {
-                                    if (mounted) {
-                                      setState(() {
-                                        isLoading = true;
-                                        isClicked = true;
-                                      });
-                                      context.read<VerifyBloc>().add(
-                                          VerifyPressed(
-                                              widget.phoneNum, _code.text));
-                                    }
-                                  }
-                                : null),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 32.0,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },

@@ -1,16 +1,18 @@
-import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pin_code_text_field/pin_code_text_field.dart';
 import 'package:onegrgold/bloc/auth_bloc/auth_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/l10n/language_switcher.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/main_screen.dart';
 import 'package:onegrgold/screens/auth_screen/register_screen/generate_screen.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'package:onscreen_num_keyboard/onscreen_num_keyboard.dart';
 import 'package:onegrgold/models/user_model.dart';
@@ -78,6 +80,7 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
 
   void _onKeyboardTap(String value) {
     if (_codeController.text.length >= 6) return;
+    HapticFeedback.lightImpact();
     setState(() => _codeController.text = _codeController.text + value);
     if (_codeController.text.length == 6) {
       _verify();
@@ -86,12 +89,14 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
 
   void _onBackspace() {
     if (_codeController.text.isEmpty) return;
+    HapticFeedback.selectionClick();
     setState(() => _codeController.text =
         _codeController.text.substring(0, _codeController.text.length - 1));
   }
 
   void _onClear() {
     if (_codeController.text.isEmpty) return;
+    HapticFeedback.mediumImpact();
     setState(() => _codeController.text = '');
   }
 
@@ -117,6 +122,7 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
         ),
       );
     } else {
+      HapticFeedback.heavyImpact();
       showAlertPopUpDialog(context, tr('auth.pin_incorrect'), 75.0);
       _codeController.text = '';
       setState(() {});
@@ -126,7 +132,7 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CustomColors.scaffoldDarkBack,
+      backgroundColor: CustomColors.appBackground,
       body: SafeArea(
         child: Stack(
           children: [
@@ -149,31 +155,29 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
                     child:
                         Image.asset('assets/images/logo_white_horizontal.png'),
                   ),
-                  const SizedBox(height: 32.0),
+                  const SizedBox(height: 20.0),
                   FutureBuilder<UserModel>(
                     future: _userFuture,
                     builder: (context, snapshot) {
                       final user = snapshot.data ?? UserModel.empty;
                       final text = _formatGreeting(user);
                       if (text.isEmpty) return const SizedBox.shrink();
-                      return Text(
-                        text,
-                        style: const TextStyle(
-                          fontSize: 14.0,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text(
+                          text,
+                          style: AppText.title,
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       );
                     },
                   ),
-                  const SizedBox(height: 16.0),
                   Text(
                     tr('auth.enter_your_pin'),
-                    style:
-                        const TextStyle(fontSize: 10.0, color: Colors.white70),
+                    style: AppText.caption,
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16.0),
+                  const SizedBox(height: 24.0),
                   IgnorePointer(
                     ignoring: true, // prevent opening system keyboard
                     child: PinCodeTextField(
@@ -182,14 +186,16 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
                       autofocus: false,
                       isCupertino: true,
                       hideCharacter: true,
-                      highlightColor: CustomColors.mainColor,
-                      defaultBorderColor: Colors.white12,
-                      pinBoxColor: CustomColors.inputDarkColor,
-                      pinBoxRadius: 8.0,
+                      highlightColor: CustomColors.accent,
+                      defaultBorderColor: CustomColors.surfaceBorder,
+                      pinBoxColor: CustomColors.surfaceAlt,
+                      pinBoxRadius: 12.0,
                       pinBoxBorderWidth: 1.0,
-                      hasTextBorderColor: CustomColors.mainColor,
-                      pinBoxWidth: 40.0,
-                      pinBoxHeight: 40.0,
+                      hasTextBorderColor: CustomColors.accent,
+                      errorBorderColor: CustomColors.negative,
+                      pinBoxWidth: 44.0,
+                      pinBoxHeight: 44.0,
+                      pinTextStyle: AppText.title.copyWith(fontSize: 20.0),
                       onDone: (text) {
                         // handled by on-screen keyboard
                       },
@@ -198,41 +204,33 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
                           ProvidedPinBoxDecoration.defaultPinBoxDecoration,
                     ),
                   ),
-                  const SizedBox(height: 16.0),
+                  const SizedBox(height: 12.0),
                   TextButton(
                       onPressed: _showForgotPinDialog,
                       child: Text(
                         tr('auth.forgot_pin'),
-                        style: const TextStyle(fontSize: 12.0),
+                        style: AppText.link,
                       )),
-                  const SizedBox(height: 16.0),
-                  Divider(
-                    color: Colors.white30,
-                    height: 1.0,
-                  ),
+                  const SizedBox(height: 8.0),
                   NumericKeyboard(
                     onKeyboardTap: _onKeyboardTap,
-                    textStyle:
-                        const TextStyle(fontSize: 24.0, color: Colors.white),
+                    textStyle: AppText.title.copyWith(fontSize: 26.0),
                     rightButtonFn: _onBackspace,
                     rightButtonLongPressFn: _onClear,
-                    rightIcon:
-                        const Icon(Icons.backspace, color: Colors.white70),
+                    rightIcon: Icon(Icons.backspace_outlined,
+                        color: CustomColors.textSecondary),
                     leftButtonFn: _verify,
                     leftIcon: _loading
-                        ? CupertinoActivityIndicator(
-                            color: CustomColors.mainColor,
+                        ? const CupertinoActivityIndicator(
+                            color: Colors.white,
                           )
-                        : Icon(FluentIcons.lock_closed_28_regular,
-                            color: CustomColors.mainColor),
+                        : Icon(Icons.lock_open_rounded,
+                            color: CustomColors.accent),
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   ),
-                  SizedBox(height: 16.0),
-                  Divider(
-                    color: Colors.white30,
-                    height: 1.0,
-                  ),
                   const SizedBox(height: 16.0),
+                  const AppDivider(vertical: 0.0),
+                  const SizedBox(height: 12.0),
                   TextButton(
                       onPressed: () {
                         // Logout and navigate to GenerateScreen
@@ -248,7 +246,8 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
                       },
                       child: Text(
                         tr('auth.sign_in_other_user'),
-                        style: const TextStyle(fontSize: 12.0),
+                        style: AppText.link
+                            .copyWith(color: CustomColors.textSecondary),
                       )),
                 ],
               ),

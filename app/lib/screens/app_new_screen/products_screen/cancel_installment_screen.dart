@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:onegrgold/elements/main_button.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// Mongolian banks the refund can be transferred to.
@@ -87,32 +88,14 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (dialogCtx) => AlertDialog(
-          backgroundColor: const Color(0xFF1F1F22),
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: CustomColors.successGreen),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  tr('product.request_sent'),
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            tr('product.cancel_request_sent_body',
-                {'amount': formatMNT(_refund)}),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: Text(tr('product.got_it'),
-                  style: TextStyle(color: CustomColors.mainColor)),
-            ),
-          ],
+        builder: (dialogCtx) => AppDialog(
+          icon: Icons.check_rounded,
+          iconColor: CustomColors.positive,
+          title: tr('product.request_sent'),
+          message: tr('product.cancel_request_sent_body',
+              {'amount': formatMNT(_refund)}),
+          primaryLabel: tr('product.got_it'),
+          onPrimary: () => Navigator.of(dialogCtx).pop(),
         ),
       );
       if (mounted) Navigator.of(context).pop();
@@ -126,99 +109,65 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: CustomColors.alerRed),
+      SnackBar(content: Text(msg), backgroundColor: CustomColors.negative),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('product.cancel_installment'),
-          style: const TextStyle(
-              fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
-        ),
-        centerTitle: false,
-      ),
-      body: Column(
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('product.cancel_installment')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _refundCard(),
-                const SizedBox(height: 14),
-                _bankForm(),
-                const SizedBox(height: 14),
-                _termsSection(),
-                const SizedBox(height: 14),
-                _infoNote(),
-              ],
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: MainButton(
-                isLoading: _submitting,
-                onPress: _submitting ? null : _submit,
-                title: Text(
-                  tr('common.confirm'),
-                  style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14),
-                ),
-              ),
-            ),
-          ),
+          _infoNote(),
+          const SizedBox(height: 12),
+          _refundCard(),
+          const SizedBox(height: 12),
+          _bankForm(),
+          const SizedBox(height: 12),
+          _termsSection(),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: AppPrimaryButton(
+            label: tr('common.confirm'),
+            danger: true,
+            loading: _submitting,
+            onPressed: _submitting ? null : _submit,
+          ),
+        ),
       ),
     );
   }
 
   Widget _refundCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.purchase.productSnapshot.name,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          _row(tr('product.total_paid'), formatMNT(_paid), Colors.white),
+          Text(widget.purchase.productSnapshot.name,
+              style: AppText.sectionTitle),
           const SizedBox(height: 8),
-          _row(tr('product.cancel_fee_percent', {'percent': _feePercent}),
-              '−${formatMNT(_fee)}', const Color(0xFFE57373)),
-          const Divider(color: Colors.white12, height: 22),
+          AppInfoRow(label: tr('product.total_paid'), value: formatMNT(_paid)),
+          AppInfoRow(
+            label: tr('product.cancel_fee_percent', {'percent': _feePercent}),
+            value: '−${formatMNT(_fee)}',
+            valueColor: CustomColors.negative,
+          ),
+          const AppDivider(vertical: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(tr('product.refund_amount'),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600)),
+              Text(tr('product.refund_amount'), style: AppText.bodyBold),
               Text(
                 formatMNT(_refund),
-                style: TextStyle(
-                  color: CustomColors.mainColor,
-                  fontFamily: 'RubikBold',
-                  fontSize: 18,
-                ),
+                style: AppText.displayUnit.copyWith(
+                    color: CustomColors.positive, fontSize: 20),
               ),
             ],
           ),
@@ -227,43 +176,20 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
     );
   }
 
-  Widget _row(String label, String value, Color valueColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
-        Text(value,
-            style: TextStyle(
-                color: valueColor, fontSize: 13, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-
   Widget _bankForm() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            tr('product.refund_account'),
-            style: const TextStyle(
-                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          Text(tr('product.refund_account'), style: AppText.sectionTitle),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _bank,
-            dropdownColor: const Color(0xFF252528),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            dropdownColor: CustomColors.surfaceAlt,
+            style: AppText.body,
             icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: CustomColors.mainColor),
-            decoration: _inputDecoration(tr('product.select_bank')),
+                color: CustomColors.textSecondary),
+            decoration: appInputDecoration(hint: tr('product.select_bank')),
             items: kMongolianBanks
                 .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                 .toList(),
@@ -274,31 +200,19 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
             controller: _accountCtrl,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: _inputDecoration(tr('product.account_number')),
+            style: AppText.body,
+            cursorColor: CustomColors.accent,
+            decoration: appInputDecoration(hint: tr('product.account_number')),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: _holderCtrl,
             textCapitalization: TextCapitalization.words,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: _inputDecoration(tr('product.account_holder')),
+            style: AppText.body,
+            cursorColor: CustomColors.accent,
+            decoration: appInputDecoration(hint: tr('product.account_holder')),
           ),
         ],
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.white30, fontSize: 12.5),
-      filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide.none,
       ),
     );
   }
@@ -306,39 +220,25 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
   String get _termsText => tr('product.refund_terms', {'percent': _feePercent});
 
   Widget _termsSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            tr('product.refund_terms_title'),
-            style: const TextStyle(
-                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          Text(tr('product.refund_terms_title'), style: AppText.sectionTitle),
           const SizedBox(height: 10),
           Container(
             constraints: const BoxConstraints(maxHeight: 160),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              color: CustomColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CustomColors.surfaceBorder),
             ),
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             child: Scrollbar(
               child: SingleChildScrollView(
                 child: Text(
                   _termsText,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    height: 1.5,
-                  ),
+                  style: AppText.caption.copyWith(height: 1.5),
                 ),
               ),
             ),
@@ -352,34 +252,30 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     decoration: BoxDecoration(
                       color: _termsAccepted
-                          ? CustomColors.mainColor
+                          ? CustomColors.accent
                           : Colors.transparent,
                       border: Border.all(
                         color: _termsAccepted
-                            ? CustomColors.mainColor
-                            : Colors.white38,
+                            ? CustomColors.accent
+                            : CustomColors.textTertiary,
                         width: 1.5,
                       ),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: _termsAccepted
-                        ? Icon(Icons.check,
-                            size: 14, color: CustomColors.mainBlack)
+                        ? const Icon(Icons.check_rounded,
+                            size: 14, color: Colors.black)
                         : null,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       tr('product.accept_terms_checkbox'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        height: 1.35,
-                      ),
+                      style: AppText.body.copyWith(fontSize: 13),
                     ),
                   ),
                 ],
@@ -392,27 +288,10 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
   }
 
   Widget _infoNote() {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.withOpacity(0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline, size: 14, color: Colors.amberAccent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tr('product.cancel_info_note'),
-              style: const TextStyle(
-                  color: Colors.white70, fontSize: 11, height: 1.4),
-            ),
-          ),
-        ],
-      ),
+    return AppBanner(
+      color: CustomColors.negative,
+      icon: Icons.warning_amber_rounded,
+      text: tr('product.cancel_info_note'),
     );
   }
 }

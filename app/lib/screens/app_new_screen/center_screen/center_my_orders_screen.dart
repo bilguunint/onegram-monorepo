@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/center_models.dart';
 import 'package:onegrgold/repositories/center_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 class CenterMyOrdersScreen extends StatelessWidget {
@@ -14,49 +16,43 @@ class CenterMyOrdersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('center.my_support_title'),
-          style: const TextStyle(
-              fontFamily: 'InterBold', fontSize: 13, color: Colors.white),
-        ),
-        centerTitle: false,
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('center.my_support_title')),
       body: uid == null
-          ? Center(
-              child: Text(tr('common.sign_in_required'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          ? AppEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: tr('common.sign_in_required'),
             )
           : StreamBuilder<List<CenterDonationOrder>>(
               stream: repo.watchMyDonations(uid),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return AppEmptyState(
+                    icon: Icons.error_outline_rounded,
+                    iconColor: CustomColors.negative,
+                    title: tr('common.error'),
+                    subtitle: snapshot.error
+                        .toString()
+                        .replaceFirst('Exception: ', ''),
+                  );
+                }
                 if (!snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Colors.white24),
+                  return Center(
+                    child: CircularProgressIndicator(
+                        color: CustomColors.accent, strokeWidth: 2),
                   );
                 }
                 final orders = snapshot.data!;
                 if (orders.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.receipt_long_outlined,
-                            color: Colors.white24, size: 48),
-                        const SizedBox(height: 12),
-                        Text(tr('center.no_support_orders'),
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 13)),
-                      ],
-                    ),
+                  return AppEmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: tr('center.no_support_orders'),
                   );
                 }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   itemCount: orders.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, i) => _OrderTile(order: orders[i]),
                 );
               },
@@ -74,20 +70,18 @@ String _fmtDate(DateTime? d) => d == null
 String _fmtDay(DateTime? d) =>
     d == null ? '—' : '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
-Widget _receivedBadge() => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: CustomColors.successGreen.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        tr('center.goods_received'),
-        style: TextStyle(
-            color: CustomColors.successGreen,
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600),
-      ),
-    );
+/// Захиалгын төлөвийн chip — хүлээж авсан бол саарал, эсвэл авах код бэлэн.
+Widget _statusChip(CenterDonationOrder order) => order.isDelivered
+    ? AppStatusChip(
+        label: tr('center.goods_received'),
+        color: CustomColors.textSecondary,
+        icon: Icons.check_circle_rounded,
+      )
+    : AppStatusChip(
+        label: tr('center.view_code'),
+        color: CustomColors.accent,
+        icon: Icons.qr_code_2_rounded,
+      );
 
 class _OrderTile extends StatelessWidget {
   final CenterDonationOrder order;
@@ -108,63 +102,51 @@ class _OrderTile extends StatelessWidget {
           builder: (_) => _OrderDetailSheet(order: order),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F22),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: Column(
+      child: AppCard(
+        padding: const EdgeInsets.all(12),
+        radius: 16,
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    formatMNT(order.amount),
-                    style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                if (order.isDelivered) _receivedBadge(),
-              ],
-            ),
-            if (itemsText.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                itemsText,
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+            AppIconTile(
+              child: Icon(
+                order.isDelivered
+                    ? Icons.inventory_2_outlined
+                    : Icons.volunteer_activism_rounded,
+                size: 22,
+                color: order.isDelivered
+                    ? CustomColors.textSecondary
+                    : CustomColors.accent,
               ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    itemsText.isNotEmpty
+                        ? itemsText
+                        : tr('center.order_details'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyBold,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(_fmtDate(order.createdAt), style: AppText.caption),
+                  const SizedBox(height: 8),
+                  _statusChip(order),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  _fmtDate(order.createdAt),
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      order.isDelivered
-                          ? tr('common.details')
-                          : tr('center.view_code'),
-                      style: TextStyle(
-                        color: CustomColors.mainColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 16, color: CustomColors.mainColor),
-                  ],
-                ),
+                Text(formatMNT(order.amount), style: AppText.bodyBold),
+                const SizedBox(height: 4),
+                Icon(Icons.chevron_right_rounded,
+                    size: 18, color: CustomColors.textSecondary),
               ],
             ),
           ],
@@ -180,96 +162,68 @@ class _OrderDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1A1A1C),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      tr('center.order_details'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'InterBold',
-                        fontSize: 16,
+      child: AppSheet(
+        child: Flexible(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        tr('center.order_details'),
+                        style: AppText.sectionTitle.copyWith(fontSize: 18),
                       ),
                     ),
-                  ),
-                  if (order.isDelivered) _receivedBadge(),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Items
-              ...order.items.map(
-                (it) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
+                    _statusChip(order),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Items
+                AppCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  radius: 16,
+                  color: CustomColors.surfaceAlt,
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Text(
-                          '${it.name}${it.qty > 1 ? '  ×${it.qty}' : ''}',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13),
+                      ...order.items.map(
+                        (it) => AppInfoRow(
+                          label:
+                              '${it.name}${it.qty > 1 ? '  ×${it.qty}' : ''}',
+                          value: formatMNT(it.price * it.qty),
+                          dense: true,
                         ),
                       ),
-                      Text(
-                        formatMNT(it.price * it.qty),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 13),
+                      const AppDivider(),
+                      AppInfoRow(
+                        label: tr('center.total_amount'),
+                        value: formatMNT(order.amount),
+                        valueColor: CustomColors.accent,
                       ),
+                      const SizedBox(height: 2),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(_fmtDate(order.createdAt),
+                            style: AppText.caption),
+                      ),
+                      const SizedBox(height: 4),
                     ],
                   ),
                 ),
-              ),
-              const Divider(color: Colors.white12, height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(tr('center.total_amount'),
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 13)),
-                  Text(
-                    formatMNT(order.amount),
-                    style: TextStyle(
-                      color: CustomColors.mainColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _fmtDate(order.createdAt),
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
-              ),
-              const SizedBox(height: 20),
-              if (order.isDelivered)
-                _receivedCard()
-              else if (order.pickupCode.isNotEmpty)
-                _codeCard(),
-            ],
+                const SizedBox(height: 16),
+                if (order.isDelivered)
+                  _receivedCard()
+                else if (order.pickupCode.isNotEmpty)
+                  _codeCard(),
+              ],
+            ),
           ),
         ),
       ),
@@ -281,25 +235,20 @@ class _OrderDetailSheet extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
-        color: CustomColors.mainColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: CustomColors.mainColor.withOpacity(0.3)),
+        color: CustomColors.accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CustomColors.accent.withOpacity(0.3)),
       ),
       child: Column(
         children: [
-          Icon(Icons.qr_code_2_rounded,
-              size: 30, color: CustomColors.mainColor),
+          Icon(Icons.qr_code_2_rounded, size: 30, color: CustomColors.accent),
           const SizedBox(height: 8),
-          Text(
-            tr('center.pickup_code'),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
+          Text(tr('center.pickup_code'), style: AppText.caption),
           const SizedBox(height: 10),
           Text(
             order.pickupCode,
-            style: TextStyle(
-              color: CustomColors.mainColor,
-              fontFamily: 'RubikBold',
+            style: AppText.display.copyWith(
+              color: CustomColors.accent,
               fontSize: 38,
               letterSpacing: 8,
             ),
@@ -308,7 +257,7 @@ class _OrderDetailSheet extends StatelessWidget {
           Text(
             tr('center.pickup_code_hint'),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+            style: AppText.caption,
           ),
         ],
       ),
@@ -320,37 +269,27 @@ class _OrderDetailSheet extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: CustomColors.successGreen.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: CustomColors.successGreen.withOpacity(0.3)),
+        color: CustomColors.positive.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CustomColors.positive.withOpacity(0.3)),
       ),
       child: Column(
         children: [
           Icon(Icons.check_circle_rounded,
-              size: 32, color: CustomColors.successGreen),
+              size: 32, color: CustomColors.positive),
           const SizedBox(height: 8),
-          Text(
-            tr('center.goods_received'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'InterBold',
-              fontSize: 15,
-            ),
-          ),
+          Text(tr('center.goods_received'), style: AppText.sectionTitle),
           const SizedBox(height: 8),
           Text(
             tr('center.received_on', {'date': _fmtDay(order.deliveredAt)}),
-            style: TextStyle(
-              color: CustomColors.successGreen,
-              fontFamily: 'RubikBold',
-              fontSize: 16,
-            ),
+            style: AppText.bodyBold
+                .copyWith(color: CustomColors.positive, fontSize: 16),
           ),
           const SizedBox(height: 8),
           Text(
             tr('center.received_note'),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+            style: AppText.caption,
           ),
         ],
       ),

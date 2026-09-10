@@ -1,8 +1,12 @@
 import 'dart:async';
 
-enum NavBarItem { home, exchange, products, profile }
+enum NavBarItem { home, exchange, products, more }
 
 class BottomNavBarBloc {
+  /// Одоо дэлгэцэн дээр ажиллаж буй MainScreen-ийн bloc — нүүрний картууд
+  /// доод nav-ийн таб руу шууд шилжүүлэхэд ашиглана.
+  static BottomNavBarBloc? current;
+
   final StreamController<NavBarItem> _navBarController =
       StreamController<NavBarItem>.broadcast();
 
@@ -22,7 +26,7 @@ class BottomNavBarBloc {
         _navBarController.sink.add(NavBarItem.products);
         break;
       case 3:
-        _navBarController.sink.add(NavBarItem.profile);
+        _navBarController.sink.add(NavBarItem.more);
         break;
     }
   }

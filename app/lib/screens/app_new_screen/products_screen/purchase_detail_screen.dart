@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
@@ -9,6 +10,7 @@ import 'package:onegrgold/screens/app_new_screen/products_screen/installment_pay
 import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_view.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_schedule.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// Full purchase detail (header card, stats, progress, payment schedule,
@@ -89,33 +91,17 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
   Future<void> _onCancelTap(ProductPurchase purchase) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F1F22),
-        title: Text(
-          tr('product.cancel_confirm_title'),
-          style: const TextStyle(color: Colors.white, fontSize: 15),
-        ),
-        content: Text(
-          tr('product.cancel_confirm_body', {
-            'percent': purchase.productSnapshot.cancelFeePercent,
-          }),
-          style: const TextStyle(color: Colors.white70, fontSize: 12.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: Text(tr('product.no'),
-                style: const TextStyle(color: Colors.white54)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: Text(
-              tr('product.yes'),
-              style: const TextStyle(
-                  color: Color(0xFFE57373), fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (dialogCtx) => AppDialog(
+        icon: Icons.warning_amber_rounded,
+        danger: true,
+        title: tr('product.cancel_confirm_title'),
+        message: tr('product.cancel_confirm_body', {
+          'percent': purchase.productSnapshot.cancelFeePercent,
+        }),
+        secondaryLabel: tr('product.no'),
+        onSecondary: () => Navigator.of(dialogCtx).pop(false),
+        primaryLabel: tr('product.yes'),
+        onPrimary: () => Navigator.of(dialogCtx).pop(true),
       ),
     );
     if (confirmed != true || !mounted) return;
@@ -148,100 +134,110 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
             purchase.status == ProductPurchaseStatus.active &&
             purchase.paidDays < purchase.totalDays &&
             !cancelPending;
-        final showCancelButton = isInstallment &&
+        final showCancelAction = isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
             !cancelPending;
         final nextDay = purchase.paidDays + 1;
         final remainingDays = purchase.totalDays - purchase.paidDays;
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        // Дараагийн төлөгдөөгүй өдрийг түүхийн дээр "хүлээгдэж буй" мөрөөр
+        // харуулна — хоцорсон бол улаан анхааруулгатай.
+        final ScheduleRow? upcoming = showPayButton
+            ? ScheduleRow(
+                dayNo: nextDay,
+                paidAt: DateTime.now(),
+                amount: purchase.dailyPayment,
+              )
+            : null;
+
+        return Column(
           children: [
-            _HeaderCard(purchase: purchase),
-            const SizedBox(height: 14),
-            _StatsRow(purchase: purchase),
-            if (isInstallment &&
-                purchase.status != ProductPurchaseStatus.cancelled) ...[
-              const SizedBox(height: 14),
-              _ProgressCard(purchase: purchase),
-            ],
-            if (isInstallment &&
-                purchase.status == ProductPurchaseStatus.active &&
-                purchase.isPaymentLapsing) ...[
-              const SizedBox(height: 14),
-              _PaymentLapseWarning(purchase: purchase),
-            ],
-            if (purchase.status == ProductPurchaseStatus.cancelled) ...[
-              const SizedBox(height: 14),
-              _CancelledCard(purchase: purchase),
-            ],
-            if (purchase.status == ProductPurchaseStatus.completed) ...[
-              const SizedBox(height: 14),
-              PickupInstructionsSection(code: purchase.pickupCode),
-            ],
-            if (isInstallment &&
-                purchase.status == ProductPurchaseStatus.active &&
-                cancelPending) ...[
-              const SizedBox(height: 14),
-              const _CancelPendingBanner(),
-            ],
-            if (showPayButton) ...[
-              const SizedBox(height: 14),
-              _PayDayButton(
-                nextDay: nextDay,
-                remainingDays: remainingDays,
-                busy: _requestingInvoice,
-                onPressed: () => _onPayDayTap(purchase),
-              ),
-            ],
-            if (showCancelButton) ...[
-              const SizedBox(height: 10),
-              _CancelInstallmentButton(
-                onPressed: () => _onCancelTap(purchase),
-              ),
-            ],
-            const SizedBox(height: 18),
-            Text(
-              tr('product.payment_history'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
+            Expanded(
+              child: ListView(
+                padding: widget.padding,
+                children: [
+                  _HeaderCard(purchase: purchase),
+                  const SizedBox(height: 12),
+                  if (isInstallment &&
+                      purchase.status != ProductPurchaseStatus.cancelled)
+                    _ProgressCard(purchase: purchase)
+                  else
+                    _AmountsCard(purchase: purchase),
+                  if (isInstallment &&
+                      purchase.status == ProductPurchaseStatus.active &&
+                      purchase.isPaymentLapsing) ...[
+                    const SizedBox(height: 12),
+                    _PaymentLapseWarning(purchase: purchase),
+                  ],
+                  if (purchase.status == ProductPurchaseStatus.cancelled) ...[
+                    const SizedBox(height: 12),
+                    _CancelledCard(purchase: purchase),
+                  ],
+                  if (purchase.status == ProductPurchaseStatus.completed) ...[
+                    const SizedBox(height: 12),
+                    PickupInstructionsSection(code: purchase.pickupCode),
+                  ],
+                  if (isInstallment &&
+                      purchase.status == ProductPurchaseStatus.active &&
+                      cancelPending) ...[
+                    const SizedBox(height: 12),
+                    const _CancelPendingBanner(),
+                  ],
+                  const SizedBox(height: 24),
+                  Text(tr('product.payment_history'),
+                      style: AppText.sectionTitle),
+                  if (isInstallment) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      tr('product.schedule_summary', {
+                        'days': purchase.totalDays,
+                        'amount': formatMNT(purchase.dailyPayment),
+                        'months': purchase.months,
+                      }),
+                      style: AppText.caption,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  _HistoryCard(
+                    history: history,
+                    upcoming: upcoming,
+                    overdue: purchase.isPaymentLapsing,
+                  ),
+                ],
               ),
             ),
-            if (isInstallment) ...[
-              const SizedBox(height: 4),
-              Text(
-                tr('product.schedule_summary', {
-                  'days': purchase.totalDays,
-                  'amount': formatMNT(purchase.dailyPayment),
-                  'months': purchase.months,
-                }),
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+            if (showPayButton || showCancelAction)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showPayButton)
+                        AppPrimaryButton(
+                          label: _requestingInvoice
+                              ? tr('product.creating_invoice')
+                              : tr('product.pay_from_day', {
+                                  'day': nextDay,
+                                  'remaining': remainingDays,
+                                }),
+                          icon: Icons.qr_code_rounded,
+                          loading: _requestingInvoice,
+                          onPressed: () => _onPayDayTap(purchase),
+                        ),
+                      if (showPayButton && showCancelAction)
+                        const SizedBox(height: 8),
+                      if (showCancelAction)
+                        AppPrimaryButton(
+                          label: tr('product.cancel_installment'),
+                          outlined: true,
+                          onPressed: () => _onCancelTap(purchase),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ],
-            const SizedBox(height: 10),
-            if (history.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1F1F22),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
-                ),
-                child: Text(
-                  tr('product.no_payment_history'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
-                ),
-              )
-            else
-              ...List.generate(history.length, (i) {
-                final row = history[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _HistoryRowCard(row: row),
-                );
-              }),
           ],
         );
       },
@@ -257,139 +253,79 @@ class PurchaseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CustomColors.darkContainerColor,
-      appBar: AppBar(
-        backgroundColor: CustomColors.darkContainerColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          tr('product.purchase_title'),
-          style: const TextStyle(
-            fontFamily: 'InterBold',
-            fontSize: 13,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: false,
-      ),
+      backgroundColor: CustomColors.appBackground,
+      appBar: appBar(tr('product.purchase_title')),
       body: PurchaseDetailView(purchase: purchase),
     );
   }
 }
 
-class _PayDayButton extends StatelessWidget {
-  final int nextDay;
-  final int remainingDays;
-  final bool busy;
-  final VoidCallback onPressed;
+/// Төлбөрийн түүх — нэг картанд AppListRow мөрүүд, AppDivider-ээр тусгаарлана.
+class _HistoryCard extends StatelessWidget {
+  final List<ScheduleRow> history;
 
-  const _PayDayButton({
-    required this.nextDay,
-    required this.remainingDays,
-    required this.busy,
-    required this.onPressed,
+  /// Дараагийн төлөгдөөгүй өдөр (байхгүй бол null).
+  final ScheduleRow? upcoming;
+
+  /// Дараагийн өдрийн төлбөр хоцорсон эсэх — улаан icon.
+  final bool overdue;
+
+  const _HistoryCard({
+    required this.history,
+    required this.upcoming,
+    required this.overdue,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: busy ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: CustomColors.mainColor,
-          foregroundColor: CustomColors.mainBlack,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    if (history.isEmpty && upcoming == null) {
+      return AppCard(
+        child: Text(tr('product.no_payment_history'), style: AppText.caption),
+      );
+    }
+
+    final List<Widget> rows = [];
+    if (upcoming != null) {
+      final Color c =
+          overdue ? CustomColors.negative : CustomColors.textSecondary;
+      rows.add(AppListRow(
+        leading: AppIconTile(
+          size: 40,
+          color: c.withOpacity(0.15),
+          child: Icon(
+            overdue ? Icons.priority_high_rounded : Icons.schedule_rounded,
+            size: 18,
+            color: c,
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
-        icon: busy
-            ? const SizedBox(
-                height: 14,
-                width: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.black54,
-                ),
-              )
-            : const Icon(Icons.qr_code, size: 18),
-        label: Text(
-          busy
-              ? tr('product.creating_invoice')
-              : tr('product.pay_from_day', {
-                  'day': nextDay,
-                  'remaining': remainingDays,
-                }),
+        title: tr('product.day_payment', {'day': upcoming!.dayNo}),
+        subtitle: tr('common.pending'),
+        trailing: Text(formatMNT(upcoming!.amount),
+            style: AppText.bodyBold.copyWith(color: c)),
+      ));
+    }
+    for (final row in history) {
+      rows.add(AppListRow(
+        leading: AppIconTile(
+          size: 40,
+          color: CustomColors.positive.withOpacity(0.15),
+          child: Icon(Icons.check_rounded,
+              size: 18, color: CustomColors.positive),
         ),
-      ),
-    );
-  }
-}
+        title: tr('product.day_payment', {'day': row.dayNo}),
+        subtitle: _fmtDate(row.paidAt),
+        trailing: Text(formatMNT(row.amount), style: AppText.bodyBold),
+      ));
+    }
 
-class _HistoryRowCard extends StatelessWidget {
-  final ScheduleRow row;
-
-  const _HistoryRowCard({required this.row});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Row(
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: CustomColors.successGreen.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.check_circle,
-              size: 16,
-              color: CustomColors.successGreen,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tr('product.day_payment', {'day': row.dayNo}),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _fmtDate(row.paidAt),
-                  style: TextStyle(
-                    color: CustomColors.successGreen,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            formatMNT(row.amount),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
+          for (int i = 0; i < rows.length; i++) ...[
+            if (i > 0) const AppDivider(vertical: 0),
+            rows[i],
+          ],
         ],
       ),
     );
@@ -403,21 +339,15 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ps = purchase.productSnapshot;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
+    return AppCard(
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
               width: 64,
               height: 64,
-              color: const Color(0xFF252528),
+              color: CustomColors.surfaceAlt,
               child: ps.image != null && ps.image!.isNotEmpty
                   ? Image.network(
                       ps.image!,
@@ -442,15 +372,11 @@ class _HeaderCard extends StatelessWidget {
                   ps.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: AppText.bodyBold,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 _StatusBadge(status: purchase.status),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   purchase.purchaseType == PurchaseType.installment
                       ? tr('product.installment_summary', {
@@ -458,7 +384,7 @@ class _HeaderCard extends StatelessWidget {
                           'days': purchase.totalDays,
                         })
                       : tr('product.direct_purchase'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: AppText.caption,
                 ),
               ],
             ),
@@ -475,113 +401,53 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
+    Color color;
     String text;
     switch (status) {
       case ProductPurchaseStatus.active:
-        bg = const Color(0x331E88E5);
-        fg = const Color(0xFF7CC2FF);
+        color = CustomColors.accent;
         text = tr('product.status_active');
         break;
       case ProductPurchaseStatus.completed:
-        bg = const Color(0x3343A047);
-        fg = const Color(0xFF7BD389);
+        color = CustomColors.positive;
         text = tr('product.status_fully_paid');
         break;
       case ProductPurchaseStatus.delivered:
-        bg = const Color(0x33FCD535);
-        fg = CustomColors.mainColor;
+        color = CustomColors.textSecondary;
         text = tr('product.status_delivered');
         break;
       case ProductPurchaseStatus.cancelled:
-        bg = const Color(0x33C2240B);
-        fg = const Color(0xFFE57373);
+        color = CustomColors.negative;
         text = tr('product.status_cancelled');
         break;
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: fg,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    return AppStatusChip(label: text, color: color);
   }
 }
 
-class _StatsRow extends StatelessWidget {
+/// Нийт / төлсөн / үлдсэн дүн — шууд худалдан авалт болон цуцлагдсан
+/// захиалгад (явцын карт харагдахгүй үед).
+class _AmountsCard extends StatelessWidget {
   final ProductPurchase purchase;
-  const _StatsRow({required this.purchase});
+  const _AmountsCard({required this.purchase});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCell(
+    return AppCard(
+      child: Column(
+        children: [
+          AppInfoRow(
             label: tr('product.stat_total'),
             value: formatMNT(purchase.totalPrice),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _StatCell(
+          AppInfoRow(
             label: tr('product.stat_paid'),
             value: formatMNT(purchase.paidAmount),
-            valueColor: CustomColors.mainColor,
+            valueColor: CustomColors.accent,
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _StatCell(
+          AppInfoRow(
             label: tr('product.stat_remaining'),
             value: formatMNT(purchase.remainingAmount),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatCell extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-  const _StatCell({required this.label, required this.value, this.valueColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(color: Colors.white54, fontSize: 10)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor ?? Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -589,6 +455,8 @@ class _StatCell extends StatelessWidget {
   }
 }
 
+/// Явцын карт — том төлсөн дүн, "/ нийт", явцын зураас, өдрийн явц ба
+/// дуусах хугацааны мөрүүд.
 class _ProgressCard extends StatelessWidget {
   final ProductPurchase purchase;
   const _ProgressCard({required this.purchase});
@@ -596,84 +464,71 @@ class _ProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daysLeft = purchase.daysUntilDeadline;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
+    final bool overdue = daysLeft != null && daysLeft < 0;
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(tr('product.stat_paid'), style: AppText.caption),
+          const SizedBox(height: 4),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Expanded(
+              Flexible(
                 child: Text(
-                  tr('product.days_paid_of', {
-                    'paid': purchase.paidDays,
-                    'total': purchase.totalDays,
-                  }),
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  formatMNT(purchase.paidAmount),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.display.copyWith(fontSize: 28),
                 ),
               ),
+              const SizedBox(width: 6),
               Text(
-                '${(purchase.progress * 100).round()}%',
-                style: TextStyle(
-                  color: CustomColors.mainColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                '/ ${formatMNT(purchase.totalPrice)}',
+                style: AppText.caption.copyWith(fontSize: 13),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: purchase.progress,
               minHeight: 6,
               backgroundColor: Colors.white.withOpacity(0.08),
-              valueColor: AlwaysStoppedAnimation(CustomColors.mainColor),
+              valueColor: AlwaysStoppedAnimation(CustomColors.accent),
             ),
           ),
+          const SizedBox(height: 8),
+          const AppDivider(),
+          AppInfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: tr('product.days_paid_of', {
+              'paid': purchase.paidDays,
+              'total': purchase.totalDays,
+            }),
+            value: '${(purchase.progress * 100).round()}%',
+            valueColor: CustomColors.accent,
+          ),
+          AppInfoRow(
+            icon: Icons.account_balance_wallet_outlined,
+            label: tr('product.stat_remaining'),
+            value: formatMNT(purchase.remainingAmount),
+          ),
           if (purchase.status == ProductPurchaseStatus.active &&
-              purchase.deadline != null) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.event_outlined,
-                    size: 12, color: Colors.white38),
-                const SizedBox(width: 4),
-                Text(
-                  tr('product.deadline_with',
-                      {'date': _fmtDate(purchase.deadline!)}),
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 10.5,
-                  ),
-                ),
-                const Spacer(),
-                if (daysLeft != null)
-                  Text(
-                    daysLeft < 0
-                        ? tr('product.days_overdue', {'days': -daysLeft})
-                        : tr('product.days_left', {'days': daysLeft}),
-                    style: TextStyle(
-                      color: daysLeft < 0
-                          ? const Color(0xFFE57373)
-                          : Colors.white54,
-                      fontWeight:
-                          daysLeft < 0 ? FontWeight.w600 : FontWeight.w500,
-                      fontSize: 10.5,
-                    ),
-                  ),
-              ],
+              purchase.deadline != null)
+            AppInfoRow(
+              icon: Icons.event_outlined,
+              label: tr('product.deadline_with',
+                  {'date': _fmtDate(purchase.deadline!)}),
+              value: daysLeft == null
+                  ? _fmtDate(purchase.deadline!)
+                  : overdue
+                      ? tr('product.days_overdue', {'days': -daysLeft})
+                      : tr('product.days_left', {'days': daysLeft}),
+              valueColor: overdue ? CustomColors.negative : null,
             ),
-          ],
         ],
       ),
     );
@@ -686,57 +541,28 @@ class _CancelledCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0x33C2240B),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x55C2240B)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.cancel_outlined,
-                  color: Color(0xFFE57373), size: 16),
-              const SizedBox(width: 6),
-              Text(
-                tr('product.status_cancelled'),
-                style: const TextStyle(
-                  color: Color(0xFFE57373),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          if (purchase.cancelReason != null &&
-              purchase.cancelReason!.isNotEmpty)
-            Text(
-              tr('product.cancel_reason', {'reason': purchase.cancelReason}),
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-            ),
-          if (purchase.refundAmount != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              tr('product.fee_amount',
-                  {'amount': formatMNT(purchase.refundFee ?? 0)}),
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-            ),
-            Text(
-              tr('product.refunded_amount',
-                  {'amount': formatMNT(purchase.refundAmount!)}),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ],
-      ),
+    final List<String> details = [
+      if (purchase.cancelReason != null && purchase.cancelReason!.isNotEmpty)
+        tr('product.cancel_reason', {'reason': purchase.cancelReason}),
+      if (purchase.refundAmount != null) ...[
+        tr('product.fee_amount',
+            {'amount': formatMNT(purchase.refundFee ?? 0)}),
+        tr('product.refunded_amount',
+            {'amount': formatMNT(purchase.refundAmount!)}),
+      ],
+    ];
+    if (details.isEmpty) {
+      return AppBanner(
+        icon: Icons.cancel_outlined,
+        color: CustomColors.negative,
+        text: tr('product.status_cancelled'),
+      );
+    }
+    return AppBanner(
+      icon: Icons.cancel_outlined,
+      color: CustomColors.negative,
+      title: tr('product.status_cancelled'),
+      text: details.join('\n'),
     );
   }
 }
@@ -754,59 +580,17 @@ class _PaymentLapseWarning extends StatelessWidget {
     final gap = purchase.daysSinceLastPayment ?? 0;
     final critical = gap >= ProductPurchase.installmentCancelGapDays;
 
-    // One calm amber treatment for both levels — no red, no alarm icon.
-    final Color accent = Colors.amberAccent;
-    final Color bg = Colors.amber.withOpacity(0.10);
-    final Color border = Colors.amber.withOpacity(0.25);
-
     final String body = critical
         ? tr('product.lapse_critical_body', {'gap': gap})
         : tr('product.lapse_warning_body', {'gap': gap});
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.payments_outlined,
-            color: accent,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  critical
-                      ? tr('product.lapse_critical_title')
-                      : tr('product.lapse_warning_title'),
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    // One calm gold treatment for both levels — no red, no alarm icon.
+    return AppBanner(
+      icon: Icons.payments_outlined,
+      title: critical
+          ? tr('product.lapse_critical_title')
+          : tr('product.lapse_warning_title'),
+      text: body,
     );
   }
 }
@@ -825,55 +609,9 @@ class _CancelPendingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.amber.withOpacity(0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.hourglass_top_rounded,
-              size: 16, color: Colors.amberAccent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tr('product.cancel_pending_banner'),
-              style: const TextStyle(
-                  color: Colors.white70, fontSize: 11.5, height: 1.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CancelInstallmentButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _CancelInstallmentButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: const Color(0xFFE57373).withOpacity(0.6)),
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: Text(
-        tr('product.cancel_installment'),
-        style: const TextStyle(
-          color: Color(0xFFE57373),
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
-        ),
-      ),
+    return AppBanner(
+      icon: Icons.hourglass_top_rounded,
+      text: tr('product.cancel_pending_banner'),
     );
   }
 }

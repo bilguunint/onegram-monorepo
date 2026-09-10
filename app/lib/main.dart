@@ -22,6 +22,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Апп зөвхөн босоо чиглэлд ажиллана — хэвтээ эргэлт хийхгүй
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // Relative dates follow the UI language, so a Chinese user doesn't get
   // Mongolian "3 өдрийн өмнө" under a Chinese headline.
   timeago.setLocaleMessages('mn', timeago.MnMessages());

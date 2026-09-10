@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../style/colors.dart';
+import 'package:onegrgold/style/app_text.dart';
+import 'package:onegrgold/style/colors.dart';
 
+/// Хуучин API хадгалсан цуцлах товч — улаан (negative) дэвсгэр, цагаан текст
 class CancelButton extends StatelessWidget {
   const CancelButton(
-      {super.key, required this.title, required this.onPress, required this.isLoading});
+      {super.key,
+      required this.title,
+      required this.onPress,
+      required this.isLoading});
 
   final Widget title;
   final void Function()? onPress;
@@ -12,33 +17,36 @@ class CancelButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 45.0,
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8.0),
-          color: CustomColors.alerRed),
-      child: ElevatedButton(
-        style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.all(Colors.transparent),
-          // elevation: MaterialStateProperty.all(3),
-          shadowColor: MaterialStateProperty.all(Colors.transparent),
-
-          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))),
-        ),
-        onPressed: onPress,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: isLoading
-              ? const SizedBox(
-                  height: 20.0,
-                  width: 20.0,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.0,
-                    color: Colors.black,
-                  ),
-                )
-              : title,
+    final bool enabled = onPress != null && !isLoading;
+    return SizedBox(
+      height: 52.0,
+      width: double.infinity,
+      child: Opacity(
+        opacity: enabled || isLoading ? 1.0 : 0.45,
+        child: Material(
+          color: CustomColors.negative,
+          borderRadius: BorderRadius.circular(14.0),
+          child: InkWell(
+            onTap: enabled ? onPress : null,
+            borderRadius: BorderRadius.circular(14.0),
+            child: Center(
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20.0,
+                      width: 20.0,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.0, color: Colors.white),
+                    )
+                  : DefaultTextStyle.merge(
+                      style: AppText.button.copyWith(color: Colors.white),
+                      child: IconTheme.merge(
+                        data: const IconThemeData(
+                            color: Colors.white, size: 18.0),
+                        child: title,
+                      ),
+                    ),
+            ),
+          ),
         ),
       ),
     );

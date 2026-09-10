@@ -1,13 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:onegrgold/bloc/register_bloc/register_bloc.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/repositories/auth_repository.dart';
 import 'package:onegrgold/repositories/user_repository.dart';
 import 'package:onegrgold/style/colors.dart';
 import 'register_view.dart';
-import 'verify_view.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen(
@@ -28,13 +27,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: CustomColors.scaffoldDarkBack,
-        title: Text(tr('reg.sign_up')),
-        centerTitle: false,
-        elevation: 0,
-      ),
-      backgroundColor: CustomColors.scaffoldDarkBack,
+      appBar: appBar(tr('reg.sign_up')),
+      backgroundColor: CustomColors.appBackground,
       body: BlocProvider(
         create: (context) {
           return RegisterBloc(

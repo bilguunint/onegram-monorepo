@@ -2,15 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/lottery_campaign_models.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_detail_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_promo_popup.dart';
+import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
 /// Where the stub is torn off, as a fraction of the card width.
 const double _kTearFraction = 0.70;
-const double _kCornerRadius = 16.0;
+const double _kCornerRadius = 20.0;
 const double _kNotchRadius = 8.0;
 
 /// The ticket outline: a rounded rectangle with two concave semicircular
@@ -129,57 +131,67 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
-          child: Text(
-            tr('lottery.section_title'),
-            style: const TextStyle(fontFamily: "InterBold", fontSize: 14.0),
-          ),
-        ),
+        AppSectionHeader(title: tr('lottery.section_title')),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: GestureDetector(
             onTap: () => _open(campaign),
-            child: AspectRatio(
-              aspectRatio: 21 / 9,
-              child: LayoutBuilder(builder: (context, box) {
-                final size = Size(box.maxWidth, box.maxHeight);
-                final tearX = box.maxWidth * _kTearFraction;
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Content, cut to the ticket outline — notches included.
-                    ClipPath(
-                      clipper: _TicketClipper(),
-                      child: Row(
-                        children: [
-                          Expanded(child: _coverSide(campaign)),
-                          SizedBox(
-                              width: box.maxWidth - tearX, child: _stub()),
-                        ],
+            child: DecoratedBox(
+              // Soft gold glow under the ticket, matching the other home cards.
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_kCornerRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: CustomColors.accent.withOpacity(0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: AspectRatio(
+                aspectRatio: 21 / 9,
+                child: LayoutBuilder(builder: (context, box) {
+                  final size = Size(box.maxWidth, box.maxHeight);
+                  final tearX = box.maxWidth * _kTearFraction;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Content, cut to the ticket outline — notches included.
+                      ClipPath(
+                        clipper: _TicketClipper(),
+                        child: ColoredBox(
+                          color: CustomColors.surface,
+                          child: Row(
+                            children: [
+                              Expanded(child: _coverSide(campaign)),
+                              SizedBox(
+                                  width: box.maxWidth - tearX, child: _stub()),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    // Dashed tear line running notch to notch.
-                    Positioned(
-                      left: tearX - 0.75,
-                      top: _kNotchRadius + 4,
-                      bottom: _kNotchRadius + 4,
-                      child: CustomPaint(
-                        size: const Size(1.5, double.infinity),
-                        painter: _DashedLinePainter(),
+                      // Dashed tear line running notch to notch.
+                      Positioned(
+                        left: tearX - 0.75,
+                        top: _kNotchRadius + 4,
+                        bottom: _kNotchRadius + 4,
+                        child: CustomPaint(
+                          size: const Size(1.5, double.infinity),
+                          painter: _DashedLinePainter(),
+                        ),
                       ),
-                    ),
-                    // The border strokes the same path, so the line dips
-                    // around each notch exactly like a punched ticket.
-                    IgnorePointer(
-                      child: CustomPaint(
-                        size: size,
-                        painter: const _TicketBorderPainter(),
+                      // The border strokes the same path, so the line dips
+                      // around each notch exactly like a punched ticket.
+                      IgnorePointer(
+                        child: CustomPaint(
+                          size: size,
+                          painter: const _TicketBorderPainter(),
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              }),
+                    ],
+                  );
+                }),
+              ),
             ),
           ),
         ),
@@ -208,20 +220,22 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
           left: 10,
           top: 8,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
+              // Sits on a photo, so a dark scrim keeps the gold chip legible.
               color: Colors.black.withOpacity(0.55),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: CustomColors.mainColor.withOpacity(0.5)),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CustomColors.accent.withOpacity(0.5)),
             ),
             child: Text(
               campaign.daysLeft > 0
                   ? tr('lottery.days_left', {'days': campaign.daysLeft})
                   : tr('lottery.ends_today'),
-              style: TextStyle(
-                color: CustomColors.mainColor,
-                fontSize: 9,
-                fontFamily: "RubikBold",
+              style: AppText.label.copyWith(
+                fontFamily: AppText.bold,
+                fontWeight: FontWeight.bold,
+                fontSize: 9.5,
+                color: CustomColors.accent,
               ),
             ),
           ),
@@ -234,12 +248,9 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
             campaign.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: "InterBold",
-              fontSize: 14,
+            style: AppText.bodyBold.copyWith(
               height: 1.25,
-              shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+              shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
             ),
           ),
         ),
@@ -262,13 +273,17 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
   }
 
   Widget _placeholder() {
-    return const DecoratedBox(
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF3A3110), Color(0xFF161618)],
+          colors: [CustomColors.surfaceAlt, CustomColors.surface],
         ),
+      ),
+      child: const Center(
+        child: Icon(Icons.confirmation_number_outlined,
+            color: Colors.white24, size: 32),
       ),
     );
   }
@@ -277,11 +292,11 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
 
   Widget _stub() {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF241E08), Color(0xFF14120A)],
+          colors: [CustomColors.accent.withOpacity(0.16), CustomColors.surface],
         ),
       ),
       child: Column(
@@ -294,10 +309,8 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
           const SizedBox(height: 2),
           Text(
             '$_myTickets',
-            style: TextStyle(
-              color: CustomColors.mainColor,
-              fontSize: 20,
-              fontFamily: "RubikBold",
+            style: AppText.displayUnit.copyWith(
+              color: CustomColors.accent,
               height: 1.1,
             ),
           ),
@@ -308,7 +321,7 @@ class _CampaignBannerWidgetState extends State<CampaignBannerWidget> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white54, fontSize: 8.5),
+              style: AppText.caption.copyWith(fontSize: 8.5),
             ),
           ),
         ],
@@ -337,7 +350,7 @@ class _TicketBorderPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0
-        ..color = const Color(0x59FCD535), // brand gold at 35%
+        ..color = CustomColors.accent.withOpacity(0.35),
     );
   }
 
@@ -350,7 +363,7 @@ class _DashedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white24
+      ..color = CustomColors.textTertiary
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
     const dash = 4.0;

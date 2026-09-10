@@ -1,3 +1,4 @@
+import 'package:onegrgold/style/app_text.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,14 +20,7 @@ class NewsScreen extends StatelessWidget {
         preferredSize: Size.fromHeight(45.0),
         child: AppBar(
           backgroundColor: CustomColors.darkContainerColor,
-          title: Text(
-            tr('home.news'),
-            style: const TextStyle(
-              fontFamily: "InterBold",
-              fontSize: 12,
-              color: Colors.white,
-            ),
-          ),
+          title: Text(tr('home.news'), style: AppText.appBarTitle),
           centerTitle: false,
         ),
       ),

@@ -15,4 +15,5 @@ const Map<String, Map<String, String>> kNavTranslations = {
     'zh': '我的',
     'ru': 'Профиль'
   },
+  'nav.more': {'mn': 'Бусад', 'en': 'More', 'zh': '更多', 'ru': 'Ещё'},
 };

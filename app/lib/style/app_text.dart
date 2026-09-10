@@ -36,6 +36,14 @@ class AppText {
     height: 1.2,
   );
 
+  /// AppBar-ын гарчиг (17px) — апп даяар бүх AppBar нэг хэмжээтэй
+  static const TextStyle appBarTitle = TextStyle(
+    fontFamily: bold,
+    fontSize: 17.0,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
+
   /// Хэсгийн гарчиг (16px)
   static const TextStyle sectionTitle = TextStyle(
     fontFamily: bold,

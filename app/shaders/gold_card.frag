@@ -193,6 +193,13 @@ void main() {
             glitter *= 0.84 + 0.28 * g3 + 0.10 * (m1 - 0.5);
             glitter += vec3(1.00, 0.92, 0.60) * (gs * 0.9 + ms * 0.7) * (1.0 + mo * 0.5)
                      * (0.5 + 0.5 * g3);
+            // Хазайлт/хөдөлгөөнийг дагаж glitter дээгүүр гүйх диагональ гялбааны туяа;
+            // туяа өнгөрөх үед ширхэгүүд анивчиж гялалзана
+            float band = (cuv.x * 0.8 + cuv.y * 0.6) - (0.55 + tx * 0.9 - ty * 0.6);
+            float shimmer = exp(-band * band / 0.035);
+            float flicker = 0.5 + 0.5 * sin(uTime * (4.0 + mo * 6.0) + g1 * 60.0 + m1 * 30.0);
+            float sparkleGrain = step(0.80, g3) * (0.4 + 0.6 * flicker);
+            glitter += vec3(1.00, 0.95, 0.72) * shimmer * (0.10 + 0.9 * sparkleGrain) * (0.6 + mo * 0.9);
             col = mix(col, glitter, fillM * 0.92);
         }
 

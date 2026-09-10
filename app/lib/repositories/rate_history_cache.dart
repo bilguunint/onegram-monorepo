@@ -78,7 +78,7 @@ class RateHistoryCache {
 
   static Future<File> _file(int metalId) async {
     final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/rate_history_v2_$metalId.json');
+    return File('${dir.path}/rate_history_v3_$metalId.json');
   }
 
   static Future<List<RatePoint>> _readFile(int metalId) async {
