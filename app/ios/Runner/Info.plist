@@ -44,15 +44,10 @@
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
@@ -67,5 +62,7 @@
             <string>fetch</string>
             <string>remote-notification</string>
         </array>
-	</dict>
+		<key>NSCameraUsageDescription</key>
+	<string>Шүтээн хуурын гэрчилгээний QR кодыг уншихад камер ашиглана.</string>
+</dict>
 </plist>

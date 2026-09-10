@@ -5,6 +5,7 @@ import {
   Building2,
   ClipboardList,
   FileText,
+  Gem,
   Gift,
   Home,
   Package,
@@ -39,6 +40,12 @@ export const MENU: MenuItem[] = [
     label: "Морин хуурын төв цогцолбор",
     href: "/center",
     icon: Building2,
+    roles: ["admin", "manager"],
+  },
+  {
+    label: "Шүтээн хуур",
+    href: "/shuteen",
+    icon: Gem,
     roles: ["admin", "manager"],
   },
   {

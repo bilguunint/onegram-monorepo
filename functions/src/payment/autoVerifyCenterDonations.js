@@ -9,6 +9,7 @@ const {
   recordCenterDonationPaid,
 } = require("./centerDonationShared");
 const { recordTreeOrderPaid } = require("./treeOrderShared");
+const { recordShuteenOrderPaid } = require("./shuteenShared");
 
 const CHECKPOINT_DOC = "system_config/autoVerifyCenterCheckpoint";
 
@@ -95,7 +96,11 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
 
   for (const doc of pendingSnap.docs) {
     const data = doc.data();
-    if (data.type !== "center_donation" && data.type !== "tree_order") {
+    if (
+      data.type !== "center_donation" &&
+      data.type !== "tree_order" &&
+      data.type !== "shuteen_order"
+    ) {
       continue;
     }
 
@@ -122,7 +127,14 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
         continue;
       }
 
-      if (data.type === "tree_order") {
+      if (data.type === "shuteen_order") {
+        const { orderId } = await recordShuteenOrderPaid(db, doc.ref, data);
+        logger.info("AutoVerifyCenter: shuteen order credited", {
+          docId: doc.id,
+          invoiceId,
+          shuteen_order_id: orderId,
+        });
+      } else if (data.type === "tree_order") {
         const { orderId } = await recordTreeOrderPaid(db, doc.ref, data);
         logger.info("AutoVerifyCenter: tree order credited", {
           docId: doc.id,

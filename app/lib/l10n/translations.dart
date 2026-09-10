@@ -3,12 +3,14 @@ import 'parts/center.dart';
 import 'parts/common.dart';
 import 'parts/home_misc.dart';
 import 'parts/lottery.dart';
+import 'parts/more.dart';
 import 'parts/nav.dart';
 import 'parts/orders.dart';
 import 'parts/products_a.dart';
 import 'parts/products_b.dart';
 import 'parts/register_profile.dart';
 import 'parts/server.dart';
+import 'parts/shuteen.dart';
 
 /// Every UI string in the app, keyed by a dotted id and then by language code.
 ///
@@ -26,5 +28,7 @@ final Map<String, Map<String, String>> kTranslations = {
   ...kOrdersTranslations,
   ...kHomeMiscTranslations,
   ...kLotteryTranslations,
+  ...kMoreTranslations,
   ...kServerTranslations,
+  ...kShuteenTranslations,
 };

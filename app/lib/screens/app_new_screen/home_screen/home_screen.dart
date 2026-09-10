@@ -13,16 +13,16 @@ import 'package:onegrgold/elements/app_ui.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/balance_view.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/home_action_bar.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/campaign_banner_widget.dart';
-import 'package:onegrgold/screens/app_new_screen/home_screen/gold_rate_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/lottery_widget.dart';
-import 'package:onegrgold/screens/app_new_screen/home_screen/morin_khuur_widget.dart';
+import 'package:onegrgold/screens/app_new_screen/home_screen/rate_card_widget.dart';
+import 'package:onegrgold/screens/app_new_screen/shuteen_screen/shuteen_home_card.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/notifications_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/order_list_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/recent_news_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/safebox_main_widget.dart';
 import 'package:onegrgold/screens/app_new_screen/home_screen/update_registration_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/gift_screen/gift_screen.dart';
-import 'package:onegrgold/screens/auth_screen/register_screen/help_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/profile_screen/profile_screen.dart';
 import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -52,30 +52,15 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       barrierDismissible: false, // Cannot dismiss by tapping outside
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: CustomColors.darkContainerColor,
-          title: Text(
-            tr('home.registration_incomplete_title'),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            tr('home.registration_incomplete_body'),
-            style: const TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _navigateToRegistrationUpdate(context, user);
-              },
-              child: Text(
-                tr('home.update_registration'),
-                style: TextStyle(
-                    color: CustomColors.mainColor, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+        return AppDialog(
+          icon: Icons.badge_outlined,
+          title: tr('home.registration_incomplete_title'),
+          message: tr('home.registration_incomplete_body'),
+          primaryLabel: tr('home.update_registration'),
+          onPrimary: () {
+            Navigator.of(context).pop();
+            _navigateToRegistrationUpdate(context, user);
+          },
         );
       },
     );
@@ -267,14 +252,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Builder(
                     builder: (context) => IconButton(
                       icon: SvgPicture.asset(
-                        "assets/icons/burger.svg",
+                        "assets/icons/user.svg",
                         color: Colors.white,
                       ),
                       onPressed: () {
                         Navigator.push(
                             context,
                             CupertinoPageRoute(
-                                builder: (_) => const HelpScreen()));
+                                builder: (_) => ProfileScreen(
+                                    userRepository:
+                                        widget.userRepository)));
                       },
                     ),
                   ),
@@ -355,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     shape: CircleShape(),
                                     size: const Size(1, 1),
                                     color: SingleParticleColor(
-                                        color: CustomColors.mainColor),
+                                        color: CustomColors.accent),
                                   ),
                                   effectConfiguration:
                                       const EffectConfiguration(
@@ -394,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     shape: CircleShape(),
                                     size: const Size(1.8, 1.8),
                                     color: SingleParticleColor(
-                                        color: CustomColors.mainColor),
+                                        color: CustomColors.accent),
                                   ),
                                   effectConfiguration:
                                       const EffectConfiguration(
@@ -418,34 +405,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: HomeActionBar(userModel: user),
                   ),
                   const SizedBox(height: 8.0),
-                  // Services row. The right slot shows the Морин хуур donation
-                  // campaign while active, otherwise the loan service.
+                  // Үйлчилгээний мөр: өнөөдрийн ханш (үргэлж) + хуваан төлөлт
                   Row(
                     children: [
-                      const MorinKhuurWidget(),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 16.0),
+                        child: RateCardWidget(),
+                      ),
                       LotteryWidget(
                         uid: widget.uid,
                         userRepository: widget.userRepository,
                       ),
                     ],
                   ),
+                  // Шүтээн хуур — хэсэгчилсэн эзэмшлийн том карт, идэвхтэй үед
+                  const ShuteenHomeCard(),
                   // Сугалаат аян — hidden entirely when no campaign runs.
                   const CampaignBannerWidget(),
-                  AppSectionHeader(title: tr('home.todays_rate')),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                      left: 16.0,
-                      right: 16.0,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(child: GoldRateWidget()),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 8.0,
-                  ),
                   AppSectionHeader(
                     title: tr('home.orders'),
                     actionLabel: tr('home.see_all'),
