@@ -39,7 +39,9 @@ export function ImageGalleryInput({
   const handleFiles = useCallback(
     async (files: FileList | null) => {
       if (!files || files.length === 0) return;
-      const arr = Array.from(files).slice(0, remaining);
+      // max=1 (cover/hero) үед хуучин зургийг устгахгүйгээр шууд солино.
+      const replaceSingle = max === 1 && value.length >= 1;
+      const arr = Array.from(files).slice(0, replaceSingle ? 1 : remaining);
       if (arr.length === 0) {
         toast.warning(`Хамгийн ихдээ ${max} зураг оруулна уу.`);
         return;
@@ -57,7 +59,8 @@ export function ImageGalleryInput({
       if (valid.length === 0) return;
 
       // Upload sequentially so each onChange() sees the previous URLs.
-      let workingValue = value;
+      let workingValue = replaceSingle ? [] : value;
+      const replaced = replaceSingle ? value[0] : null;
       for (const file of valid) {
         const uploadId = `${Date.now()}-${Math.random()
           .toString(36)
@@ -74,9 +77,20 @@ export function ImageGalleryInput({
           });
           workingValue = [...workingValue, url];
           onChange(workingValue);
+          if (replaced) void deleteProductImage(replaced);
         } catch (err) {
           console.error(err);
-          toast.error(`"${file.name}" upload амжилтгүй.`);
+          const code =
+            err && typeof err === "object" && "code" in err
+              ? String((err as { code: unknown }).code)
+              : err instanceof Error
+                ? err.message
+                : "";
+          toast.error(
+            code === "storage/unauthorized"
+              ? `"${file.name}" — зураг оруулах эрх байхгүй (storage rules).`
+              : `"${file.name}" upload амжилтгүй${code ? ` (${code})` : ""}.`
+          );
         } finally {
           setUploading((u) => u.filter((it) => it.id !== uploadId));
         }
@@ -112,7 +126,9 @@ export function ImageGalleryInput({
     onChange(next);
   };
 
-  const canAdd = remaining > 0;
+  // max=1 үед зураг байсан ч "Солих" товч үргэлж харагдана.
+  const isSingle = max === 1;
+  const canAdd = remaining > 0 || (isSingle && uploading.length === 0);
 
   return (
     <div className="space-y-2">
@@ -193,13 +209,13 @@ export function ImageGalleryInput({
               className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-foreground/25 bg-card text-muted-foreground transition-colors hover:border-primary-300 hover:bg-primary-50/40 hover:text-primary-700"
             >
               <ImagePlus className="h-5 w-5" />
-              <span className="text-[10px]">Зураг нэмэх</span>
+              <span className="text-[10px]">{isSingle && value.length > 0 ? "Зураг солих" : "Зураг нэмэх"}</span>
             </button>
           )}
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
-          PNG / JPG / WEBP — нэг тус бүр 5MB-аас бага. Хамгийн ихдээ {max} зураг.
-          Эхний зураг нь гол зураг болно.
+          PNG / JPG / WEBP — нэг тус бүр 5MB-аас бага.{" "}
+          {isSingle ? "Нэг зураг; шинийг сонгоход хуучин нь солигдоно." : `Хамгийн ихдээ ${max} зураг. Эхний зураг нь гол зураг болно.`}
         </p>
       </div>
 
@@ -207,7 +223,7 @@ export function ImageGalleryInput({
         ref={inputRef}
         type="file"
         accept={PRODUCT_IMAGE_ACCEPT.join(",")}
-        multiple
+        multiple={!isSingle}
         className="sr-only"
         onChange={onPick}
       />

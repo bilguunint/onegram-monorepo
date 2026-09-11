@@ -112,15 +112,38 @@ class ShuteenRepository {
   }
 
   /// QR-ийн утгыг серверээр шалгана (нэвтрэлт шаардахгүй). Сүлжээний алдаанд throw.
+  /// Серверээр гарын үсгийг шалгана. Cloud Run cold start үед хааяа
+  /// "Service Unavailable" (JSON биш, 5xx) буцаадаг тул 2 удаа дахин оролдоно.
   Future<ShuteenVerifyResult> verifyCertificate(String payload) async {
-    final res = await http
-        .post(
-          Uri.parse(_verifyUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'payload': payload}),
-        )
-        .timeout(const Duration(seconds: 20));
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
-    return ShuteenVerifyResult.fromJson(body);
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await Future<void>.delayed(Duration(milliseconds: 600 * attempt));
+      }
+      try {
+        final res = await http
+            .post(
+              Uri.parse(_verifyUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'payload': payload}),
+            )
+            .timeout(const Duration(seconds: 20));
+        if (res.statusCode >= 500) {
+          lastError = http.ClientException('HTTP ${res.statusCode}');
+          continue;
+        }
+        final decoded = jsonDecode(res.body);
+        if (decoded is! Map<String, dynamic>) {
+          lastError = const FormatException('unexpected response');
+          continue;
+        }
+        return ShuteenVerifyResult.fromJson(decoded);
+      } on FormatException catch (e) {
+        lastError = e;
+      } on http.ClientException catch (e) {
+        lastError = e;
+      }
+    }
+    throw lastError ?? Exception('verify failed');
   }
 }
