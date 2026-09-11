@@ -10,6 +10,7 @@ admin.initializeApp({
 const requestOtp = require("./auth/requestOtp");
 const verifyOtp = require("./auth/verifyOtp");
 const setPin = require("./auth/setPin");
+const { syncAdminClaim } = require("./auth/adminClaims");
 const verifyPin = require("./auth/verifyPin");
 const changePin = require("./auth/changePin");
 const resetPin = require("./auth/resetPin");
@@ -122,6 +123,7 @@ exports.requestOtp = requestOtp;
 exports.verifyOtp = verifyOtp;
 exports.setPin = setPin;
 exports.verifyPin = verifyPin;
+exports.syncAdminClaim = syncAdminClaim;
 exports.changePin = changePin;
 exports.resetPin = resetPin;
 exports.userResetPin = userResetPin;
