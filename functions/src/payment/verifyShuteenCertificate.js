@@ -31,7 +31,11 @@ function initials(name) {
 exports.verifyShuteenCertificate = onRequest({
   region: "asia-northeast1",
   memory: "256MiB",
-  timeoutSeconds: 30,
+  timeoutSeconds: 60,
+  // index.js бүх функцийг ачаалдаг тул cold start удаан; хүйтэн instance-д
+  // ирсэн эхний хүсэлт Cloud Run-аас "Service Unavailable" (JSON биш) авч,
+  // апп "Шалгах үед алдаа гарлаа" харуулдаг. 1 instance үргэлж бэлэн байлгана.
+  minInstances: 1,
 }, async (req, res) => {
   return cors(req, res, async () => {
     try {
