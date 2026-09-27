@@ -9,17 +9,29 @@ export type YearRow = {
   bought: number;
   orders: number;
   buyers: number;
+  /** Анх удаа тухайн жил худалдаж авсан хүн */
+  newBuyers: number;
+  /** Тухайн жил 2+ удаа авсан хүн */
+  repeatBuyers: number;
+  /** Өмнөх жилийн худалдан авагчдаас энэ жил дахин авсан хувь */
+  retentionPct: number | null;
+  avgOrderGrams: number;
   /** Биетээр авсан, г */
   phys: number;
   /** Бидэнд буцааж зарсан, г */
   sold: number;
+  /** Буцааж зарсан алтад төлсөн дүн, ₮ */
+  soldMnt: number;
   /** Төрөл бүртгэгдээгүй (2026-02-с өмнөх), г */
   unspec: number;
   wd: number;
   wdCount: number;
   net: number;
   cum: number;
+  /** Борлуулалтын орлого, ₮ */
   revenue: number;
+  /** Дундаж зарсан үнэ, ₮/г */
+  avgPricePerGram: number;
 };
 
 export type MonthRow = {
@@ -56,10 +68,33 @@ export type CohortRow = {
 
 export type DistBucket = { label: string; count: number };
 
+export type InvestorMetrics = {
+  /** Нөөцийн үнэлгээ өнөөдрийн ханшаар, ₮ */
+  reserveValueMnt: number;
+  totalRevenueMnt: number;
+  totalBuybackMnt: number;
+  /** Авагдсан алтны жинлэсэн дундаж хадгалсан хугацаа, өдөр */
+  avgHoldDays: number;
+  /** Одоо байгаа алтны жинлэсэн дундаж нас, өдөр */
+  avgAgeDays: number;
+  last6AvgWithdrawn: number;
+  last6AvgBought: number;
+  /** Нөөц / сүүлийн 6 сарын дундаж авалт = хэдэн сарын хүрэлцээ */
+  coverMonths: number | null;
+  ordersPerBuyer: number;
+  avgOrderGrams: number;
+  /** Бүх цаг үед 2+ захиалга өгсөн худалдан авагчийн хувь */
+  repeatBuyerPct: number;
+  /** Бүх цаг үед авсан / зарсан, % */
+  redemptionPct: number;
+};
+
 export type GoldReserveReport = {
   computedAt: string; // ISO
   dataFrom: string; // YYYY-MM-DD (эхний захиалга)
   dataTo: string; // YYYY-MM-DD (тооцсон өдөр)
+  goldRate: { rate: number; updatedAt: string | null };
+  investor: InvestorMetrics;
   reserve: {
     total: number;
     userBalance: number;

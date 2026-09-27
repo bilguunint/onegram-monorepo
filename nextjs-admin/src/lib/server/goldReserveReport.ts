@@ -82,6 +82,8 @@ type Out = {
   qty: number;
   uid: string;
   type: "taken_physically" | "sold_to_us" | "unspecified" | "gift";
+  /** Бидэнд буцааж зарсан үеийн төлсөн дүн, ₮ */
+  price: number;
 };
 
 async function loadSoldLots(): Promise<{ lots: Lot[]; revenueByYear: Map<number, number>; orderCount: number }> {
@@ -111,7 +113,7 @@ async function loadWithdraws(): Promise<Out[]> {
   const snap = await adminDb
     .collection("withdraws")
     .where("status", "==", "verified")
-    .select("user_id", "metal_id", "quantity", "withdraw_type", "verified_at", "created_at")
+    .select("user_id", "metal_id", "quantity", "withdraw_type", "verified_at", "created_at", "price")
     .get();
   const outs: Out[] = [];
   for (const doc of snap.docs) {
@@ -124,7 +126,7 @@ async function loadWithdraws(): Promise<Out[]> {
       w.withdraw_type === "taken_physically" || w.withdraw_type === "sold_to_us"
         ? w.withdraw_type
         : "unspecified";
-    outs.push({ d, qty, uid: String(w.user_id || ""), type: t });
+    outs.push({ d, qty, uid: String(w.user_id || ""), type: t, price: Number(w.price) || 0 });
   }
   return outs;
 }
@@ -152,6 +154,13 @@ async function loadGifts(): Promise<{ received: { d: Date; qty: number; from: st
     });
   }
   return { received, pendingGrams };
+}
+
+async function loadGoldRate(): Promise<{ rate: number; updatedAt: string | null }> {
+  const snap = await adminDb.collection("latest_rates").doc("latest_gold_rate").get();
+  const d = snap.exists ? snap.data() || {} : {};
+  const at = toDate(d.updated_at);
+  return { rate: Number(d.rate) || 0, updatedAt: at ? at.toISOString() : null };
 }
 
 async function loadInvestmentsOpen(): Promise<number> {
@@ -221,13 +230,14 @@ async function loadUserStats(): Promise<{
 
 export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
   const now = new Date();
-  const [{ lots, revenueByYear, orderCount }, outs, gifts, investments, userStats] =
+  const [{ lots, revenueByYear, orderCount }, outs, gifts, investments, userStats, goldRate] =
     await Promise.all([
       loadSoldLots(),
       loadWithdraws(),
       loadGifts(),
       loadInvestmentsOpen(),
       loadUserStats(),
+      loadGoldRate(),
     ]);
 
   // ---- Жил / сар
@@ -235,14 +245,18 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
     bought: number;
     orders: number;
     buyers: Set<string>;
+    /** Хэрэглэгч бүрийн тухайн үеийн захиалгын тоо (давтан худалдан авагч тоолоход) */
+    ordersByBuyer: Map<string, number>;
     phys: number;
     sold: number;
+    soldMnt: number;
     unspec: number;
     wd: number;
     wdCount: number;
   };
   const mk = (): Agg => ({
-    bought: 0, orders: 0, buyers: new Set(), phys: 0, sold: 0, unspec: 0, wd: 0, wdCount: 0,
+    bought: 0, orders: 0, buyers: new Set(), ordersByBuyer: new Map(),
+    phys: 0, sold: 0, soldMnt: 0, unspec: 0, wd: 0, wdCount: 0,
   });
   const byYear = new Map<number, Agg>();
   const byMonth = new Map<string, Agg>();
@@ -258,36 +272,66 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
       a.bought += l.qty;
       a.orders += 1;
       a.buyers.add(l.uid);
+      a.ordersByBuyer.set(l.uid, (a.ordersByBuyer.get(l.uid) || 0) + 1);
     }
   }
+  // Хэрэглэгч бүрийн анхны худалдан авалтын жил (шинэ худалдан авагч тоолоход)
+  const firstYearByUser = new Map<string, number>();
+  for (const l of lots) {
+    const y = ubYear(l.d);
+    const cur = firstYearByUser.get(l.uid);
+    if (cur === undefined || y < cur) firstYearByUser.set(l.uid, y);
+  }
+  const newBuyersByYear = new Map<number, number>();
+  for (const y of firstYearByUser.values()) newBuyersByYear.set(y, (newBuyersByYear.get(y) || 0) + 1);
   for (const o of outs) {
     for (const a of [get(byYear, ubYear(o.d)), get(byMonth, ubMonthKey(o.d))]) {
       a.wd += o.qty;
       a.wdCount += 1;
       if (o.type === "taken_physically") a.phys += o.qty;
-      else if (o.type === "sold_to_us") a.sold += o.qty;
-      else a.unspec += o.qty;
+      else if (o.type === "sold_to_us") {
+        a.sold += o.qty;
+        a.soldMnt += o.price;
+      } else a.unspec += o.qty;
     }
   }
 
   let cum = 0;
-  const yearly: YearRow[] = [...byYear.keys()].sort().map((y) => {
+  const yearKeys = [...byYear.keys()].sort();
+  const yearly: YearRow[] = yearKeys.map((y, i) => {
     const a = byYear.get(y)!;
     const net = a.bought - a.wd;
     cum += net;
+    const revenue = revenueByYear.get(y) || 0;
+    let repeat = 0;
+    for (const n of a.ordersByBuyer.values()) if (n >= 2) repeat++;
+    // Өмнөх жилийн худалдан авагчдаас энэ жил дахин авсан хувь
+    let retention: number | null = null;
+    if (i > 0) {
+      const prev = byYear.get(yearKeys[i - 1])!;
+      let kept = 0;
+      for (const u of prev.buyers) if (a.buyers.has(u)) kept++;
+      retention = prev.buyers.size ? r3((100 * kept) / prev.buyers.size) : null;
+    }
     return {
       year: y,
       bought: r3(a.bought),
       orders: a.orders,
       buyers: a.buyers.size,
+      newBuyers: newBuyersByYear.get(y) || 0,
+      repeatBuyers: repeat,
+      retentionPct: retention,
+      avgOrderGrams: a.orders ? r3(a.bought / a.orders) : 0,
       phys: r3(a.phys),
       sold: r3(a.sold),
+      soldMnt: Math.round(a.soldMnt),
       unspec: r3(a.unspec),
       wd: r3(a.wd),
       wdCount: a.wdCount,
       net: r3(net),
       cum: r3(cum),
-      revenue: Math.round(revenueByYear.get(y) || 0),
+      revenue: Math.round(revenue),
+      avgPricePerGram: a.bought ? Math.round(revenue / a.bought) : 0,
     };
   });
   cum = 0;
@@ -321,7 +365,7 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
   for (const g of gifts.received) {
     // Хүлээн авсан бэлэг: хүлээн авагчийн худалдан авалт, илгээгчийн гарц.
     flow(g.to).lots.push({ d: g.d, qty: g.qty, uid: g.to, gift: true });
-    flow(g.from).outs.push({ d: g.d, qty: g.qty, uid: g.from, type: "gift" });
+    flow(g.from).outs.push({ d: g.d, qty: g.qty, uid: g.from, type: "gift", price: 0 });
   }
 
   const holdAll = emptyBuckets();
@@ -332,6 +376,8 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
   const cohortHeld = new Map<number, number>();
   let unallocated = 0;
   let fullOut = 0;
+  let holdDaysWeighted = 0; // Σ(грамм × өдөр) авагдсан алт
+  let ageDaysWeighted = 0; // Σ(грамм × өдөр) одоо байгаа алт
   const buyers = new Set<string>();
   const withdrawers = new Set<string>();
   const nowIdx = ubDayIndex(now);
@@ -362,6 +408,7 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
             const days = ubDayIndex(o.d) - ubDayIndex(lot.d);
             const b = bucketOf(days);
             holdAll[b] += take;
+            holdDaysWeighted += take * Math.max(0, days);
             const key = `${ubYear(o.d)}|${o.type}`;
             if (!holdByYearType[key]) holdByYearType[key] = emptyBuckets();
             holdByYearType[key][b] += take;
@@ -381,7 +428,9 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
       if (left[i] > 1e-9 && !lot.gift) {
         const py = ubYear(lot.d);
         cohortHeld.set(py, (cohortHeld.get(py) || 0) + left[i]);
-        ageNow[bucketOf(nowIdx - ubDayIndex(lot.d))] += left[i];
+        const age = nowIdx - ubDayIndex(lot.d);
+        ageNow[bucketOf(age)] += left[i];
+        ageDaysWeighted += left[i] * Math.max(0, age);
       }
     });
     if (buyers.has(uid) && withdrawers.has(uid) && outReal >= boughtReal - 1e-6) fullOut++;
@@ -419,10 +468,41 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
     if (!peakMonth || m.wd > peakMonth.wd) peakMonth = { month: m.month, wd: m.wd, phys: m.phys };
   }
 
+  // ---- Хөрөнгө оруулагчийн үзүүлэлт
+  const holdGramsTotal = HOLD_BUCKETS.reduce((s, k) => s + holdAll[k], 0);
+  const ageGramsTotal = HOLD_BUCKETS.reduce((s, k) => s + ageNow[k], 0);
+  const last6 = monthly.slice(-6);
+  const last6AvgWd = last6.length ? last6.reduce((s, m) => s + m.wd, 0) / last6.length : 0;
+  const last6AvgBought = last6.length ? last6.reduce((s, m) => s + m.bought, 0) / last6.length : 0;
+  const ordersPerBuyerMap = new Map<string, number>();
+  for (const l of lots) ordersPerBuyerMap.set(l.uid, (ordersPerBuyerMap.get(l.uid) || 0) + 1);
+  let repeatLifetime = 0;
+  for (const n of ordersPerBuyerMap.values()) if (n >= 2) repeatLifetime++;
+  const totalRevenue = [...revenueByYear.values()].reduce((s, v) => s + v, 0);
+  const totalSoldMnt = outs.filter((o) => o.type === "sold_to_us").reduce((s, o) => s + o.price, 0);
+
   return {
     computedAt: now.toISOString(),
     dataFrom: firstDate ? ubDateKey(firstDate) : "",
     dataTo: ubDateKey(now),
+    goldRate: {
+      rate: goldRate.rate,
+      updatedAt: goldRate.updatedAt,
+    },
+    investor: {
+      reserveValueMnt: Math.round(reserveTotal * goldRate.rate),
+      totalRevenueMnt: Math.round(totalRevenue),
+      totalBuybackMnt: Math.round(totalSoldMnt),
+      avgHoldDays: holdGramsTotal ? Math.round(holdDaysWeighted / holdGramsTotal) : 0,
+      avgAgeDays: ageGramsTotal ? Math.round(ageDaysWeighted / ageGramsTotal) : 0,
+      last6AvgWithdrawn: r3(last6AvgWd),
+      last6AvgBought: r3(last6AvgBought),
+      coverMonths: last6AvgWd > 0 ? r3(reserveTotal / last6AvgWd) : null,
+      ordersPerBuyer: buyers.size ? r3(orderCount / buyers.size) : 0,
+      avgOrderGrams: orderCount ? r3(bought / orderCount) : 0,
+      repeatBuyerPct: buyers.size ? r3((100 * repeatLifetime) / buyers.size) : 0,
+      redemptionPct: bought ? r3((100 * withdrawn) / bought) : 0,
+    },
     reserve: {
       total: r3(reserveTotal),
       userBalance: r3(userStats.gold),
