@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   ClipboardList,
+  Coins,
   FileText,
   Gem,
   Gift,
@@ -24,6 +25,8 @@ export type MenuItem = {
   href: string;
   icon: LucideIcon;
   roles?: AdminRole[];
+  /** Дэд цэс. Байвал эх зүйл нь задардаг бүлэг болно. */
+  children?: MenuItem[];
 };
 
 export const MENU: MenuItem[] = [
@@ -72,10 +75,24 @@ export const MENU: MenuItem[] = [
     href: "/report",
     icon: TrendingUp,
     roles: ["admin", "manager", "accountant"],
+    children: [
+      { label: "Хөрөнгө оруулагчийн тайлан", href: "/report", icon: TrendingUp },
+      { label: "Алтны нөөцийн судалгаа", href: "/report/gold-reserve", icon: Coins },
+    ],
   },
 ];
 
 export function filterMenuByRole(role: AdminRole | null | undefined): MenuItem[] {
   if (!role) return [];
-  return MENU.filter((item) => !item.roles || item.roles.includes(role));
+  return MENU.filter((item) => !item.roles || item.roles.includes(role)).map(
+    (item) =>
+      item.children
+        ? {
+            ...item,
+            children: item.children.filter(
+              (c) => !c.roles || c.roles.includes(role)
+            ),
+          }
+        : item
+  );
 }
