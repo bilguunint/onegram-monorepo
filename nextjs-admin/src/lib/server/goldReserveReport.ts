@@ -24,6 +24,10 @@ import {
 
 const CACHE_DOC = adminDb.collection("analytics").doc("gold_reserve_report");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 цаг
+// Тайлангийн бүтэц өөрчлөгдөх бүрд нэмэгдүүлнэ: хуучин бүтэцтэй кэшийг
+// хэрэглэхгүй, дахин тооцно (хуучин payload-д шинэ талбар байхгүйгээс
+// клиент дээр алдаа гарахаас сэргийлнэ).
+const SCHEMA_VERSION = 2;
 
 // Улаанбаатар UTC+8 (зуны цаг байхгүй). Огноог +8 цаг шилжүүлээд UTC
 // getter-ээр уншвал УБ-ын календарийн огноо гарна.
@@ -545,7 +549,8 @@ export async function computeGoldReserveReport(): Promise<GoldReserveReport> {
 export async function getCachedGoldReserveReport(): Promise<GoldReserveReport | null> {
   const snap = await CACHE_DOC.get();
   if (!snap.exists) return null;
-  const d = snap.data() as { computed_at?: Timestamp; payload?: string };
+  const d = snap.data() as { computed_at?: Timestamp; payload?: string; schema?: number };
+  if (d.schema !== SCHEMA_VERSION) return null;
   const at = toDate(d.computed_at);
   if (!at || !d.payload) return null;
   if (Date.now() - at.getTime() > CACHE_TTL_MS) return null;
@@ -559,6 +564,7 @@ export async function getCachedGoldReserveReport(): Promise<GoldReserveReport | 
 export async function computeAndCacheGoldReserveReport(): Promise<GoldReserveReport> {
   const report = await computeGoldReserveReport();
   await CACHE_DOC.set({
+    schema: SCHEMA_VERSION,
     computed_at: Timestamp.fromDate(new Date(report.computedAt)),
     payload: JSON.stringify(report),
   });

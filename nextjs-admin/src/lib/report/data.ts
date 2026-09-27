@@ -18,6 +18,10 @@ import { fetchInvestments, type Investment } from "@/lib/firestore/investments";
 import { purchaseIsOverdue } from "@/lib/products";
 import { getInvestmentStatusKey } from "@/lib/investments";
 import { currentMonthKey, previousMonthKey } from "@/lib/format";
+import {
+  fetchGoldReserveReport,
+  type GoldReserveReport,
+} from "@/lib/report/goldReserve";
 
 export type PortfolioMetrics = {
   total: number;
@@ -53,6 +57,8 @@ export type ReportData = {
   withdrawOverall: WithdrawAnalytics | null;
   portfolio: PortfolioMetrics;
   investments: InvestmentMetrics;
+  /** Алтны нөөц, авалт, хадгалалтын судалгаа (сервер дээр тооцогдож кэшлэгддэг). */
+  goldReserve: GoldReserveReport | null;
 };
 
 function computePortfolio(purchases: ProductPurchase[]): PortfolioMetrics {
@@ -124,17 +130,25 @@ function computeInvestments(items: Investment[]): InvestmentMetrics {
 }
 
 export async function fetchReportData(): Promise<ReportData> {
-  const [snapshot, withdrawOverall, purchases, investments] = await Promise.all([
-    fetchDashboardSnapshot(currentMonthKey(), previousMonthKey()),
-    fetchWithdrawAnalytics("overall").catch(() => null),
-    fetchAllProductPurchases().catch(() => [] as ProductPurchase[]),
-    fetchInvestments().catch(() => [] as Investment[]),
-  ]);
+  const [snapshot, withdrawOverall, purchases, investments, goldReserve] =
+    await Promise.all([
+      fetchDashboardSnapshot(currentMonthKey(), previousMonthKey()),
+      fetchWithdrawAnalytics("overall").catch(() => null),
+      fetchAllProductPurchases().catch(() => [] as ProductPurchase[]),
+      fetchInvestments().catch(() => [] as Investment[]),
+      fetchGoldReserveReport(false)
+        .then((r) => r.data)
+        .catch((err) => {
+          console.error("Gold reserve section unavailable:", err);
+          return null;
+        }),
+    ]);
 
   return {
     snapshot,
     withdrawOverall,
     portfolio: computePortfolio(purchases),
     investments: computeInvestments(investments),
+    goldReserve,
   };
 }
