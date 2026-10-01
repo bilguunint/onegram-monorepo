@@ -78,6 +78,7 @@ export const MENU: MenuItem[] = [
     children: [
       { label: "Хөрөнгө оруулагчийн тайлан", href: "/report", icon: TrendingUp },
       { label: "Алтны нөөцийн судалгаа", href: "/report/gold-reserve", icon: Coins },
+      { label: "Ашгийн тайлан", href: "/report/profit", icon: Wallet },
     ],
   },
 ];
