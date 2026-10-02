@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_accept_checkbox.dart';
+import 'package:onegrgold/elements/terms_content.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
@@ -217,8 +219,6 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
     );
   }
 
-  String get _termsText => tr('product.refund_terms', {'percent': _feePercent});
-
   Widget _termsSection() {
     return AppCard(
       child: Column(
@@ -236,51 +236,24 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
             padding: const EdgeInsets.all(12),
             child: Scrollbar(
               child: SingleChildScrollView(
-                child: Text(
-                  _termsText,
-                  style: AppText.caption.copyWith(height: 1.5),
+                // Firestore terms/refund — {percent} нь барааны цуцлах шимтгэл.
+                child: TermsContent(
+                  termsKey: 'refund',
+                  compact: true,
+                  showTitle: false,
+                  params: {'percent': _feePercent},
                 ),
               ),
             ),
           ),
           const SizedBox(height: 10),
-          InkWell(
-            onTap: () => setState(() => _termsAccepted = !_termsAccepted),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: _termsAccepted
-                          ? CustomColors.accent
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: _termsAccepted
-                            ? CustomColors.accent
-                            : CustomColors.textTertiary,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: _termsAccepted
-                        ? const Icon(Icons.check_rounded,
-                            size: 14, color: Colors.black)
-                        : null,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      tr('product.accept_terms_checkbox'),
-                      style: AppText.body.copyWith(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Анх удаа чагтлахад гарын үсэг зуруулна (terms/refund).
+          TermsAcceptCheckbox(
+            termsKey: 'refund',
+            value: _termsAccepted,
+            onChanged: (v) => setState(() => _termsAccepted = v),
+            label: tr('product.accept_terms_checkbox'),
+            labelStyle: AppText.body.copyWith(fontSize: 13),
           ),
         ],
       ),

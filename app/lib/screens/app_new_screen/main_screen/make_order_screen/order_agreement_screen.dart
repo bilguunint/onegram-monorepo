@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:onegrgold/elements/app_ui.dart';
-import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/elements/terms_content.dart';
 import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
-/// Захиалгын үйлчилгээний нөхцөл — зураг + нэг картанд гарчиг/цэгүүд.
+/// Үйлчилгээний нөхцөл — зураг + нэг картанд Firestore `terms/{termsKey}`-ийн
+/// текст (админаас удирдана; офлайн бол аппд шигтгэсэн нөөц текст).
 /// Column дотор ашиглагддаг тул Expanded-оор ороосон хэвээр.
-class OrderAgreement extends StatefulWidget {
-  const OrderAgreement({super.key});
+class OrderAgreement extends StatelessWidget {
+  /// `general` (ерөнхий нөхцөл), `privacy` (нууцлалын бодлого) гэх мэт.
+  final String termsKey;
 
-  @override
-  State<OrderAgreement> createState() => _OrderAgreementState();
-}
+  const OrderAgreement({super.key, this.termsKey = 'general'});
 
-class _OrderAgreementState extends State<OrderAgreement> {
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -30,40 +29,7 @@ class _OrderAgreementState extends State<OrderAgreement> {
           ),
           const SizedBox(height: 16.0),
           AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SectionTitle(tr('order.terms_title')),
-
-                SectionTitle(tr('order.terms_s1_title')),
-                BulletPoint(tr('order.terms_1_1')),
-                BulletPoint(tr('order.terms_1_2')),
-                BulletPoint(tr('order.terms_1_3')),
-
-                SectionTitle(tr('order.terms_s2_title')),
-                BulletPoint(tr('order.terms_2_1')),
-                BulletPoint(tr('order.terms_2_2')),
-                BulletPoint(tr('order.terms_2_3')),
-
-                SectionTitle(tr('order.terms_s3_title')),
-                BulletPoint(tr('order.terms_3_1')),
-                BulletPoint(tr('order.terms_3_2')),
-                BulletPoint(tr('order.terms_3_3')),
-
-                SectionTitle(tr('order.terms_s4_title')),
-                BulletPoint(tr('order.terms_4_1')),
-                BulletPoint(tr('order.terms_4_2')),
-                BulletPoint(tr('order.terms_4_3')),
-
-                SectionTitle(tr('order.terms_s5_company_title')),
-                BulletPoint(tr('order.terms_5_1')),
-                BulletPoint(tr('order.terms_5_2')),
-
-                SectionTitle(tr('order.terms_s6_title')),
-                BulletPoint(tr('order.terms_6_1')),
-                BulletPoint(tr('order.terms_6_2')),
-              ],
-            ),
+            child: TermsContent(termsKey: termsKey),
           ),
         ],
       ),

@@ -4,24 +4,26 @@ import 'package:onegrgold/screens/app_new_screen/main_screen/make_order_screen/o
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/colors.dart';
 
-class PrivacyScreen extends StatefulWidget {
+/// Үйлчилгээний нөхцөл / Нууцлалын бодлогын бүтэн дэлгэц.
+/// [termsKey] — Firestore `terms/{key}`: `general` эсвэл `privacy`.
+class PrivacyScreen extends StatelessWidget {
+  final String termsKey;
+  final String titleKey;
+
   const PrivacyScreen({
     super.key,
+    this.termsKey = 'general',
+    this.titleKey = 'more.terms',
   });
-
-  @override
-  State<PrivacyScreen> createState() => _PrivacyScreenState();
-}
-
-class _PrivacyScreenState extends State<PrivacyScreen> {
-  bool monVal = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CustomColors.appBackground,
-      appBar: appBar(tr('purchase.terms_title')),
-      body: const OrderAgreement(),
+      appBar: appBar(tr(titleKey)),
+      body: Column(
+        children: [OrderAgreement(termsKey: termsKey)],
+      ),
     );
   }
 }

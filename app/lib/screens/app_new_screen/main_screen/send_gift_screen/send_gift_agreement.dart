@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:onegrgold/elements/app_ui.dart';
-import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/elements/terms_content.dart';
 import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
 
@@ -24,28 +24,9 @@ class _SendGiftAgreementState extends State<SendGiftAgreement> {
             child: SvgPicture.asset("assets/icons/agreement-dark.svg"),
           ),
           const SizedBox(height: 16.0),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(tr('order.gift_terms_title'),
-                    style: AppText.sectionTitle.copyWith(fontSize: 18.0)),
-                SectionTitle(tr('order.gift_terms_s1_title')),
-                BulletPoint(tr('order.gift_terms_1_1')),
-                BulletPoint(tr('order.gift_terms_1_2')),
-                SectionTitle(tr('order.gift_terms_s2_title')),
-                BulletPoint(tr('order.gift_terms_2_1')),
-                BulletPoint(tr('order.gift_terms_2_2')),
-                BulletPoint(tr('order.gift_terms_2_3')),
-                SectionTitle(tr('order.gift_terms_s3_title')),
-                BulletPoint(tr('order.gift_terms_3_1')),
-                BulletPoint(tr('order.gift_terms_3_2')),
-                BulletPoint(tr('order.gift_terms_3_3')),
-                SectionTitle(tr('order.terms_s4_company_title')),
-                BulletPoint(tr('order.gift_terms_4_1')),
-                BulletPoint(tr('order.gift_terms_4_2')),
-              ],
-            ),
+          // Firestore terms/gift — админаас удирдана (офлайн бол нөөц текст).
+          const AppCard(
+            child: TermsContent(termsKey: 'gift'),
           ),
         ],
       ),

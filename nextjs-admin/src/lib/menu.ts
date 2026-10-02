@@ -5,6 +5,7 @@ import {
   Building2,
   ClipboardList,
   Coins,
+  FileSignature,
   FileText,
   Gem,
   Gift,
@@ -62,6 +63,12 @@ export const MENU: MenuItem[] = [
     href: "/campaigns",
     icon: ClipboardList,
     roles: ["admin", "manager", "seller"],
+  },
+  {
+    label: "Үйлчилгээний нөхцөл",
+    href: "/terms",
+    icon: FileSignature,
+    roles: ["admin", "manager"],
   },
   { label: "Админууд", href: "/admins", icon: ShieldCheck, roles: ["admin"] },
   {

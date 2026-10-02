@@ -146,7 +146,10 @@ class _MoreScreenState extends State<MoreScreen>
                   _MenuRow(
                     icon: Icons.shield_outlined,
                     title: tr('reg.help_privacy_policy'),
-                    onTap: () => _push(const PrivacyScreen()),
+                    onTap: () => _push(const PrivacyScreen(
+                      termsKey: 'privacy',
+                      titleKey: 'reg.help_privacy_policy',
+                    )),
                   ),
                 ],
               ),

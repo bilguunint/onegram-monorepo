@@ -9,6 +9,7 @@ import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_
 import 'package:onegrgold/bloc/make_withdraw_request_bloc/make_withdraw_request_state.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_accept_checkbox.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/make_withdraw_screen/success_withdraw_screen.dart';
@@ -245,7 +246,7 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                     quantityText = '0';
                   });
                 },
-                rightIcon: Icon(Ionicons.backspace_outline,
+                rightIcon: Icon(Ionicons.backspaceOutline,
                     color: CustomColors.textSecondary),
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
               ),
@@ -325,7 +326,7 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
                 textStyle: AppText.display.copyWith(fontSize: 24.0),
                 rightButtonFn: _onPinBackspace,
                 rightButtonLongPressFn: _onPinClear,
-                rightIcon: Icon(Ionicons.backspace_outline,
+                rightIcon: Icon(Ionicons.backspaceOutline,
                     color: CustomColors.textSecondary),
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
               ),
@@ -419,43 +420,13 @@ class _MakeWithdrawScreenState extends State<MakeWithdrawScreen> {
     }
   }
 
+  /// Анх удаа чагтлахад гарын үсэг зуруулна (terms/withdraw).
   Widget _agreementCheckbox() {
-    return Row(
-      children: <Widget>[
-        SizedBox(
-          width: 24.0,
-          height: 24.0,
-          child: Checkbox(
-            activeColor: CustomColors.accent,
-            checkColor: Colors.black,
-            side: BorderSide(color: CustomColors.textTertiary, width: 1.5),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.0)),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-            value: agreementAccepted,
-            onChanged: (bool? value) {
-              setState(() {
-                agreementAccepted = value!;
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 10.0),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                agreementAccepted = !agreementAccepted;
-              });
-            },
-            child: Text(
-              tr('order.accept_terms_checkbox'),
-              style: AppText.caption.copyWith(color: Colors.white),
-            ),
-          ),
-        )
-      ],
+    return TermsAcceptCheckbox(
+      termsKey: 'withdraw',
+      value: agreementAccepted,
+      onChanged: (v) => setState(() => agreementAccepted = v),
+      label: tr('order.accept_terms_checkbox'),
     );
   }
 }

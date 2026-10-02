@@ -93,12 +93,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Product purchases: admin can read/update all; user reads/creates their own.
+    // Product purchases: admin can read/update all; user reads their own.
+    //
+    // Бичих эрх ХААЛТТАЙ. Худалдан авалтын баримтыг зөвхөн Cloud Functions
+    // (Admin SDK, rules-ыг тойрдог) QPay төлбөр баталгаажсаны дараа үүсгэнэ —
+    // апп энэ collection-д хэзээ ч бичдэггүй. Өмнө нь `allow create` талбарын
+    // шалгалтгүй нээлттэй байсан тул нэвтэрсэн дурын хэрэглэгч
+    // status:"completed", paid_days:<нийт>, өөрийн pickup_code-той хуурамч
+    // баримт үүсгээд бараа авах боломжтой байв.
     match /product_purchases/{purchaseId} {
       allow read: if isAdmin()
         || (request.auth != null && resource.data.user_id == request.auth.uid);
-      allow create: if request.auth != null
-        && request.resource.data.user_id == request.auth.uid;
+      allow create: if false;
       allow update, delete: if isAdmin();
     }
 
@@ -353,6 +359,32 @@ service cloud.firestore {
     match /investments/{docId=**} {
       allow read: if true;
       allow write: if false;
+    }
+
+    // Үйлчилгээний нөхцөл — апп нэвтрэхээс өмнө ч (бүртгэлийн дэлгэц) уншина,
+    // зөвхөн админ засна. versions дэд коллекц — хувилбарын түүх (админ).
+    match /terms/{termKey} {
+      allow read: if true;
+      allow write: if isAdmin();
+      match /versions/{versionId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Нөхцөл зөвшөөрсөн бүртгэл (гарын үсэгтэй). id = {uid}_{key}_v{version}.
+    // Хэрэглэгч зөвхөн өөрийнхөө нэрээр үүсгэнэ; хэзээ ч өөрчлөгдөхгүй
+    // (нотлох баримт). Админ бүгдийг уншина.
+    match /terms_acceptances/{docId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.user_id == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.terms_key is string
+        && request.resource.data.version is int
+        && request.resource.data.signature_png is string
+        && docId == request.auth.uid + '_' + request.resource.data.terms_key
+             + '_v' + string(request.resource.data.version);
+      allow update, delete: if false;
     }
 
     // бусад бүх collection хориглох

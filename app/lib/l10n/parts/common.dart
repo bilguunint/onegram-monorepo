@@ -172,4 +172,72 @@ const Map<String, Map<String, String>> kCommonTranslations = {
     'zh': '选择语言',
     'ru': 'Выбрать язык'
   },
+
+  // Үйлчилгээний нөхцөл зөвшөөрөх, гарын үсэг (terms_accept_checkbox.dart)
+  'terms.sign_title': {
+    'mn': 'Гарын үсэг зурах',
+    'en': 'Sign to accept',
+    'zh': '签名确认',
+    'ru': 'Подпись'
+  },
+  'terms.sign_hint': {
+    'mn': 'Хуруугаараа гарын үсгээ энд зурна уу',
+    'en': 'Draw your signature here with your finger',
+    'zh': '请用手指在此签名',
+    'ru': 'Нарисуйте подпись пальцем здесь'
+  },
+  'terms.sign_agree_note': {
+    'mn': 'Гарын үсэг зурснаар "{title}" (хувилбар {version})-ийг бүрэн уншиж танилцан, хүлээн зөвшөөрсөнд тооцно.',
+    'en': 'By signing you confirm that you have read and accept "{title}" (version {version}).',
+    'zh': '签名即表示您已阅读并接受"{title}"（版本 {version}）。',
+    'ru': 'Подписывая, вы подтверждаете, что прочитали и принимаете «{title}» (версия {version}).'
+  },
+  'terms.sign_clear': {
+    'mn': 'Арилгах',
+    'en': 'Clear',
+    'zh': '清除',
+    'ru': 'Очистить'
+  },
+  'terms.sign_save': {
+    'mn': 'Баталгаажуулах',
+    'en': 'Confirm',
+    'zh': '确认',
+    'ru': 'Подтвердить'
+  },
+  'terms.sign_empty': {
+    'mn': 'Гарын үсэг зураагүй байна.',
+    'en': 'Please draw your signature first.',
+    'zh': '请先签名。',
+    'ru': 'Сначала нарисуйте подпись.'
+  },
+  'terms.sign_saved': {
+    'mn': 'Гарын үсэг хадгалагдлаа.',
+    'en': 'Signature saved.',
+    'zh': '签名已保存。',
+    'ru': 'Подпись сохранена.'
+  },
+  'terms.sign_failed': {
+    'mn': 'Гарын үсэг хадгалахад алдаа гарлаа. Дахин оролдоно уу.',
+    'en': 'Could not save the signature. Please try again.',
+    'zh': '保存签名失败，请重试。',
+    'ru': 'Не удалось сохранить подпись. Попробуйте ещё раз.'
+  },
+  'terms.status_signed': {
+    'mn': 'Гарын үсэг зурсан: {date} (хувилбар {version})',
+    'en': 'Signed on {date} (version {version})',
+    'zh': '已于 {date} 签名（版本 {version}）',
+    'ru': 'Подписано {date} (версия {version})'
+  },
+  'terms.status_updated': {
+    'mn': 'Нөхцөл {date}-нд шинэчлэгдсэн (хувилбар {version}). Үргэлжлүүлэхийн тулд дахин гарын үсэг зурна уу.',
+    'en': 'The terms were updated on {date} (version {version}). Please sign again to continue.',
+    'zh': '条款已于 {date} 更新（版本 {version}），请重新签名以继续。',
+    'ru': 'Условия обновлены {date} (версия {version}). Подпишите снова, чтобы продолжить.'
+  },
+  'terms.status_sign_required': {
+    'mn': 'Зөвшөөрөхөд гарын үсэг зурна.',
+    'en': 'A signature is required to accept.',
+    'zh': '接受需要签名。',
+    'ru': 'Для принятия требуется подпись.'
+  },
 };

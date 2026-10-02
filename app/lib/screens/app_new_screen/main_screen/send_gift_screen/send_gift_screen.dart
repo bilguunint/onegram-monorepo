@@ -9,6 +9,7 @@ import 'package:onegrgold/bloc/send_gift/send_gift_event.dart';
 import 'package:onegrgold/bloc/send_gift/send_gift_state.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_accept_checkbox.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/user_model.dart';
 import 'package:onegrgold/screens/app_new_screen/main_screen/send_gift_screen/success_gift_screen.dart';
@@ -128,25 +129,44 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
         return Scaffold(
           backgroundColor: CustomColors.appBackground,
           appBar: appBar(tr('order.send_gift_title')),
-          body: PageView(
-            controller: pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (i) => setState(() => _pageIndex = i),
-            children: [
-              // Page 0: Agreement Page
-              const Column(children: [SendGiftAgreement()]),
-              // Page 1: Quantity Selection
-              _quantityPage(),
-              // Page 2: Recipient Information
-              _recipientPage(),
-              // Page 3: PIN Confirmation
-              _pinPage(),
-            ],
-          ),
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: _bottomBar(context, loading),
+          // Доод товчийг bottomNavigationBar-д биш body дотор байрлуулна.
+          // Scaffold нь bottomNavigationBar-ыг keyboard гарахад дээш
+          // өргөдөггүй тул хүлээн авагчийн хуудсанд утасны дугаар бичихэд
+          // "Үргэлжлүүлэх" товч keyboard-ын ард нуугдаж, iOS-ийн тоон
+          // keyboard-д "Done" товч байхгүй учир хэрэглэгч гацдаг байв.
+          // Body нь resizeToAvoidBottomInset-ээр keyboard-ын хэмжээгээр
+          // багасдаг тул товч үргэлж keyboard-ын дээр харагдана.
+          body: GestureDetector(
+            // Талбарын гадна товшиход keyboard хаагдана.
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            child: Column(
+              children: [
+                Expanded(
+                  child: PageView(
+                    controller: pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (i) => setState(() => _pageIndex = i),
+                    children: [
+                      // Page 0: Agreement Page
+                      const Column(children: [SendGiftAgreement()]),
+                      // Page 1: Quantity Selection
+                      _quantityPage(),
+                      // Page 2: Recipient Information
+                      _recipientPage(),
+                      // Page 3: PIN Confirmation
+                      _pinPage(),
+                    ],
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: _bottomBar(context, loading),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -242,7 +262,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                     quantityText = '0';
                   });
                 },
-                rightIcon: Icon(Ionicons.backspace_outline,
+                rightIcon: Icon(Ionicons.backspaceOutline,
                     color: CustomColors.textSecondary),
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
               ),
@@ -262,6 +282,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
         const SizedBox(height: 12.0),
         TextField(
           keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.next,
           maxLength: 8,
           controller: _phoneController,
           style: AppText.body,
@@ -277,6 +298,9 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
         TextField(
           controller: _greetingController,
           keyboardType: TextInputType.multiline,
+          // "Done" товчоор keyboard хаагдана (мөр шилжүүлэх шаардлагагүй).
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           maxLines: 4,
           style: AppText.body,
           cursorColor: CustomColors.accent,
@@ -389,7 +413,7 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
                 textStyle: AppText.display.copyWith(fontSize: 24.0),
                 rightButtonFn: _onPinBackspace,
                 rightButtonLongPressFn: _onPinClear,
-                rightIcon: Icon(Ionicons.backspace_outline,
+                rightIcon: Icon(Ionicons.backspaceOutline,
                     color: CustomColors.textSecondary),
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
               ),
@@ -501,43 +525,13 @@ class _SendGiftScreenState extends State<SendGiftScreen> {
     }
   }
 
+  /// Анх удаа чагтлахад гарын үсэг зуруулна (terms/gift).
   Widget _agreementCheckbox() {
-    return Row(
-      children: <Widget>[
-        SizedBox(
-          width: 24.0,
-          height: 24.0,
-          child: Checkbox(
-            activeColor: CustomColors.accent,
-            checkColor: Colors.black,
-            side: BorderSide(color: CustomColors.textTertiary, width: 1.5),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.0)),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-            value: agreementAccepted,
-            onChanged: (bool? value) {
-              setState(() {
-                agreementAccepted = value!;
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 10.0),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                agreementAccepted = !agreementAccepted;
-              });
-            },
-            child: Text(
-              tr('order.accept_gift_terms_checkbox'),
-              style: AppText.caption.copyWith(color: Colors.white),
-            ),
-          ),
-        )
-      ],
+    return TermsAcceptCheckbox(
+      termsKey: 'gift',
+      value: agreementAccepted,
+      onChanged: (v) => setState(() => agreementAccepted = v),
+      label: tr('order.accept_gift_terms_checkbox'),
     );
   }
 }

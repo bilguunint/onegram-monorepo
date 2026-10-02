@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_accept_checkbox.dart';
+import 'package:onegrgold/elements/terms_content.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -106,61 +108,25 @@ class _InstallmentSetupSheetState extends State<InstallmentSetupSheet> {
               border: Border.all(color: CustomColors.surfaceBorder),
             ),
             padding: const EdgeInsets.all(12),
-            child: Scrollbar(
+            child: const Scrollbar(
               child: SingleChildScrollView(
-                child: Text(
-                  tr('purchase.terms_text'),
-                  style: AppText.caption
-                      .copyWith(color: Colors.white.withOpacity(0.78)),
+                // Firestore terms/installment — админаас удирдана.
+                child: TermsContent(
+                  termsKey: 'installment',
+                  compact: true,
                 ),
               ),
             ),
           ),
 
           const SizedBox(height: 10),
-          // Acceptance checkbox
-          InkWell(
-            onTap: () => setState(() => _termsAccepted = !_termsAccepted),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: _termsAccepted
-                          ? CustomColors.accent
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: _termsAccepted
-                            ? CustomColors.accent
-                            : CustomColors.textTertiary,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: _termsAccepted
-                        ? const Icon(
-                            Icons.check_rounded,
-                            size: 15,
-                            color: Colors.black,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      tr('purchase.terms_accept'),
-                      style: AppText.body.copyWith(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Acceptance checkbox — анх удаа чагтлахад гарын үсэг зуруулна.
+          TermsAcceptCheckbox(
+            termsKey: 'installment',
+            value: _termsAccepted,
+            onChanged: (v) => setState(() => _termsAccepted = v),
+            label: tr('purchase.terms_accept'),
+            labelStyle: AppText.body.copyWith(fontSize: 13),
           ),
 
           const SizedBox(height: 16),

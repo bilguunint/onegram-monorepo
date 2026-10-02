@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_accept_checkbox.dart';
+import 'package:onegrgold/elements/terms_content.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/shuteen_model.dart';
 import 'package:onegrgold/repositories/shuteen_repository.dart';
@@ -265,41 +267,44 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
                   {'sold': _fmt(p.soldUnits), 'total': _fmt(p.totalUnits)}),
             ),
 
-          // ---- Нөхцөл ----
-          const SizedBox(height: 4),
-          InkWell(
-            onTap: () => setState(() => _agreed = !_agreed),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: _agreed,
-                    onChanged: (v) => setState(() => _agreed = v ?? false),
-                    activeColor: CustomColors.accent,
-                    checkColor: Colors.black,
-                    side: BorderSide(color: CustomColors.textSecondary),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        tr('shuteen.agree_terms', {
-                          'months': p.holdMonths,
-                          'buyback': _fmt(p.buybackPrice),
-                        }),
-                        style: AppText.caption.copyWith(height: 1.45),
-                      ),
-                    ),
-                  ),
-                ],
+          // ---- Нөхцөл (Firestore terms/shuteen, админаас удирдана) ----
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 180),
+            decoration: BoxDecoration(
+              color: CustomColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CustomColors.surfaceBorder),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                child: TermsContent(
+                  termsKey: 'shuteen',
+                  compact: true,
+                  params: {
+                    'valuation': _fmt(p.totalValuation),
+                    'units': _fmt(p.totalUnits),
+                    'price': _fmt(p.unitPrice),
+                    'months': p.holdMonths,
+                    'growth': p.annualGrowthPercent,
+                    'buyback': _fmt(p.buybackPrice),
+                  },
+                ),
               ),
             ),
+          ),
+          const SizedBox(height: 4),
+          // Анх удаа чагтлахад гарын үсэг зуруулна (terms/shuteen).
+          TermsAcceptCheckbox(
+            termsKey: 'shuteen',
+            value: _agreed,
+            onChanged: (v) => setState(() => _agreed = v),
+            label: tr('shuteen.agree_terms', {
+              'months': p.holdMonths,
+              'buyback': _fmt(p.buybackPrice),
+            }),
+            labelStyle: AppText.caption.copyWith(height: 1.45),
           ),
         ],
       ),

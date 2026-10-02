@@ -5,6 +5,7 @@ import 'package:ionicons/ionicons.dart';
 import 'package:onegrgold/bloc/make_order_bloc/make_order_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_accept_checkbox.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/Item_model.dart';
 
@@ -115,39 +116,15 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8.0, 6.0, 16.0, 0.0),
-                      child: Row(
-                        children: <Widget>[
-                          Checkbox(
-                            activeColor: CustomColors.accent,
-                            checkColor: Colors.black,
-                            side: const BorderSide(
-                                width: 1.5, color: Colors.white38),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5.0)),
-                            value: monVal,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                monVal = value!;
-                                print(monVal);
-                              });
-                            },
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  monVal = !monVal;
-                                });
-                              },
-                              child: Text(
-                                tr('order.accept_terms_checkbox'),
-                                style: AppText.caption.copyWith(
-                                    color: Colors.white.withOpacity(0.85)),
-                              ),
-                            ),
-                          )
-                        ],
+                      padding: const EdgeInsets.fromLTRB(12.0, 6.0, 16.0, 0.0),
+                      // Анх удаа чагтлахад гарын үсэг зуруулна (terms/general).
+                      child: TermsAcceptCheckbox(
+                        termsKey: 'general',
+                        value: monVal,
+                        onChanged: (v) => setState(() => monVal = v),
+                        label: tr('order.accept_terms_checkbox'),
+                        labelStyle: AppText.caption.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ),
                     _bottomCta(
@@ -289,7 +266,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                     });
                                   },
                                   rightIcon: const Icon(
-                                    Ionicons.backspace_outline,
+                                    Ionicons.backspaceOutline,
                                     color: Colors.white,
                                   ),
                                   leftButtonFn: () {

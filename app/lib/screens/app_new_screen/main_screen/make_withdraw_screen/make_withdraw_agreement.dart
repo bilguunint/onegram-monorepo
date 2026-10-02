@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/terms_content.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/style/app_text.dart';
 import 'package:onegrgold/style/colors.dart';
@@ -29,28 +30,10 @@ class _MakeWithdrawAgreementState extends State<MakeWithdrawAgreement> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tr('order.withdraw_terms_title'),
-                    style: AppText.sectionTitle.copyWith(fontSize: 18.0)),
-                SectionTitle(tr('order.terms_s1_title')),
-                BulletPoint(tr('order.withdraw_terms_1_1')),
-                BulletPoint(tr('order.withdraw_terms_1_2')),
-                SectionTitle(tr('order.withdraw_terms_s2_title')),
-                BulletPoint(tr('order.withdraw_terms_2_1')),
-                BulletPoint(tr('order.withdraw_terms_2_2')),
-                BulletPoint(tr('order.withdraw_terms_2_3')),
-                SectionTitle(tr('order.withdraw_terms_s3_title')),
-                BulletPoint(tr('order.withdraw_terms_3_1')),
+                // Firestore terms/withdraw — админаас удирдана.
+                const TermsContent(termsKey: 'withdraw'),
                 const SizedBox(height: 12.0),
                 _branchInfo(),
-                const SizedBox(height: 12.0),
-                BulletPoint(tr('order.withdraw_terms_3_2')),
-                BulletPoint(tr('order.withdraw_terms_3_3')),
-                BulletPoint(tr('order.withdraw_terms_3_4')),
-                BulletPoint(tr('order.withdraw_terms_3_5')),
-                SectionTitle(tr('order.terms_s4_company_title')),
-                BulletPoint(tr('order.withdraw_terms_4_1')),
-                BulletPoint(tr('order.withdraw_terms_4_2')),
-                BulletPoint(tr('order.withdraw_terms_4_3')),
               ],
             ),
           ),
@@ -71,7 +54,7 @@ class _MakeWithdrawAgreementState extends State<MakeWithdrawAgreement> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _InfoLine(
-            icon: Ionicons.location_outline,
+            icon: Ionicons.locationOutline,
             text: tr('order.withdraw_branches_label'),
             bold: true,
           ),
@@ -89,9 +72,9 @@ class _MakeWithdrawAgreementState extends State<MakeWithdrawAgreement> {
             ),
           ),
           const SizedBox(height: 10.0),
-          const _InfoLine(icon: Ionicons.call_outline, text: '7588-8888'),
+          const _InfoLine(icon: Ionicons.callOutline, text: '7588-8888'),
           const SizedBox(height: 10.0),
-          const _InfoLine(icon: Ionicons.alarm_outline, text: '10:00 - 18:00'),
+          const _InfoLine(icon: Ionicons.alarmOutline, text: '10:00 - 18:00'),
         ],
       ),
     );
