@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  documentId,
   getDoc,
   getDocs,
   limit,
@@ -210,6 +211,28 @@ export async function fetchTermVersion(key: string, version: number): Promise<Te
     saved_at: (v.saved_at as Timestamp) ?? null,
     saved_by: typeof v.saved_by === "string" ? v.saved_by : null,
   };
+}
+
+/**
+ * Хэрэглэгчдийн алтан хуримтлалын зорилт (users/{uid}.gold_goal_grams, аппаас оруулсан).
+ * uid -> грамм; тохируулаагүй бол null.
+ */
+export async function fetchGoldGoals(userIds: string[]): Promise<Record<string, number | null>> {
+  const ids = Array.from(new Set(userIds.filter(Boolean)));
+  const out: Record<string, number | null> = {};
+  for (const id of ids) out[id] = null;
+  const CHUNK = 30; // Firestore "in" хязгаар
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    const snap = await getDocs(
+      query(collection(getDb(), "users"), where(documentId(), "in", chunk))
+    );
+    for (const d of snap.docs) {
+      const g = d.data().gold_goal_grams;
+      out[d.id] = typeof g === "number" && g > 0 ? g : null;
+    }
+  }
+  return out;
 }
 
 export async function fetchAcceptances(key: string, max = 300): Promise<TermAcceptance[]> {

@@ -6,6 +6,7 @@ import { Loader2, Printer, X } from "lucide-react";
 import { TermsPreview } from "@/components/terms/TermsPreview";
 import {
   fetchAcceptance,
+  fetchGoldGoals,
   fetchTerm,
   fetchTermVersion,
   TERM_KEYS,
@@ -19,6 +20,8 @@ type Loaded = {
   text: { title: LangText; body: LangText } | null;
   /** Текст яг тэр хувилбарынх мөн эсэх */
   exactVersion: boolean;
+  /** Алтан хуримтлалын зорилт (гр), аппаас оруулсан; байхгүй бол null */
+  goldGoal: number | null;
 };
 
 const fmtDateTime = (t: { toDate: () => Date } | null) =>
@@ -58,7 +61,9 @@ export default function TermsAcceptancePrintPage() {
           exact = cur.version === acceptance.version;
         }
       }
-      if (alive) setData({ acceptance, text, exactVersion: exact });
+      const goals = await fetchGoldGoals([acceptance.user_id]).catch(() => ({}) as Record<string, number | null>);
+      const goldGoal = goals[acceptance.user_id] ?? null;
+      if (alive) setData({ acceptance, text, exactVersion: exact, goldGoal });
     })().catch((err) => {
       console.error(err);
       if (alive) setError("Ачааллахад алдаа гарлаа.");
@@ -142,6 +147,10 @@ export default function TermsAcceptancePrintPage() {
           <div><span className="text-neutral-500">Хэрэглэгчийн ID:</span> <span className="font-mono text-[11px]">{a.user_id}</span></div>
           <div><span className="text-neutral-500">Зөвшөөрсөн огноо:</span> {fmtDateTime(a.accepted_at)}</div>
           <div><span className="text-neutral-500">Төхөөрөмж:</span> {a.platform || "—"}</div>
+          <div>
+            <span className="text-neutral-500">Алтан хуримтлалын зорилт:</span>{" "}
+            <b>{data.goldGoal != null ? `${data.goldGoal} гр` : "—"}</b>
+          </div>
           <div><span className="text-neutral-500">Баримтын дугаар:</span> <span className="font-mono text-[11px]">{a.id}</span></div>
         </section>
 

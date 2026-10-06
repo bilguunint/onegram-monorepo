@@ -15,6 +15,7 @@ import { TermsPreview } from "@/components/terms/TermsPreview";
 import {
   emptyLangText,
   fetchAcceptances,
+  fetchGoldGoals,
   fetchTerm,
   fetchTermVersions,
   LANG_LABEL,
@@ -49,6 +50,8 @@ export default function TermEditPage() {
   const [saving, setSaving] = useState(false);
   const [versions, setVersions] = useState<TermVersion[] | null>(null);
   const [acceptances, setAcceptances] = useState<TermAcceptance[] | null>(null);
+  /** uid -> алтан хуримтлалын зорилт (гр), аппаас оруулсан */
+  const [goldGoals, setGoldGoals] = useState<Record<string, number | null>>({});
   const [openSig, setOpenSig] = useState<TermAcceptance | null>(null);
 
   useEffect(() => {
@@ -90,7 +93,12 @@ export default function TermEditPage() {
     }
     if (tab === "acceptances" && acceptances === null && key) {
       fetchAcceptances(key)
-        .then(setAcceptances)
+        .then((rows) => {
+          setAcceptances(rows);
+          fetchGoldGoals(rows.map((r) => r.user_id))
+            .then(setGoldGoals)
+            .catch((err) => console.error("gold_goal_grams:", err));
+        })
         .catch((err) => {
           console.error(err);
           toast.error("Зөвшөөрлүүдийг ачааллахад алдаа гарлаа.");
@@ -297,11 +305,12 @@ export default function TermEditPage() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-[12px]">
+              <table className="w-full min-w-[820px] text-[12px]">
                 <thead>
                   <tr className="border-b border-border-light text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                     <th className="px-3 py-2">Хэрэглэгч</th>
                     <th className="px-3 py-2">Утас</th>
+                    <th className="px-3 py-2">Хуримтлалын зорилт</th>
                     <th className="px-3 py-2">Хувилбар</th>
                     <th className="px-3 py-2">Огноо</th>
                     <th className="px-3 py-2">Төхөөрөмж</th>
@@ -317,6 +326,13 @@ export default function TermEditPage() {
                         <div className="font-mono text-[10px] text-muted-foreground">{a.user_id}</div>
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{a.user_phone || "—"}</td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {goldGoals[a.user_id] != null ? (
+                          <span className="font-medium text-foreground">{goldGoals[a.user_id]} гр</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <span
                           className={cn(
