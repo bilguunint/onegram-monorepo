@@ -5,6 +5,7 @@ import 'package:ionicons/ionicons.dart';
 import 'package:onegrgold/bloc/make_order_bloc/make_order_bloc.dart';
 import 'package:onegrgold/elements/alert_pop_up.dart';
 import 'package:onegrgold/elements/app_ui.dart';
+import 'package:onegrgold/elements/gold_goal_selector.dart';
 import 'package:onegrgold/elements/terms_accept_checkbox.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/Item_model.dart';
@@ -68,6 +69,8 @@ class _MakeOrderViewState extends State<MakeOrderView> {
   String text = "0";
   PageController pageController = PageController();
   bool monVal = false;
+  /// Сонгосон алтан хуримтлалын зорилт (гр); null бол үргэлжлүүлэхгүй.
+  int? _goalGrams;
 
   /// Дэлгэцийн доод CTA — бүх хуудсанд ижил зай
   Widget _bottomCta(Widget button) {
@@ -115,6 +118,13 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                             width: 1.0, color: CustomColors.surfaceBorder))),
                 child: Column(
                   children: [
+                    // Алтан хуримтлалын зорилт — users/{uid}.gold_goal_grams
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 6.0),
+                      child: GoldGoalSelector(
+                        onChanged: (g) => setState(() => _goalGrams = g),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12.0, 6.0, 16.0, 0.0),
                       // Анх удаа чагтлахад гарын үсэг зуруулна (terms/general).
@@ -131,7 +141,10 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                       AppPrimaryButton(
                         label: tr('common.continue'),
                         onPressed: () {
-                          if (!monVal) {
+                          if (_goalGrams == null) {
+                            showAlertPopUpDialog(
+                                context, tr('order.goal_required'), 85);
+                          } else if (!monVal) {
                             showAlertPopUpDialog(
                                 context,
                                 tr('order.must_accept_terms'),

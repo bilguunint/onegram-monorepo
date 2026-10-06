@@ -240,4 +240,36 @@ const Map<String, Map<String, String>> kCommonTranslations = {
     'zh': '接受需要签名。',
     'ru': 'Для принятия требуется подпись.'
   },
+
+  // Алтан хуримтлалын зорилт (gold_goal_selector.dart)
+  'order.goal_title': {
+    'mn': 'Алтан хуримтлалын зорилт',
+    'en': 'Gold savings goal',
+    'zh': '黄金积累目标',
+    'ru': 'Цель накопления золота'
+  },
+  'order.goal_hint': {
+    'mn': 'Та хэдэн грамм алт хуримтлуулахаар зорьж байна вэ?',
+    'en': 'How many grams of gold do you aim to accumulate?',
+    'zh': '您计划积累多少克黄金？',
+    'ru': 'Сколько граммов золота вы планируете накопить?'
+  },
+  'order.goal_grams': {
+    'mn': '{grams} гр',
+    'en': '{grams} g',
+    'zh': '{grams} 克',
+    'ru': '{grams} г'
+  },
+  'order.goal_required': {
+    'mn': 'Алтан хуримтлалын зорилтоо сонгоно уу.',
+    'en': 'Please choose your gold savings goal.',
+    'zh': '请选择您的黄金积累目标。',
+    'ru': 'Выберите цель накопления золота.'
+  },
+  'order.goal_save_failed': {
+    'mn': 'Зорилт хадгалахад алдаа гарлаа. Дахин оролдоно уу.',
+    'en': 'Could not save your goal. Please try again.',
+    'zh': '保存目标失败，请重试。',
+    'ru': 'Не удалось сохранить цель. Попробуйте ещё раз.'
+  },
 };

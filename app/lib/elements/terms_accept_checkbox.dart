@@ -82,6 +82,20 @@ class _TermsAcceptCheckboxState extends State<TermsAcceptCheckbox> {
       widget.onChanged(false);
       return;
     }
+    // Нөхцөл хараахан ачаалагдаагүй байхад чагтлавал эхлээд ачаална —
+    // үгүй бол гарын үсэггүйгээр зөвшөөрөгдөх эрсдэлтэй.
+    if (_doc == null) {
+      setState(() => _busy = true);
+      try {
+        await _load();
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      if (!mounted) return;
+    }
+    debugPrint('terms/${widget.termsKey}: signedIn=$_signedIn '
+        'fromServer=${_doc?.fromServer} version=${_doc?.version} '
+        'current=${_current?.version} needsSignature=$_needsSignature');
     if (!_needsSignature) {
       widget.onChanged(true);
       return;
@@ -224,6 +238,10 @@ Future<SignatureResult?> showSignatureSheet(
   return showModalBottomSheet<SignatureResult>(
     context: context,
     isScrollControlled: true,
+    // Самбар дээр доош зурахад sheet хаагдахгүй байхын тулд чирж хаахыг
+    // болон гадна дарж хаахыг унтраасан; зөвхөн X товчоор хаана.
+    enableDrag: false,
+    isDismissible: false,
     backgroundColor: Colors.transparent,
     builder: (ctx) => _SignatureSheet(doc: doc),
   );
@@ -283,18 +301,22 @@ class _SignatureSheetState extends State<_SignatureSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: CustomColors.surfaceBorder,
-                    borderRadius: BorderRadius.circular(2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(tr('terms.sign_title'),
+                        style: AppText.sectionTitle),
                   ),
-                ),
+                  IconButton(
+                    onPressed:
+                        _saving ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    color: CustomColors.textSecondary,
+                    tooltip: tr('common.close'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
               ),
-              Text(tr('terms.sign_title'), style: AppText.sectionTitle),
               const SizedBox(height: 4),
               Text(
                 tr('terms.sign_agree_note', {
