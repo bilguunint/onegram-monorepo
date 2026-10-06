@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileSignature, Loader2, Pencil, RefreshCw } from "lucide-react";
+import { Eye, FileSignature, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -88,10 +88,13 @@ export default function TermsListPage() {
                 return (
                   <tr key={m.key} className="border-b border-border-light/60 last:border-0 hover:bg-muted/40">
                     <td className={TD}>
-                      <div className="flex items-center gap-2 font-medium text-foreground">
+                      <Link
+                        href={`/terms/${m.key}`}
+                        className="flex items-center gap-2 font-medium text-foreground hover:text-primary-600 hover:underline"
+                      >
                         <FileSignature className="h-3.5 w-3.5 text-primary-600" />
                         {m.label}
-                      </div>
+                      </Link>
                       <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">terms/{m.key}</div>
                     </td>
                     <td className={cn(TD, "text-muted-foreground")}>{m.where}</td>
@@ -111,8 +114,8 @@ export default function TermsListPage() {
                     <td className={cn(TD, "text-right")}>
                       <Link href={`/terms/${m.key}`}>
                         <Button size="sm" variant="outline">
-                          <Pencil className="h-3.5 w-3.5" />
-                          {d ? "Засах" : "Үүсгэх"}
+                          <Eye className="h-3.5 w-3.5" />
+                          Харах
                         </Button>
                       </Link>
                     </td>
