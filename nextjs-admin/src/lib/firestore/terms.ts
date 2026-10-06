@@ -171,23 +171,52 @@ export type TermAcceptance = {
   signature_png: string;
 };
 
+function mapAcceptance(id: string, v: Record<string, unknown>): TermAcceptance {
+  return {
+    id,
+    user_id: String(v.user_id ?? ""),
+    user_name: String(v.user_name ?? ""),
+    user_phone: String(v.user_phone ?? ""),
+    version: Number(v.version ?? 0),
+    accepted_at: (v.accepted_at as Timestamp) ?? null,
+    platform: String(v.platform ?? ""),
+    signature_png: String(v.signature_png ?? ""),
+  };
+}
+
+/** Нэг зөвшөөрлийн баримт + түүний нөхцөлийн түлхүүр, гарчиг (хэвлэх хуудсанд). */
+export async function fetchAcceptance(
+  id: string
+): Promise<(TermAcceptance & { terms_key: string; title: string }) | null> {
+  const snap = await getDoc(doc(getDb(), "terms_acceptances", id));
+  if (!snap.exists()) return null;
+  const v = snap.data();
+  return {
+    ...mapAcceptance(snap.id, v),
+    terms_key: String(v.terms_key ?? ""),
+    title: String(v.title ?? ""),
+  };
+}
+
+/** Тухайн хувилбарын нөхцөлийн текст — гарын үсэг зурсан яг тэр хувилбараар харуулахад. */
+export async function fetchTermVersion(key: string, version: number): Promise<TermVersion | null> {
+  const snap = await getDoc(doc(getDb(), "terms", key, "versions", String(version)));
+  if (!snap.exists()) return null;
+  const v = snap.data();
+  return {
+    version: Number(v.version ?? version),
+    title: toLangText(v.title),
+    body: toLangText(v.body),
+    saved_at: (v.saved_at as Timestamp) ?? null,
+    saved_by: typeof v.saved_by === "string" ? v.saved_by : null,
+  };
+}
+
 export async function fetchAcceptances(key: string, max = 300): Promise<TermAcceptance[]> {
   const snap = await getDocs(
     query(collection(getDb(), "terms_acceptances"), where("terms_key", "==", key), limit(max))
   );
-  const rows = snap.docs.map((d) => {
-    const v = d.data();
-    return {
-      id: d.id,
-      user_id: String(v.user_id ?? ""),
-      user_name: String(v.user_name ?? ""),
-      user_phone: String(v.user_phone ?? ""),
-      version: Number(v.version ?? 0),
-      accepted_at: (v.accepted_at as Timestamp) ?? null,
-      platform: String(v.platform ?? ""),
-      signature_png: String(v.signature_png ?? ""),
-    };
-  });
+  const rows = snap.docs.map((d) => mapAcceptance(d.id, d.data()));
   rows.sort((a, b) => (b.accepted_at?.toMillis() ?? 0) - (a.accepted_at?.toMillis() ?? 0));
   return rows;
 }

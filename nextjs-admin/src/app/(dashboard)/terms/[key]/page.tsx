@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Eye, History, Loader2, PenLine, Save, Users } from "lucide-react";
+import { ArrowLeft, Eye, History, Loader2, PenLine, Printer, Save, Users } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -306,6 +306,7 @@ export default function TermEditPage() {
                     <th className="px-3 py-2">Огноо</th>
                     <th className="px-3 py-2">Төхөөрөмж</th>
                     <th className="px-3 py-2">Гарын үсэг</th>
+                    <th className="px-3 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -343,6 +344,17 @@ export default function TermEditPage() {
                         ) : (
                           "—"
                         )}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <a
+                          href={`/print/terms-acceptance/${encodeURIComponent(a.id)}`}
+                          target="_blank"
+                          rel="noopener"
+                          className="inline-flex items-center gap-1 rounded-md border border-border-light px-2 py-1 text-[11px] text-foreground hover:bg-muted"
+                          title="Нөхцөлийн текст + гарын үсэг, хэвлэх боломжтой"
+                        >
+                          <Printer className="h-3.5 w-3.5" /> Харах / Хэвлэх
+                        </a>
                       </td>
                     </tr>
                   ))}
