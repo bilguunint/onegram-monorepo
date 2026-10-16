@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, RefreshCw, ShieldOff, Trash2, UserX } from "lucide-react";
+import { KeyRound, Loader2, Plus, RefreshCw, ShieldOff, Trash2, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   type AdminListItem,
 } from "@/lib/api/adminActions";
 import { AddAdminDialog } from "@/components/admins/AddAdminDialog";
+import { ResetPasswordDialog } from "@/components/admins/ResetPasswordDialog";
 
 export default function AdminsPage() {
   const { adminData } = useAuth();
@@ -30,6 +31,7 @@ export default function AdminsPage() {
   const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [deleting, setDeleting] = useState<AdminListItem | null>(null);
+  const [resetting, setResetting] = useState<AdminListItem | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
 
   const load = useCallback(async () => {
@@ -160,7 +162,15 @@ export default function AdminsPage() {
                           {a.uid}
                         </td>
                         <td className="px-2 py-2">
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Нууц үг шинэчлэх"
+                              onClick={() => setResetting(a)}
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon-sm"
@@ -187,6 +197,12 @@ export default function AdminsPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         onCreated={() => void load()}
+      />
+
+      <ResetPasswordDialog
+        admin={resetting}
+        onOpenChange={(o) => !o && setResetting(null)}
+        onDone={() => void load()}
       />
 
       <ConfirmDialog

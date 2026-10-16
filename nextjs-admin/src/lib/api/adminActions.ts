@@ -72,3 +72,17 @@ export async function deleteAdmin(uid: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+/** Админы нууц үгийг шинээр тавина (зөвхөн admin эрхтэй). */
+export async function resetAdminPassword(
+  uid: string,
+  password: string
+): Promise<void> {
+  await authedFetch<{ status: string }>(
+    `/api/admins/${encodeURIComponent(uid)}/password`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ password }),
+    }
+  );
+}
