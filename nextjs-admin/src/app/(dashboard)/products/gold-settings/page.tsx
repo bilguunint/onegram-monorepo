@@ -113,7 +113,7 @@ export default function GoldJewelrySettingsPage() {
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  step={1000}
+                  step="any"
                   value={labor}
                   onChange={(e) => setLabor(e.target.value)}
                   disabled={saving}
@@ -127,7 +127,7 @@ export default function GoldJewelrySettingsPage() {
                   inputMode="decimal"
                   min={0}
                   max={100}
-                  step={0.5}
+                  step="any"
                   value={tax}
                   onChange={(e) => setTax(e.target.value)}
                   disabled={saving}
@@ -141,7 +141,7 @@ export default function GoldJewelrySettingsPage() {
                   inputMode="decimal"
                   min={0.01}
                   max={10}
-                  step={0.1}
+                  step="any"
                   value={step}
                   onChange={(e) => setStep(e.target.value)}
                   disabled={saving}
