@@ -53,9 +53,29 @@ export function formatPriceMNT2(n: number | null | undefined): string {
   return `${MNT2.format(n)}₮`;
 }
 
+export function isGoldPurchase(p: ProductPurchase): boolean {
+  return p.purchase_type === "gold_installment";
+}
+
+export function formatGrams(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "0 гр";
+  return `${Math.round(n * 100) / 100} гр`;
+}
+
 export function purchaseProgress(p: ProductPurchase): number {
+  if (isGoldPurchase(p)) {
+    if (!p.total_grams || p.total_grams <= 0) return 0;
+    return Math.min(100, Math.round((p.paid_grams / p.total_grams) * 100));
+  }
   if (!p.total_price || p.total_price <= 0) return 0;
   return Math.min(100, Math.round((p.paid_amount / p.total_price) * 100));
+}
+
+/** "67/360 өдөр" эсвэл эдлэлд "1.3/5.2 гр". */
+export function purchaseProgressLabel(p: ProductPurchase): string {
+  return isGoldPurchase(p)
+    ? `${p.paid_grams}/${p.total_grams} гр`
+    : `${p.paid_days}/${p.total_days} өдөр`;
 }
 
 export function getPurchaseUserName(p: ProductPurchase): string {
@@ -100,6 +120,8 @@ export function purchaseDaysSinceStart(p: ProductPurchase): number | null {
  * per day). Capped at total_days. Returns null without started_at.
  */
 export function purchaseExpectedPaidDays(p: ProductPurchase): number | null {
+  // Алтан эдлэлд хатуу хуваарь байхгүй (хэрэглэгч граммаа өөрөө сонгодог).
+  if (isGoldPurchase(p)) return null;
   const elapsed = purchaseDaysSinceStart(p);
   if (elapsed == null) return null;
   // +1 because day 1 is paid on start day
@@ -137,18 +159,27 @@ export function purchaseLastPaidAt(p: ProductPurchase): Date | null {
 }
 
 /**
- * How many days an active plan may go without a payment before it is
- * flagged overdue. A user who pays the first day and then stops will be
- * surfaced to admins once this gap is reached.
+ * How many days an active plan may fall BEHIND SCHEDULE before it is flagged
+ * overdue to admins.
+ *
+ * IMPORTANT: this counts schedule lag (expected − paid_days), NOT the gap since
+ * the last payment. The old gap-based rule flagged customers who had prepaid
+ * weeks in advance and simply had nothing left to pay — 9 active plans were
+ * sitting in the overdue list that way, one of them 27 days AHEAD of
+ * schedule. Keep this in sync with the app's
+ * `ProductPurchase.installmentCancelBehindDays` (20) and the backend's
+ * `WARN_BEHIND_DAYS` (5, the softer in-app warning threshold).
  */
-export const OVERDUE_GAP_DAYS = 10;
+export const OVERDUE_BEHIND_DAYS = 20;
 
 /**
  * Days since the most recent payment (falling back to started_at when no
  * payment record exists). Null when the plan isn't active or has no start
- * date. Unlike purchaseDaysBehind (cumulative schedule lag), this measures
- * the gap since the last actual payment, so it catches "prepaid then
- * abandoned" plans too.
+ * date.
+ *
+ * INFORMATIONAL ONLY — show it in the table, but never decide "overdue" from
+ * it: a customer who prepaid 30 days is not late just because they haven't
+ * opened the app since. Use purchaseDaysBehind for that.
  */
 export function purchaseDaysSinceLastPayment(
   p: ProductPurchase
@@ -160,10 +191,14 @@ export function purchaseDaysSinceLastPayment(
   return Math.max(0, Math.floor(ms / 86_400_000));
 }
 
-/** True when an active plan has had no payment for OVERDUE_GAP_DAYS+ days. */
+/**
+ * True when an active plan is OVERDUE_BEHIND_DAYS+ days behind schedule.
+ * Plans that are on track or paid ahead are never overdue, however long ago
+ * the last payment was.
+ */
 export function purchaseIsOverdue(p: ProductPurchase): boolean {
-  const gap = purchaseDaysSinceLastPayment(p);
-  return gap != null && gap >= OVERDUE_GAP_DAYS;
+  const behind = purchaseDaysBehind(p);
+  return behind != null && behind >= OVERDUE_BEHIND_DAYS;
 }
 
 /**

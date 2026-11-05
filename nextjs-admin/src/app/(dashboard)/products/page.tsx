@@ -117,6 +117,13 @@ export default function ProductsPage() {
               Шинэ бараа
             </Button>
           )}
+          <Button
+            render={<Link href="/products/gold-settings" />}
+            size="sm"
+            variant="outline"
+          >
+            Алтан эдлэлийн тохиргоо
+          </Button>
           <CatalogPdfButton products={items} />
           <Button
             variant="outline"
@@ -235,12 +242,21 @@ export default function ProductsPage() {
                         </Link>
                       </td>
                       <td className="px-2 py-2 text-right font-semibold tabular-nums text-primary-600">
-                        {formatPriceMNT(p.price)}
+                        {p.product_kind === "gold_jewelry"
+                          ? `${p.total_grams ?? 0} гр`
+                          : formatPriceMNT(p.price)}
+                        {p.product_kind === "gold_jewelry" && (
+                          <div className="text-[10px] font-normal text-muted-foreground">
+                            алтан эдлэл · өдрийн ханшаар
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center text-[12px] tabular-nums">
-                        {p.min_months === p.max_months
-                          ? `${p.max_months}`
-                          : `${p.min_months}-${p.max_months}`}
+                        {p.product_kind === "gold_jewelry"
+                          ? "—"
+                          : p.min_months === p.max_months
+                            ? `${p.max_months}`
+                            : `${p.min_months}-${p.max_months}`}
                       </td>
                       <td className="px-2 py-2 text-center text-[12px] tabular-nums">
                         {p.stock == null ? (

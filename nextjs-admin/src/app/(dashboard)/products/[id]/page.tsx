@@ -33,6 +33,8 @@ import {
   purchaseExpectedPaidDays,
   purchaseLastPaidAt,
   purchaseProgress,
+  purchaseProgressLabel,
+  isGoldPurchase,
   purchaseStatusBadge,
   purchaseStatusText,
 } from "@/lib/products";
@@ -188,7 +190,9 @@ export default function ProductDetailPage() {
                 {productStatusText(product.status)}
               </span>
               <span className="text-[18px] font-bold text-primary-600">
-                {formatPriceMNT(product.price)}
+                {product.product_kind === "gold_jewelry"
+                  ? `${product.total_grams ?? 0} гр · өдрийн ханшаар`
+                  : formatPriceMNT(product.price)}
               </span>
             </div>
             {product.description && (
@@ -355,7 +359,9 @@ function PurchasesTable({
                     {formatPriceMNT(p.paid_amount)}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    {formatPriceMNT(p.total_price)}
+                    {isGoldPurchase(p)
+                      ? `${p.paid_grams}/${p.total_grams} гр`
+                      : formatPriceMNT(p.total_price)}
                   </div>
                 </td>
                 <td className="px-2 py-2">
@@ -380,9 +386,7 @@ function PurchasesTable({
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                    <span>
-                      {p.paid_days}/{p.total_days} өдөр
-                    </span>
+                    <span>{purchaseProgressLabel(p)}</span>
                     {p.status === "active" &&
                       expected != null &&
                       expected !== p.paid_days && (

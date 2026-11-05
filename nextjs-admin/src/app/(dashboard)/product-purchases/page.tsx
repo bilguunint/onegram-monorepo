@@ -50,9 +50,11 @@ import {
   purchaseIsOverdue,
   purchaseLastPaidAt,
   purchaseProgress,
+  purchaseProgressLabel,
+  isGoldPurchase,
   purchaseStatusBadge,
   purchaseStatusText,
-  OVERDUE_GAP_DAYS,
+  OVERDUE_BEHIND_DAYS,
 } from "@/lib/products";
 import { formatOrderDate } from "@/lib/orders";
 import { CancelPurchaseDialog } from "@/components/products/CancelPurchaseDialog";
@@ -211,8 +213,8 @@ export default function ProductPurchasesPage() {
     setPage(1);
   };
 
-  // Overdue count for the filter chip — active plans with no payment for
-  // OVERDUE_GAP_DAYS+ days.
+  // Overdue count for the filter chip — active plans that are
+  // OVERDUE_BEHIND_DAYS+ days BEHIND SCHEDULE (prepaid plans never count).
   const overdueCount = useMemo(
     () => items.filter((p) => purchaseIsOverdue(p)).length,
     [items]
@@ -349,7 +351,7 @@ export default function ProductPurchasesPage() {
               label="Хугацаа хэтэрсэн"
               value={fmtInt(overdueCount)}
               icon={AlertTriangle}
-              meta={`${OVERDUE_GAP_DAYS}+ хоног төлбөргүй`}
+              meta={`Хуваариасаа ${OVERDUE_BEHIND_DAYS}+ хоног хоцорсон`}
             />
           </div>
 
@@ -449,7 +451,7 @@ export default function ProductPurchasesPage() {
               <option value="">Бүгд</option>
               <option value="active">Идэвхтэй</option>
               <option value="overdue">
-                {OVERDUE_GAP_DAYS}+ хоног төлбөргүй ({overdueCount})
+                Хуваариасаа {OVERDUE_BEHIND_DAYS}+ хоног хоцорсон ({overdueCount})
               </option>
               <option value="completed">Төлөгдсөн</option>
               <option value="delivered">Хүлээлгэн өгсөн</option>
@@ -548,12 +550,25 @@ export default function ProductPurchasesPage() {
                                 {p.product_snapshot.name}
                               </div>
                               <div className="text-[11px] text-muted-foreground">
-                                <span className="font-medium text-foreground/80">
-                                  {formatPriceMNT(p.daily_payment)}
-                                </span>
-                                {" / өдөр"}
-                                <span className="text-foreground/40"> · </span>
-                                {p.months} сар ({p.total_days} өдөр)
+                                {isGoldPurchase(p) ? (
+                                  <>
+                                    <span className="font-medium text-foreground/80">
+                                      {p.daily_grams} гр
+                                    </span>
+                                    {" / өдөр"}
+                                    <span className="text-foreground/40"> · </span>
+                                    алтан эдлэл {p.total_grams} гр
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="font-medium text-foreground/80">
+                                      {formatPriceMNT(p.daily_payment)}
+                                    </span>
+                                    {" / өдөр"}
+                                    <span className="text-foreground/40"> · </span>
+                                    {p.months} сар ({p.total_days} өдөр)
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -578,7 +593,9 @@ export default function ProductPurchasesPage() {
                             {formatPriceMNT(p.paid_amount)}
                           </div>
                           <div className="text-[11px] text-muted-foreground">
-                            {formatPriceMNT(p.total_price)}
+                            {isGoldPurchase(p)
+                              ? `${p.paid_grams}/${p.total_grams} гр`
+                              : formatPriceMNT(p.total_price)}
                           </div>
                         </td>
                         <td className="px-2 py-2">
@@ -603,9 +620,7 @@ export default function ProductPurchasesPage() {
                             </span>
                           </div>
                           <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                            <span>
-                              {p.paid_days}/{p.total_days} өдөр
-                            </span>
+                            <span>{purchaseProgressLabel(p)}</span>
                             {p.status === "active" &&
                               expected != null &&
                               expected !== p.paid_days && (

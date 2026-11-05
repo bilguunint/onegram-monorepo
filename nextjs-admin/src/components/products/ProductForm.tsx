@@ -14,7 +14,7 @@ import { ImageGalleryInput } from "@/components/products/ImageGalleryInput";
 import {
   formatPriceMNT,
 } from "@/lib/products";
-import type { Product, ProductDraft } from "@/lib/firestore/products";
+import type { Product, ProductDraft, ProductKind } from "@/lib/firestore/products";
 
 type Props = {
   /** Firestore doc id used as the Storage path namespace for images. */
@@ -44,8 +44,15 @@ export function ProductForm({
 }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [kind, setKind] = useState<ProductKind>(
+    initial?.product_kind ?? "standard"
+  );
+  const isGold = kind === "gold_jewelry";
   const [price, setPrice] = useState<string>(
-    initial?.price != null ? String(initial.price) : ""
+    initial?.price != null && initial.price > 0 ? String(initial.price) : ""
+  );
+  const [totalGrams, setTotalGrams] = useState<string>(
+    initial?.total_grams != null ? String(initial.total_grams) : ""
   );
   const [minMonths, setMinMonths] = useState<string>(
     String(initial?.min_months ?? 1)
@@ -66,10 +73,11 @@ export function ProductForm({
   const [error, setError] = useState<string | null>(null);
 
   const priceNum = Number(price);
+  const totalGramsNum = Math.round(Number(totalGrams) * 100) / 100;
   const minMonthsNum = Math.max(1, Math.floor(Number(minMonths) || 0));
   const maxMonthsNum = Math.max(1, Math.floor(Number(maxMonths) || 0));
   const monthlyPreview =
-    Number.isFinite(priceNum) && priceNum > 0 && maxMonthsNum > 0
+    !isGold && Number.isFinite(priceNum) && priceNum > 0 && maxMonthsNum > 0
       ? Math.round(priceNum / maxMonthsNum)
       : 0;
 
@@ -81,21 +89,28 @@ export function ProductForm({
       setError("Барааны нэр оруулна уу.");
       return;
     }
-    if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      setError("Үнэ зөв оруулна уу.");
-      return;
-    }
-    if (minMonthsNum < 1 || maxMonthsNum < 1) {
-      setError("Сарын тоо 1 ба түүнээс дээш байх ёстой.");
-      return;
-    }
-    if (maxMonthsNum > 12) {
-      setError("Хамгийн их сарын тоо 12-оос хэтэрч болохгүй.");
-      return;
-    }
-    if (minMonthsNum > maxMonthsNum) {
-      setError("Min сар нь max сараас бага байх ёстой.");
-      return;
+    if (isGold) {
+      if (!Number.isFinite(totalGramsNum) || totalGramsNum < 0.1) {
+        setError("Эдлэлийн нийт граммыг оруулна уу (≥ 0.1).");
+        return;
+      }
+    } else {
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        setError("Үнэ зөв оруулна уу.");
+        return;
+      }
+      if (minMonthsNum < 1 || maxMonthsNum < 1) {
+        setError("Сарын тоо 1 ба түүнээс дээш байх ёстой.");
+        return;
+      }
+      if (maxMonthsNum > 12) {
+        setError("Хамгийн их сарын тоо 12-оос хэтэрч болохгүй.");
+        return;
+      }
+      if (minMonthsNum > maxMonthsNum) {
+        setError("Min сар нь max сараас бага байх ёстой.");
+        return;
+      }
     }
     const feeNum = Number(cancelFee);
     if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
@@ -122,7 +137,9 @@ export function ProductForm({
         name,
         description,
         images,
-        price: Math.round(priceNum),
+        product_kind: kind,
+        price: isGold ? 0 : Math.round(priceNum),
+        total_grams: isGold ? totalGramsNum : null,
         min_months: minMonthsNum,
         max_months: maxMonthsNum,
         cancel_fee_percent: Math.round(feeNum),
@@ -201,22 +218,68 @@ export function ProductForm({
             />
           </FormCard>
 
-          <FormCard title="Үнэ ба хугацаа">
+          <FormCard title="Төрөл, үнэ ба хугацаа">
+            <div className="mb-3 space-y-1.5">
+              <Label htmlFor="kind">Барааны төрөл</Label>
+              <Select
+                id="kind"
+                value={kind}
+                onChange={(e) => setKind(e.target.value as ProductKind)}
+                disabled={submitting || !!initial}
+              >
+                <option value="standard">Ердийн бараа (үнэ, хоногоор хуваана)</option>
+                <option value="gold_jewelry">Алтан эдлэл (грамм, өдрийн ханшаар)</option>
+              </Select>
+              {isGold && (
+                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  Үнэ оруулахгүй. Хэрэглэгч тухайн өдрийн алтны ханшаар 0.1 гр-ын
+                  үржвэрээр цуглуулна; ажлын хөлс, татвар нь{" "}
+                  <Link href="/products/gold-settings" className="underline">
+                    нийтлэг тохиргоонд
+                  </Link>
+                  . Шинэ аппгүй хэрэглэгчид энэ барааг авч чадахгүй тул апп
+                  шинэчлэл гартал &quot;Идэвхгүй&quot; байлгана уу.
+                </p>
+              )}
+              {!!initial && (
+                <p className="text-[11px] text-muted-foreground">
+                  Төрлийг үүсгэсний дараа өөрчлөх боломжгүй.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="price">Үнэ (₮)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  step={1}
-                  placeholder="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
+              {isGold ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="total-grams">Нийт грамм</Label>
+                  <Input
+                    id="total-grams"
+                    type="number"
+                    inputMode="decimal"
+                    min={0.1}
+                    step={0.01}
+                    placeholder="5.2"
+                    value={totalGrams}
+                    onChange={(e) => setTotalGrams(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="price">Үнэ (₮)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    placeholder="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="cancel-fee">Цуцлах шимтгэл (%)</Label>
                 <Input
@@ -232,6 +295,8 @@ export function ProductForm({
                   disabled={submitting}
                 />
               </div>
+              {!isGold && (
+              <>
               <div className="space-y-1.5">
                 <Label htmlFor="min-months">Min сар</Label>
                 <Input
@@ -260,6 +325,8 @@ export function ProductForm({
                   disabled={submitting}
                 />
               </div>
+              </>
+              )}
             </div>
             {monthlyPreview > 0 && (
               <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -327,6 +394,8 @@ export function ProductForm({
             <ProductPreview
               name={name}
               description={description}
+              kind={kind}
+              totalGrams={totalGramsNum}
               price={priceNum}
               images={images}
               minMonths={minMonthsNum}
@@ -381,6 +450,8 @@ function FormCard({
 function ProductPreview({
   name,
   description,
+  kind,
+  totalGrams,
   price,
   images,
   minMonths,
@@ -390,6 +461,8 @@ function ProductPreview({
 }: {
   name: string;
   description: string;
+  kind: ProductKind;
+  totalGrams: number;
   price: number;
   images: string[];
   minMonths: number;
@@ -434,7 +507,9 @@ function ProductPreview({
           </p>
         )}
         <div className="mt-2 text-[16px] font-bold text-primary-600">
-          {formatPriceMNT(price)}
+          {kind === "gold_jewelry"
+            ? `${totalGrams || 0} гр · өдрийн ханшаар`
+            : formatPriceMNT(price)}
         </div>
         {monthlyPreview > 0 && (
           <div className="text-[11px] text-muted-foreground">
@@ -445,7 +520,9 @@ function ProductPreview({
           </div>
         )}
         <div className="text-[11px] text-muted-foreground">
-          {minMonths}-{maxMonths} сараар хувааж төлнө
+          {kind === "gold_jewelry"
+            ? "0.1 гр-ын үржвэрээр, өөрийн хурдаар цуглуулна"
+            : `${minMonths}-${maxMonths} сараар хувааж төлнө`}
         </div>
       </div>
     </div>

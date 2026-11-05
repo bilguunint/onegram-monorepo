@@ -16,13 +16,24 @@ import {
 import { getDb, getFirebaseAuth } from "@/lib/firebase/client";
 
 export type ProductStatus = "active" | "inactive";
+/**
+ * standard     — үнэтэй, хоног тоолдог ердийн хуваан төлөлт
+ * gold_jewelry — үнэгүй, ГРАММ дээр суурилсан алтан эдлэл: хэрэглэгч тухайн
+ *                өдрийн ханшаар 0.1 гр-ын үржвэрээр цуглуулна (functions/
+ *                goldInstallmentShared.js). Ажлын хөлс/татвар нийтлэг тохиргоо
+ *                (system_config/gold_jewelry).
+ */
+export type ProductKind = "standard" | "gold_jewelry";
 
 export type Product = {
   id: string;
   name: string;
   description?: string;
   images: string[]; // Firebase Storage download URLs
-  price: number; // MNT
+  product_kind: ProductKind;
+  price: number; // MNT (gold_jewelry бол 0)
+  /** gold_jewelry: эдлэлийн нийт грамм */
+  total_grams: number | null;
   min_months: number;
   max_months: number;
   cancel_fee_percent: number; // 0-100
@@ -38,7 +49,9 @@ export type ProductDraft = {
   name: string;
   description: string;
   images: string[];
+  product_kind: ProductKind;
   price: number;
+  total_grams: number | null;
   min_months: number;
   max_months: number;
   cancel_fee_percent: number;
@@ -52,7 +65,10 @@ function mapProduct(id: string, raw: DocumentData): Product {
     name: String(raw.name ?? ""),
     description: raw.description ?? "",
     images: Array.isArray(raw.images) ? (raw.images as string[]) : [],
+    product_kind:
+      raw.product_kind === "gold_jewelry" ? "gold_jewelry" : "standard",
     price: Number(raw.price ?? 0),
+    total_grams: raw.total_grams == null ? null : Number(raw.total_grams),
     min_months: Number(raw.min_months ?? 1),
     max_months: Number(raw.max_months ?? 12),
     cancel_fee_percent: Number(raw.cancel_fee_percent ?? 0),
@@ -102,7 +118,9 @@ export async function createProduct(
     name: draft.name.trim(),
     description: draft.description.trim(),
     images: draft.images,
+    product_kind: draft.product_kind,
     price: draft.price,
+    total_grams: draft.total_grams,
     min_months: draft.min_months,
     max_months: draft.max_months,
     cancel_fee_percent: draft.cancel_fee_percent,
@@ -124,7 +142,9 @@ export async function updateProduct(
     name: draft.name.trim(),
     description: draft.description.trim(),
     images: draft.images,
+    product_kind: draft.product_kind,
     price: draft.price,
+    total_grams: draft.total_grams,
     min_months: draft.min_months,
     max_months: draft.max_months,
     cancel_fee_percent: draft.cancel_fee_percent,

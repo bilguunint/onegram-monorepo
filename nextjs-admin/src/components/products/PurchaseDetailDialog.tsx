@@ -13,6 +13,7 @@ import type { ProductPurchase } from "@/lib/firestore/productPurchases";
 import {
   formatPriceMNT,
   getPurchaseUserName,
+  isGoldPurchase,
   purchaseProgress,
   purchaseStatusBadge,
   purchaseStatusText,
@@ -43,6 +44,7 @@ export function PurchaseDetailDialog({ open, purchase, onOpenChange }: Props) {
 
 function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
   const progress = purchaseProgress(p);
+  const gold = isGoldPurchase(p);
   const remaining = Math.max(0, p.total_price - p.paid_amount);
   const payments = [...(p.payments ?? [])].sort(
     (a, b) => (a.day_no ?? 0) - (b.day_no ?? 0)
@@ -90,8 +92,10 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
       <div className="rounded-lg border border-border-light bg-card p-3">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
           <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">Нийт үнэ</dt>
-            <dd className="font-medium tabular-nums">{formatPriceMNT(p.total_price)}</dd>
+            <dt className="text-muted-foreground">{gold ? "Нийт грамм" : "Нийт үнэ"}</dt>
+            <dd className="font-medium tabular-nums">
+              {gold ? `${p.total_grams} гр` : formatPriceMNT(p.total_price)}
+            </dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-muted-foreground">Төлсөн</dt>
@@ -101,22 +105,32 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-muted-foreground">Үлдэгдэл</dt>
-            <dd className="font-medium tabular-nums">{formatPriceMNT(remaining)}</dd>
+            <dd className="font-medium tabular-nums">
+              {gold
+                ? `${Math.round((p.total_grams - p.paid_grams) * 100) / 100} гр`
+                : formatPriceMNT(remaining)}
+            </dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-muted-foreground">Өдрийн төлбөр</dt>
-            <dd className="font-medium tabular-nums">{formatPriceMNT(p.daily_payment)}</dd>
+            <dd className="font-medium tabular-nums">
+              {gold ? `${p.daily_grams} гр (ханшаар)` : formatPriceMNT(p.daily_payment)}
+            </dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-muted-foreground">Хугацаа</dt>
             <dd className="font-medium tabular-nums">
-              {p.months} сар ({p.total_days} өдөр)
+              {gold
+                ? `~${p.estimated_days} өдөр (санал)`
+                : `${p.months} сар (${p.total_days} өдөр)`}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">Төлсөн өдөр</dt>
+            <dt className="text-muted-foreground">{gold ? "Цугласан" : "Төлсөн өдөр"}</dt>
             <dd className="font-medium tabular-nums">
-              {p.paid_days}/{p.total_days} ({progress}%)
+              {gold
+                ? `${p.paid_grams}/${p.total_grams} гр (${progress}%)`
+                : `${p.paid_days}/${p.total_days} (${progress}%)`}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
@@ -162,7 +176,9 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
                     {rec.paid_at ? formatOrderDate(rec.paid_at) : "—"}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    Өдөр {rec.day_no}
+                    {gold && rec.grams != null
+                      ? `${rec.grams} гр · ханш ${formatPriceMNT(rec.rate)}`
+                      : `Өдөр ${rec.day_no}`}
                     {rec.payment_method ? ` · ${rec.payment_method}` : ""}
                   </div>
                 </div>

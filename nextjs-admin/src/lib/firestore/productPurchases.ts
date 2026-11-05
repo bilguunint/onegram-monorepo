@@ -37,13 +37,26 @@ export type UserSnapshot = {
 export type PaymentRecord = {
   day_no: number;
   amount: number;
+  /** gold_installment: энэ төлбөрөөр авсан грамм ба тухайн үеийн ханш */
+  grams?: number;
+  rate?: number;
+  price_per_gram?: number;
   paid_at: Timestamp | string | null;
   payment_method?: string;
   transaction_id?: string;
 };
 
+/** installment — үнэ/хоног дээр; gold_installment — грамм дээр суурилсан эдлэл */
+export type PurchaseType = "installment" | "gold_installment" | "direct";
+
 export type ProductPurchase = {
   id: string;
+  purchase_type: PurchaseType;
+  /** gold_installment: эдлэлийн нийт грамм / цугласан грамм / өдрийн сонголт */
+  total_grams: number;
+  paid_grams: number;
+  daily_grams: number;
+  estimated_days: number;
   product_id: string;
   product_snapshot: ProductSnapshot;
   user_id: string;
@@ -79,6 +92,14 @@ function mapPurchase(id: string, raw: DocumentData): ProductPurchase {
   const us = (raw.user_snapshot ?? {}) as Partial<UserSnapshot>;
   return {
     id,
+    purchase_type:
+      raw.purchase_type === "gold_installment" || raw.purchase_type === "direct"
+        ? raw.purchase_type
+        : "installment",
+    total_grams: Number(raw.total_grams ?? 0),
+    paid_grams: Number(raw.paid_grams ?? 0),
+    daily_grams: Number(raw.daily_grams ?? 0),
+    estimated_days: Number(raw.estimated_days ?? 0),
     product_id: String(raw.product_id ?? ""),
     product_snapshot: {
       name: ps.name ?? "",
