@@ -7,6 +7,14 @@ const cors = require("cors")({ origin: true });
 
 const QPAY_USERNAME = "ONE_GRAM_GOLD";
 const QPAY_PASSWORD = "zElO7j40";
+const { recordDirectPurchasePaid } = require("./directPurchaseShared");
+const {
+  SWEEP_DAYS,
+  LAST_CHECK_FIELD,
+  sweepStart,
+  dueForRecheck,
+} = require("../utils/verifySweep");
+
 const CHECKPOINT_DOC = "system_config/autoVerifyCheckpoint";
 
 /**
@@ -59,48 +67,42 @@ async function checkQPayPaymentStatus(token, invoiceId) {
  * pending_invoices-с шалгаж, QPay API-аар PAID болсон
  * захиалгуудыг автоматаар success болгоно.
  *
- * @param {Date|null} sinceDate - энэ огноос хойших invoice шалгана. null бол checkpoint-с авна.
+ * Өмнө нь `createdAt`-checkpoint ашигладаг байв — нэхэмжлэхийг зөвхөн үүссэнийх
+ * нь дараах эхний ажиллалтад хараад checkpoint-оо урагшлуулдаг тул QR-аа
+ * хадгалаад хожим төлсөн хүний төлбөр цонхны ард үлдэж хэзээ ч дахин
+ * шалгагддаггүй байсан. Одоо сүүлийн SWEEP_DAYS хоногийн нэхэмжлэхүүдийг
+ * эргэлдэх цонхоор дахин хардаг (давтамжийн дүрэм ../utils/verifySweep дотор).
+ *
+ * @param {number|null} lookbackDays - хэдэн хоногоор ухарч шалгах. null →
+ *   SWEEP_DAYS. Утга өгвөл давтамжийн хязгаарлалтыг алгасаж бүгдийг шалгана.
  * @return {object} summary
  */
-async function runAutoVerifyOrders(sinceDate = null) {
+async function runAutoVerifyOrders(lookbackDays = null) {
   const db = admin.firestore();
 
-  // 1. lastCheckedAt checkpoint-г авах
   const checkpointRef = db.doc(CHECKPOINT_DOC);
-  const checkpointSnap = await checkpointRef.get();
-
-  let lastCheckedAt;
-  let isInitialRun = false;
-  if (sinceDate) {
-    // Manual дуудлага — sinceDate-с хойш шалгана
-    lastCheckedAt = admin.firestore.Timestamp.fromDate(sinceDate);
-    isInitialRun = true;
-  } else if (checkpointSnap.exists && checkpointSnap.data().lastCheckedAt) {
-    lastCheckedAt = checkpointSnap.data().lastCheckedAt;
-  } else {
-    // checkpoint байхгүй бол сүүлийн 7 хоног
-    lastCheckedAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-    isInitialRun = true;
-  }
-
+  const forceAll = lookbackDays !== null;
+  const windowStart = sweepStart(forceAll ? lookbackDays : SWEEP_DAYS);
+  const windowStartTs = admin.firestore.Timestamp.fromDate(windowStart);
   const now = admin.firestore.Timestamp.now();
+  const nowMs = now.toMillis();
 
   logger.info("AutoVerify started", {
-    isInitialRun,
-    lastCheckedAt: lastCheckedAt ? lastCheckedAt.toDate().toISOString() : "ALL",
+    forceAll,
+    windowStart: windowStart.toISOString(),
     now: now.toDate().toISOString(),
   });
 
-  // 2. pending_invoices авах
+  // 2. pending_invoices авах — createdAt мужаар (composite index шаардахгүй),
+  // төрөл/төлөв доорх давталтад шүүгдэнэ.
   const pendingSnap = await db.collection("pending_invoices")
-    .where("createdAt", ">=", lastCheckedAt)
-    .where("createdAt", "<=", now)
+    .where("createdAt", ">=", windowStartTs)
     .get();
 
   if (pendingSnap.empty) {
-    logger.info("AutoVerify: No pending invoices in range, updating checkpoint");
-    await checkpointRef.set({ lastCheckedAt: now, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-    return { checked: 0, autoVerified: 0, alreadySuccess: 0, notPaid: 0, errors: 0 };
+    logger.info("AutoVerify: No pending invoices in sweep window");
+    await checkpointRef.set({ lastRunAt: now, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return { scanned: 0, checked: 0, autoVerified: 0, alreadySuccess: 0, notPaid: 0, throttled: 0, errors: 0 };
   }
 
   logger.info(`AutoVerify: Found ${pendingSnap.size} pending invoices to check`);
@@ -117,16 +119,58 @@ async function runAutoVerifyOrders(sinceDate = null) {
     throw err;
   }
 
+  // QPay шалгалт — token хугацаа дуусвал нэг удаа шинэчилж дахин оролдоно.
+  // Захиалга болон шууд худалдан авалтын аль аль салаа үүнийг ашиглана.
+  const checkWithRefresh = async (invoiceId) => {
+    try {
+      return await checkQPayPaymentStatus(qpayToken, invoiceId);
+    } catch (apiErr) {
+      if (apiErr.response && apiErr.response.status === 401) {
+        logger.info("AutoVerify: QPay token expired, refreshing...");
+        qpayToken = await getQPayToken();
+        return await checkQPayPaymentStatus(qpayToken, invoiceId);
+      }
+      throw apiErr;
+    }
+  };
+
+  let scanned = 0;
   let checked = 0;
   let autoVerified = 0;
   let alreadySuccess = 0;
   let notPaid = 0;
+  let throttled = 0;
   let errors = 0;
   const autoVerifiedOrderIds = [];
 
   for (const doc of pendingSnap.docs) {
     const invoiceData = doc.data();
     const { order_id, invoice_id, userId, amount } = invoiceData;
+
+    // Энэ cron нь ONE_GRAM_GOLD merchant-ийн хоёр урсгалыг хариуцна:
+    // (а) энгийн захиалга — `type` талбаргүй, `order_id`-тай
+    // (б) шууд худалдан авалт — type === "direct_purchase"
+    // Хуваан төлөлт / хандив / мод / шүтээн нь LISTLY_AGENT merchant дээр,
+    // өөрсдийн cron-тойгоо.
+    const isDirect = invoiceData.type === "direct_purchase";
+    if (!isDirect && (invoiceData.type || !order_id)) {
+      continue;
+    }
+
+    scanned++;
+
+    // Аль хэдийн хаагдсан — QPay ч, order ч уншихгүй.
+    if (invoiceData.status !== "pending") {
+      alreadySuccess++;
+      continue;
+    }
+
+    // Насны дагуух давтамжийн хязгаар — цонхон дахь бүх нэхэмжлэхийг
+    // ажиллалт болгонд дахин шалгахгүй.
+    if (!forceAll && !dueForRecheck(invoiceData.createdAt, invoiceData[LAST_CHECK_FIELD], nowMs)) {
+      throttled++;
+      continue;
+    }
 
     checked++;
 
@@ -137,14 +181,55 @@ async function runAutoVerifyOrders(sinceDate = null) {
       });
     }
 
-    if (!order_id || !invoice_id) {
-      logger.warn("AutoVerify: Skipping invoice with missing order_id or invoice_id", { docId: doc.id });
+    if (!invoice_id) {
+      logger.warn("AutoVerify: Skipping invoice with missing invoice_id", { docId: doc.id });
       errors++;
       continue;
     }
 
     try {
-      // 4. Order-н одоогийн статусыг шалгах
+      // 4а. Шууд худалдан авалт — `orders` баримтгүй, pending_invoices өөрөө
+      // эх сурвалж. Өмнө нь энэ урсгалд аюулгүйн тор ОГТ байгаагүй: callback
+      // ирэхгүй бол төлбөр нь бүртгэлгүй үлддэг байв.
+      if (isDirect) {
+        const directResult = await checkWithRefresh(invoice_id);
+        if (!directResult || directResult.payment_status !== "PAID") {
+          notPaid++;
+          await doc.ref.update({ [LAST_CHECK_FIELD]: now });
+          continue;
+        }
+        const fullSnap = await doc.ref.get();
+        const { purchaseId, created } = await recordDirectPurchasePaid(
+          db,
+          doc.ref,
+          fullSnap.data() || {},
+        );
+        autoVerified++;
+        logger.info("AutoVerify: direct purchase auto-verified", {
+          docId: doc.id,
+          invoice_id,
+          purchase_id: purchaseId,
+          created,
+          qpay_payment_id: directResult.payment_id,
+        });
+        await db.collection("auto_verified_orders").doc(doc.id).set({
+          pending_id: doc.id,
+          type: "direct_purchase",
+          invoice_id,
+          purchase_id: purchaseId,
+          userId: invoiceData.user_id || userId || null,
+          amount,
+          qpay_payment_id: directResult.payment_id,
+          qpay_payment_status: directResult.payment_status,
+          qpay_payment_date: directResult.payment_date,
+          verified_at: admin.firestore.FieldValue.serverTimestamp(),
+          source: "scheduledAutoVerify",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        continue;
+      }
+
+      // 4б. Order-н одоогийн статусыг шалгах
       const orderRef = db.collection("orders").doc(String(order_id));
       const orderSnap = await orderRef.get();
 
@@ -156,48 +241,32 @@ async function runAutoVerifyOrders(sinceDate = null) {
 
       const orderData = orderSnap.data();
 
-      // Аль хэдийн success болсон бол алгасна (QPay дуудахгүй → хурдан)
+      // Аль хэдийн success болсон бол алгасна (QPay дуудахгүй → хурдан).
+      // Захиалгын callback нь pending_invoices-ийг хаадаггүй тул эдгээр
+      // баримт мөнхөд "pending" хэвээр үлдэж, sweep бүрт дахин уншигддаг —
+      // эндээс нь хааж өгнө.
       if (orderData.payment_status === "success") {
         alreadySuccess++;
+        await doc.ref.update({
+          status: "processed",
+          [LAST_CHECK_FIELD]: now,
+          updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
         continue;
       }
 
-      // 5. QPay API-аар invoice-н төлбөрийн статусыг шууд шалгах
-      let qpayResult;
-      try {
-        qpayResult = await checkQPayPaymentStatus(qpayToken, invoice_id);
-      } catch (apiErr) {
-        // Token хугацаа дууссан бол шинэ token авч дахин оролдох
-        if (apiErr.response && apiErr.response.status === 401) {
-          logger.info("AutoVerify: QPay token expired, refreshing...");
-          try {
-            qpayToken = await getQPayToken();
-            qpayResult = await checkQPayPaymentStatus(qpayToken, invoice_id);
-          } catch (retryErr) {
-            logger.error("AutoVerify: QPay API retry failed", {
-              order_id, invoice_id, error: retryErr.message,
-            });
-            errors++;
-            continue;
-          }
-        } else {
-          logger.error("AutoVerify: QPay API check failed", {
-            order_id, invoice_id, error: apiErr.message,
-          });
-          errors++;
-          continue;
-        }
-      }
+      // 5. QPay API-аар invoice-н төлбөрийн статусыг шууд шалгах.
+      // Алдаа гарвал доорх гадаад catch нь errors++ хийж, дахин шалгах
+      // хугацааг тэмдэглэнэ.
+      const qpayResult = await checkWithRefresh(invoice_id);
 
-      // QPay-д төлбөр бүртгэлгүй байвал алгасна
-      if (!qpayResult) {
+      // QPay-д төлбөр бүртгэлгүй, эсвэл PAID биш бол одоохондоо алгасна.
+      // Хэзээ шалгаснаа тэмдэглэнэ — дараагийн ажиллалтууд давтамжийн
+      // дүрмээр сийрэгжинэ, гэхдээ цонхоос гарах хүртэл дахин шалгагдсаар
+      // байх тул хожим төлсөн ч баригдана.
+      if (!qpayResult || qpayResult.payment_status !== "PAID") {
         notPaid++;
-        continue;
-      }
-
-      // ЗӨВХӨН "PAID" статустай бол л update хийнэ
-      if (qpayResult.payment_status !== "PAID") {
-        notPaid++;
+        await doc.ref.update({ [LAST_CHECK_FIELD]: now });
         continue;
       }
 
@@ -223,6 +292,12 @@ async function runAutoVerifyOrders(sinceDate = null) {
           auto_verified_source: "scheduledAutoVerify",
           auto_verified_qpay_payment_id: qpayResult.payment_id,
         });
+      });
+
+      await doc.ref.update({
+        status: "processed",
+        [LAST_CHECK_FIELD]: now,
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       autoVerified++;
@@ -260,30 +335,40 @@ async function runAutoVerifyOrders(sinceDate = null) {
         invoice_id,
         error: err.message,
       });
+      try {
+        await doc.ref.update({ [LAST_CHECK_FIELD]: now });
+      } catch (stampErr) {
+        logger.warn("AutoVerify: failed to stamp last check", {
+          docId: doc.id,
+          error: stampErr.message,
+        });
+      }
     }
   }
 
-  // 8. Checkpoint-г шинэчлэх
+  // 8. Ажиллалтын төлөвийг шинэчлэх
   await checkpointRef.set({
-    lastCheckedAt: now,
+    lastRunAt: now,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    lastRunStats: { checked, autoVerified, alreadySuccess, notPaid, errors },
+    lastRunStats: { scanned, checked, autoVerified, alreadySuccess, notPaid, throttled, errors },
   }, { merge: true });
 
   // 9. auto_verify_logs collection-д ажиллалтын бүртгэл хадгалах
   await db.collection("auto_verify_logs").add({
     ran_at: admin.firestore.FieldValue.serverTimestamp(),
-    range_from: lastCheckedAt,
+    range_from: windowStartTs,
     range_to: now,
+    scanned,
     checked,
     autoVerified,
     alreadySuccess,
     notPaid,
+    throttled,
     errors,
     autoVerifiedOrderIds,
   });
 
-  const summary = { checked, autoVerified, alreadySuccess, notPaid, errors, autoVerifiedOrderIds };
+  const summary = { scanned, checked, autoVerified, alreadySuccess, notPaid, throttled, errors, autoVerifiedOrderIds };
   logger.info("AutoVerify completed", summary);
 
   return summary;
@@ -299,9 +384,9 @@ exports.initAutoVerifyOrders = onRequest({
 }, async (req, res) => {
   return cors(req, res, async () => {
     try {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const result = await runAutoVerifyOrders(sevenDaysAgo);
-      return res.status(200).json({ success: true, ...result });
+      const days = Math.max(1, Math.floor(Number(req.query && req.query.days) || 7));
+      const result = await runAutoVerifyOrders(days);
+      return res.status(200).json({ success: true, days, ...result });
     } catch (err) {
       logger.error("initAutoVerifyOrders failed", { error: err.message, stack: err.stack });
       return res.status(500).json({ success: false, error: err.message });

@@ -94,6 +94,9 @@ async function recordShuteenOrderPaid(db, pendingRef, pendingData) {
   let orderId = pendingData.shuteen_order_id || null;
 
   await db.runTransaction(async (tx) => {
+    // Транзакц дахин оролдоход (callback + autoVerify зэрэг ирэх) өмнөх
+    // оролдлогын created=true үлдэж holders нэгтгэлийг давхар нэмдэг байсан.
+    created = false;
     const cur = await tx.get(pendingRef);
     const curData = cur.data() || {};
     if (curData.status === "processed" && curData.shuteen_order_id) {

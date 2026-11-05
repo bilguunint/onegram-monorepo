@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const {
   getQPayToken,
   checkQPayPayment,
-  applyPaidUpToDay,
+  applyPaidInvoice,
 } = require("./installmentShared");
 
 /**
@@ -12,16 +12,18 @@ const {
  * -------------------
  * QPay calls this URL after the user pays an installment invoice. The URL
  * is configured per-invoice (createInstallmentPayment sets it) and includes
- * `purchase_id` + `month_no` as query parameters. The function:
+ * `purchase_id` + `day_no` as query parameters. The function:
  *
- *  1. Looks up the pending invoice by (purchase_id, month_no)
- *  2. Calls QPay payment/check to verify the payment status
- *  3. On PAID: atomically updates the purchase doc (paid_months++,
- *     paid_amount+=monthly, appends payment record, optionally marks the
- *     purchase as `completed`)
- *  4. Marks the pending invoice as `processed`
+ *  1. Looks up the still-pending invoices for (purchase_id, day_no)
+ *  2. Calls QPay payment/check on each until one comes back PAID
+ *  3. On PAID: atomically credits the invoice's day_count days after the
+ *     current paid_days (paid_amount += the days credited, appends payment
+ *     records, optionally marks the purchase as `completed`) and marks that
+ *     pending invoice `processed` in the same transaction.
  *
- * Idempotent: re-invocations for already-processed months are no-ops.
+ * Idempotent: re-invocations for an already-processed invoice are no-ops.
+ * Days are credited by COUNT, not "up to day_no", so paying two overlapping
+ * QRs credits both payments.
  */
 exports.installmentCallback = onRequest({
   region: "asia-northeast1",
@@ -51,13 +53,18 @@ exports.installmentCallback = onRequest({
   }
 
   try {
-    // Find the pending invoice for this purchase + day.
+    // Find the pending invoices for this purchase + day.
+    //
+    // ЧУХАЛ: энэ хайлт өмнө нь `limit(1)`-тэй, төлвийн шүүлтгүй байсан. Нэг
+    // (purchase_id, day_no) хосон дээр олон нэхэмжлэх үүсэх нь энгийн үзэгдэл
+    // (өгөгдөл дээр 87 давхардал, 76 нь processed+pending холимог) — хуучин
+    // боловсруулагдсан баримт эхэлж таарвал түүний нэхэмжлэхийг шалгаад
+    // "төлөгдөөгүй" гэж дүгнэн, бодит төлбөрийг чимээгүй алддаг байв.
     const pendingSnap = await db
       .collection("pending_invoices")
       .where("purchase_id", "==", purchaseId)
       .where("day_no", "==", dayNo)
       .where("type", "==", "installment")
-      .limit(1)
       .get();
 
     if (pendingSnap.empty) {
@@ -70,16 +77,59 @@ exports.installmentCallback = onRequest({
         .json({ error: "Pending installment invoice not found" });
     }
 
-    const pendingDoc = pendingSnap.docs[0];
-    const pendingData = pendingDoc.data() || {};
-    const invoiceId = pendingData.invoice_id;
+    // Зөвхөн хүлээгдэж буйг нь авч, хамгийн сүүлд үүссэнээс нь эхэлж үзнэ
+    // (хэрэглэгчийн хамгийн сүүлд нээсэн QR).
+    const candidates = pendingSnap.docs
+      .filter((d) => (d.data() || {}).status === "pending")
+      .sort((a, b) => {
+        const ta = (a.data().createdAt && a.data().createdAt.toMillis()) || 0;
+        const tb = (b.data().createdAt && b.data().createdAt.toMillis()) || 0;
+        return tb - ta;
+      });
 
-    // Verify payment status with QPay
+    if (candidates.length === 0) {
+      // Бүгд боловсруулагдсан — QPay давтан дуудсан байна. Идемпотент хариу.
+      logger.info("Installment day already credited — idempotent ack", {
+        purchaseId,
+        dayNo,
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Already processed",
+        purchase_id: purchaseId,
+        day_no: dayNo,
+      });
+    }
+
+    // Verify payment status with QPay. Олон нэр дэвшигч байвал төлөгдсөнийг нь
+    // олох хүртэл нэг нэгээр шалгана — аль нэг нь төлөгдсөн байхад бусдад нь
+    // "төлөгдөөгүй" гэж дүгнэхгүй.
     const token = await getQPayToken();
-    const paymentStatus = await checkQPayPayment(invoiceId, token);
-    logger.info("QPay payment status", { invoiceId, paymentStatus });
+    let pendingDoc = null;
+    let invoiceId = null;
+    let paymentStatus = null;
 
-    if (paymentStatus !== "PAID") {
+    for (const candidate of candidates) {
+      const data = candidate.data() || {};
+      const status = await checkQPayPayment(data.invoice_id, token);
+      logger.info("QPay payment status", {
+        invoiceId: data.invoice_id,
+        paymentStatus: status,
+      });
+      if (status === "PAID") {
+        pendingDoc = candidate;
+        invoiceId = data.invoice_id;
+        paymentStatus = status;
+        break;
+      }
+      if (paymentStatus === null) {
+        // Хариу буцаах зорилгоор эхний нэхэмжлэхийн мэдээллийг санана.
+        invoiceId = data.invoice_id;
+        paymentStatus = status;
+      }
+    }
+
+    if (!pendingDoc) {
       // Not paid yet — leave as pending so QPay can call us again later
       return res.status(200).json({
         success: true,
@@ -89,16 +139,10 @@ exports.installmentCallback = onRequest({
       });
     }
 
-    // Credit every day up to dayNo (single day, or a multi-day bundle whose
-    // callback URL carries the bundle's last day) — idempotent.
-    const result = await applyPaidUpToDay(db, purchaseId, dayNo);
-
-    // Mark the pending invoice as processed (also idempotent)
-    await pendingDoc.ref.update({
-      status: "processed",
-      paid_at: admin.firestore.FieldValue.serverTimestamp(),
-      updated_at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Нэхэмжлэхийн day_count хоногийг paid_days-ийн дараагаас нэмж, нэхэмжлэхийг
+    // нэг транзакцид processed болгоно (давхцсан QR хоёуланг нь төлсөн ч
+    // мөнгө алдагдахгүй; давтан дуудлага идемпотент).
+    const result = await applyPaidInvoice(db, pendingDoc.ref);
 
     logger.info("✅ Installment payment recorded", {
       purchaseId,

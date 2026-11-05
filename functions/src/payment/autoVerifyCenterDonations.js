@@ -11,6 +11,14 @@ const {
 const { recordTreeOrderPaid } = require("./treeOrderShared");
 const { recordShuteenOrderPaid } = require("./shuteenShared");
 
+const {
+  SWEEP_DAYS,
+  LAST_CHECK_FIELD,
+  SWEEP_QPAY_ATTEMPTS,
+  sweepStart,
+  dueForRecheck,
+} = require("../utils/verifySweep");
+
 const CHECKPOINT_DOC = "system_config/autoVerifyCenterCheckpoint";
 
 /**
@@ -21,55 +29,55 @@ const CHECKPOINT_DOC = "system_config/autoVerifyCenterCheckpoint";
  * the payment screen so the app's self-heal poll stopped), the donation would
  * be left unrecorded even though the buyer paid.
  *
- * Mirrors autoVerifyInstallments: scans recently-created `pending_invoices`
- * that are still "pending", asks QPay whether they were actually PAID, and
- * applies the same idempotent crediting via the shared recordCenterDonationPaid
- * helper. Queries by createdAt range + checkpoint only (no composite index).
+ * Mirrors autoVerifyInstallments: sweeps still-"pending" `pending_invoices`,
+ * asks QPay whether they were actually PAID, and applies the same idempotent
+ * crediting via the shared recordCenterDonationPaid helper. Queries by
+ * createdAt range only (no composite index).
  *
- * @param {Date|null} sinceDate - check invoices created since this date;
- *   null → resume from the stored checkpoint.
+ * Өмнө нь `createdAt`-checkpoint ашигладаг байв — нэхэмжлэхийг зөвхөн үүссэнийх
+ * нь дараах эхний ажиллалтад хараад checkpoint-оо урагшлуулдаг тул хожим
+ * төлсөн төлбөр цонхны ард үлдэж хэзээ ч дахин шалгагддаггүй байсан. Одоо
+ * сүүлийн SWEEP_DAYS хоногийг эргэлдэх цонхоор дахин хардаг.
+ *
+ * @param {number|null} lookbackDays - хэдэн хоногоор ухарч шалгах. null →
+ *   SWEEP_DAYS. Утга өгвөл давтамжийн хязгаарлалтыг алгасаж бүгдийг шалгана.
  * @return {object} run summary
  */
-async function runAutoVerifyCenterDonations(sinceDate = null) {
+async function runAutoVerifyCenterDonations(lookbackDays = null) {
   const db = admin.firestore();
   const checkpointRef = db.doc(CHECKPOINT_DOC);
-  const checkpointSnap = await checkpointRef.get();
 
-  let lastCheckedAt;
-  if (sinceDate) {
-    lastCheckedAt = admin.firestore.Timestamp.fromDate(sinceDate);
-  } else if (checkpointSnap.exists && checkpointSnap.data().lastCheckedAt) {
-    lastCheckedAt = checkpointSnap.data().lastCheckedAt;
-  } else {
-    lastCheckedAt = admin.firestore.Timestamp.fromDate(
-      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    );
-  }
+  const forceAll = lookbackDays !== null;
+  const windowStart = sweepStart(forceAll ? lookbackDays : SWEEP_DAYS);
+  const windowStartTs = admin.firestore.Timestamp.fromDate(windowStart);
   const now = admin.firestore.Timestamp.now();
+  const nowMs = now.toMillis();
 
   logger.info("AutoVerifyCenter started", {
-    lastCheckedAt: lastCheckedAt.toDate().toISOString(),
+    forceAll,
+    windowStart: windowStart.toISOString(),
     now: now.toDate().toISOString(),
   });
 
   const pendingSnap = await db
     .collection("pending_invoices")
-    .where("createdAt", ">=", lastCheckedAt)
-    .where("createdAt", "<=", now)
+    .where("createdAt", ">=", windowStartTs)
     .get();
 
   const empty = {
+    scanned: 0,
     checked: 0,
     autoVerified: 0,
     alreadyProcessed: 0,
     notPaid: 0,
+    throttled: 0,
     errors: 0,
   };
 
   if (pendingSnap.empty) {
     await checkpointRef.set(
       {
-        lastCheckedAt: now,
+        lastRunAt: now,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true },
@@ -87,10 +95,12 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
     throw err;
   }
 
+  let scanned = 0;
   let checked = 0;
   let autoVerified = 0;
   let alreadyProcessed = 0;
   let notPaid = 0;
+  let throttled = 0;
   let errors = 0;
   const autoVerifiedIds = [];
 
@@ -104,12 +114,21 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
       continue;
     }
 
-    checked++;
+    scanned++;
 
     if (data.status !== "pending") {
       alreadyProcessed++;
       continue;
     }
+
+    // Насны дагуух давтамжийн хязгаар — цонхон дахь бүх нэхэмжлэхийг
+    // ажиллалт болгонд QPay-аас асуухгүй.
+    if (!forceAll && !dueForRecheck(data.createdAt, data[LAST_CHECK_FIELD], nowMs)) {
+      throttled++;
+      continue;
+    }
+
+    checked++;
 
     const invoiceId = data.invoice_id;
     if (!invoiceId) {
@@ -121,9 +140,12 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
     }
 
     try {
-      const paymentStatus = await checkQPayPayment(invoiceId, token);
+      const paymentStatus = await checkQPayPayment(invoiceId, token, SWEEP_QPAY_ATTEMPTS);
       if (paymentStatus !== "PAID") {
         notPaid++;
+        // Хэзээ шалгаснаа тэмдэглэнэ — дараагийн ажиллалтууд давтамжийн
+        // дүрмээр сийрэгжинэ, гэхдээ цонхоос гарах хүртэл шалгасаар байна.
+        await doc.ref.update({ [LAST_CHECK_FIELD]: now });
         continue;
       }
 
@@ -161,35 +183,49 @@ async function runAutoVerifyCenterDonations(sinceDate = null) {
         invoiceId,
         error: err.message,
       });
+      try {
+        await doc.ref.update({ [LAST_CHECK_FIELD]: now });
+      } catch (stampErr) {
+        logger.warn("AutoVerifyCenter: failed to stamp last check", {
+          docId: doc.id,
+          error: stampErr.message,
+        });
+      }
     }
   }
 
   await checkpointRef.set(
     {
-      lastCheckedAt: now,
+      lastRunAt: now,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      lastRunStats: { checked, autoVerified, alreadyProcessed, notPaid, errors },
+      lastRunStats: {
+        scanned, checked, autoVerified, alreadyProcessed, notPaid, throttled, errors,
+      },
     },
     { merge: true },
   );
 
   await db.collection("auto_verify_center_logs").add({
     ran_at: admin.firestore.FieldValue.serverTimestamp(),
-    range_from: lastCheckedAt,
+    range_from: windowStartTs,
     range_to: now,
+    scanned,
     checked,
     autoVerified,
     alreadyProcessed,
     notPaid,
+    throttled,
     errors,
     autoVerifiedIds,
   });
 
   const summary = {
+    scanned,
     checked,
     autoVerified,
     alreadyProcessed,
     notPaid,
+    throttled,
     errors,
     autoVerifiedIds,
   };
@@ -206,9 +242,9 @@ exports.initAutoVerifyCenterDonations = onRequest({
 }, async (req, res) => {
   return cors(req, res, async () => {
     try {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const result = await runAutoVerifyCenterDonations(sevenDaysAgo);
-      return res.status(200).json({ success: true, ...result });
+      const days = Math.max(1, Math.floor(Number(req.query && req.query.days) || 7));
+      const result = await runAutoVerifyCenterDonations(days);
+      return res.status(200).json({ success: true, days, ...result });
     } catch (err) {
       logger.error("initAutoVerifyCenterDonations failed", {
         error: err.message,

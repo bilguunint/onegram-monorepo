@@ -7,7 +7,7 @@ const { updateMonthlyWithdrawAnalytics, updateOverallAnalytics } = require("./an
 exports.onWithdrawCreated = onDocumentCreated(
   {
     document: "withdraws/{withdrawId}",
-    memory: "256MiB",
+    memory: "512MiB", // Node 22 дээр 256MiB-д container эхэлж чаддаггүй
     timeoutSeconds: 120,
   },
   async (event) => {
@@ -44,7 +44,7 @@ exports.onWithdrawCreated = onDocumentCreated(
 exports.onWithdrawUpdated = onDocumentUpdated(
   {
     document: "withdraws/{withdrawId}",
-    memory: "256MiB", 
+    memory: "512MiB", // Node 22 дээр 256MiB-д container эхэлж чаддаггүй
     timeoutSeconds: 120,
   },
   async (event) => {

@@ -13,6 +13,8 @@ const CALLBACK_BASE =
   "https://asia-northeast1-grammgold.cloudfunctions.net/shuteenOrderCallback";
 
 const MAX_UNITS_PER_ORDER = 100000;
+// Хамгийн багадаа хэдэн нэгж авах вэ (апп талын ShuteenBuyScreen._minUnits-тэй ижил).
+const MIN_UNITS_PER_ORDER = 10;
 
 async function authUid(req) {
   const header = req.headers.authorization || "";
@@ -29,7 +31,7 @@ async function authUid(req) {
  * ------------------
  * POST /createShuteenOrder
  * Headers: Authorization: Bearer <firebase id token>
- * Body: { units: number }   // >= 1
+ * Body: { units: number }   // >= MIN_UNITS_PER_ORDER (10)
  *
  * "Шүтээн хуур" хэсэгчилсэн эзэмшлийн нэгж худалдан авах QPay invoice үүсгэнэ.
  * `shuteen_orders` doc-ийг зөвхөн QPay төлбөр баталгаажсаны дараа callback
@@ -51,9 +53,9 @@ exports.createShuteenOrder = onRequest({
       const body = req.body || {};
       const units = Math.floor(Number(body.units) || 0);
 
-      if (units < 1 || units > MAX_UNITS_PER_ORDER) {
+      if (units < MIN_UNITS_PER_ORDER || units > MAX_UNITS_PER_ORDER) {
         return res.status(400).json({
-          error: `Нэгжийн тоо 1–${MAX_UNITS_PER_ORDER} хооронд байна.`,
+          error: `Нэгжийн тоо ${MIN_UNITS_PER_ORDER}–${MAX_UNITS_PER_ORDER} хооронд байна.`,
         });
       }
 

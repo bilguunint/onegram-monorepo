@@ -241,6 +241,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Алтан эдлэлийн хуваан төлөлтийн нийтлэг тохиргоо (ажлын хөлс, татвар,
+    // алхам): апп тооцоолуурт уншина, админ өөрчилнө.
+    match /system_config/gold_jewelry {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // marketing_campaigns (нийтэд нээлттэй унших)
     match /marketing_campaigns/{docId} {
       allow read: if true;

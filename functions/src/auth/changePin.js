@@ -4,7 +4,8 @@ const bcrypt = require("bcryptjs");
 
 const db = admin.firestore();
 
-module.exports = functions.https.onRequest(async (req, res) => {
+// Node 22 дээр 256MiB-д container эхэлж чаддаггүй тул 512MiB.
+module.exports = functions.https.onRequest({ memory: "512MiB" }, async (req, res) => {
   // Set CORS headers
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

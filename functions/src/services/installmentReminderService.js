@@ -2,157 +2,138 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { logger } = require("firebase-functions");
+const { toDate, ubDayDiff } = require("../utils/ubDate");
 
-// Convert any Firestore-ish timestamp shape into a JS Date, or null.
-function tsToDate(t) {
-  if (!t) return null;
-  if (typeof t.toDate === "function") return t.toDate();
-  if (typeof t === "string") {
-    const d = new Date(t);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  if (typeof t.seconds === "number") return new Date(t.seconds * 1000);
-  return null;
-}
+/**
+ * installmentReminderService
+ * --------------------------
+ * Өдөрт хоёр удаа (10:00, 20:00 УБ) идэвхтэй хуваан төлөлтүүдийг шалгаж, ЗӨВХӨН
+ * удаан хугацаанд төлбөр хийгээгүй хэрэглэгчид НЭГ зөөлөн сануулга илгээнэ.
+ *
+ * Бодлого (2026-11-05):
+ *   - Хуваариас хоцорсон эсэхийг огт дурддаггүй, "N өдрийн төлбөр хүлээгдэж
+ *     байна", "цуцлагдах эрсдэлтэй" гэх мэт шаардсан өнгө аястай мэдэгдэл
+ *     ИЛГЭЭХГҮЙ. Өмнөх хувилбарууд өдөрт 2 удаа сануулж, хэрэглэгчид дарамт
+ *     гэж хүлээн авч plan-аа цуцалдаг байв (нэг хэрэглэгчид 126 хоногт 250
+ *     сануулга очсон кейс).
+ *   - Сүүлийн төлбөрөөс хойш NUDGE_DAYS (3) хоног төлөөгүй бол зөөлөн
+ *     "өнөөдөр төлөх үү?" сануулга, төлөхгүй л бол NUDGE_REPEAT_DAYS (7)
+ *     хоног тутамд давтана (3, 10, 17, 24 дэх хоног). QUIET_DAYS (30) хүрвэл
+ *     нэг "үргэлжлүүлэх үү?" сануулга, дараа нь чимээгүй. Сард дээд тал нь 5.
+ *     Хэрэглэгч төлбөр хийвэл тоолуур шинээр эхэлнэ. purchase.last_reminder_at
+ *     ба last_reminder_kind талбараар хянана.
+ *   - Талархал, өдөр тутмын давтагдах сануулга байхгүй.
+ *
+ * Бүх огнооны тооцоо УБ цагаар (utils/ubDate).
+ */
 
-function startOfDay(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
+// Сүүлийн төлбөрөөс хойш хэдэн хоног төлөөгүй бол эхний зөөлөн сануулга.
+const NUDGE_DAYS = 3;
+// Төлөхгүй л бол зөөлөн сануулгыг хэдэн хоног тутамд давтах вэ.
+const NUDGE_REPEAT_DAYS = 7;
+// Хэдэн хоног чимээгүй байвал хоёр дахь (сүүлийн) сануулга.
+const QUIET_DAYS = 30;
 
-// True when the purchase has at least one `payments[]` entry whose paid_at
-// falls on today's calendar date (local server time).
-function paidToday(purchase) {
-  const payments = Array.isArray(purchase.payments) ? purchase.payments : [];
-  const today = startOfDay(new Date()).getTime();
-  for (const p of payments) {
-    const d = tsToDate(p.paid_at);
-    if (d && startOfDay(d).getTime() === today) return true;
-  }
-  return false;
-}
-
-// Number of days the user *should* have paid by today (1-based, capped at
-// total_days). null when started_at is unknown.
-function expectedPaidDays(purchase) {
-  const start = tsToDate(purchase.started_at);
-  if (!start) return null;
-  const elapsed = Math.floor(
-    (startOfDay(new Date()).getTime() - startOfDay(start).getTime()) /
-      86400000,
-  );
-  const total = Number(purchase.total_days || 0);
-  return Math.min(total, Math.max(0, elapsed) + 1);
-}
-
-// Format MNT amount as "1 234 567₮" (no decimals).
+// MNT дүнг "1 234 567₮" хэлбэрээр форматлана.
 function formatMNT(n) {
   if (n == null || !isFinite(n)) return "0₮";
   const s = Math.round(Number(n)).toLocaleString("mn-MN");
   return `${s}₮`;
 }
 
-// Pick the next-day's invoice amount. The final day adjusts to the
-// remaining residual so the sum equals total_price exactly — matches the
-// behaviour in createInstallmentPayment.js.
-function nextInvoiceAmount(purchase) {
-  const paidDays = Number(purchase.paid_days || 0);
-  const totalDays = Number(purchase.total_days || 0);
-  const dailyPayment = Number(purchase.daily_payment || 0);
-  const totalPrice = Number(purchase.total_price || 0);
-  const paidAmount = Number(purchase.paid_amount || 0);
-  if (paidDays + 1 >= totalDays) {
-    return Math.max(0, totalPrice - paidAmount);
-  }
-  return dailyPayment;
-}
-
-// Days without any payment before the reminder switches from the on-schedule
-// wording to the behind-schedule one. Mirrors the app
-// (ProductPurchase.installmentWarnGapDays).
-const WARN_GAP_DAYS = 5;
-
-// Calendar days since the most recent payment, falling back to started_at
-// when no payment carries a timestamp. null when neither is known.
-function daysSinceLastPayment(purchase) {
+// Сүүлийн төлбөрийн огноо: payments[]-ийн хамгийн сүүлийн paid_at, байхгүй
+// бол started_at (1 дэх өдрийн төлбөр).
+function lastPaidAt(purchase) {
   const payments = Array.isArray(purchase.payments) ? purchase.payments : [];
   let last = null;
   for (const p of payments) {
-    const d = tsToDate(p.paid_at);
+    const d = toDate(p.paid_at);
     if (d && (!last || d > last)) last = d;
   }
-  if (!last) last = tsToDate(purchase.started_at);
-  if (!last) return null;
-  const diff = Math.floor(
-    (startOfDay(new Date()).getTime() - startOfDay(last).getTime()) / 86400000,
-  );
-  return diff < 0 ? 0 : diff;
+  return last || toDate(purchase.started_at);
 }
 
-// Build a (title, body) pair tailored to slot + payment state. Cases:
-//   1. Paid today                  → thank-you
-//   2. Behind (gap ≥ WARN, or fewer days paid than elapsed) → plain nudge
-//   3. Not paid, on track           → gentle reminder with daily amount
-function buildMessage(slot, purchase) {
+// Сүүлийн төлбөрөөс хойш өнгөрсөн бүтэн хоног (УБ). Мэдэхгүй бол null.
+function daysSinceLastPayment(purchase, now = new Date()) {
+  const last = lastPaidAt(purchase);
+  if (!last) return null;
+  return ubDayDiff(now, last);
+}
+
+/**
+ * Тухайн хуваан төлөлтөд сануулга илгээх эсэхийг шийдэж, илгээх бол
+ * (title, body, kind)-ийг буцаана. Илгээхгүй бол null.
+ *
+ *   gap = сүүлийн төлбөрөөс хойшхи хоног
+ *   - gap < NUDGE_DAYS                              → null
+ *   - NUDGE_DAYS ≤ gap < QUIET_DAYS:
+ *       сүүлийн сануулгаас NUDGE_REPEAT_DAYS болоогүй → null
+ *       эс бөгөөс                                    → "nudge"
+ *   - gap ≥ QUIET_DAYS:
+ *       энэ завсарлагад "quiet" аль хэдийн явсан     → null
+ *       эс бөгөөс (nudge явсан ч)                    → "quiet"
+ *
+ * @param {object} purchase - product_purchases баримтын өгөгдөл
+ * @param {Date} [now] - одоо (тестэд зориулж солих боломжтой)
+ * @return {{title: string, body: string, kind: string}|null} мэдэгдэл
+ */
+function buildMessage(purchase, now = new Date()) {
+  const gap = daysSinceLastPayment(purchase, now);
+  if (gap == null || gap < NUDGE_DAYS) return null;
+
+  const last = lastPaidAt(purchase);
+  const reminded = toDate(purchase.last_reminder_at);
+  const remindedThisGap = !!(reminded && last && reminded > last);
+  const remindedKind = remindedThisGap ? purchase.last_reminder_kind : null;
+
   const productName =
     (purchase.product_snapshot && purchase.product_snapshot.name) || "Бараа";
-  const paidDays = Number(purchase.paid_days || 0);
-  const totalDays = Number(purchase.total_days || 0);
-  const expected = expectedPaidDays(purchase) || paidDays;
-  const behind = Math.max(0, expected - paidDays);
-  const amount = nextInvoiceAmount(purchase);
+  // Ердийн хуваан төлөлт: хоног ба өдрийн төгрөг. Алтан эдлэл: грамм.
+  const isGold = purchase.purchase_type === "gold_installment";
+  const progress = isGold ?
+    `${Number(purchase.paid_grams || 0)}/${Number(purchase.total_grams || 0)} гр төлөгдсөн` :
+    `${Number(purchase.paid_days || 0)}/${Number(purchase.total_days || 0)} өдөр төлөгдсөн`;
+  const todayAmount = isGold ?
+    `${Number(purchase.daily_grams || 0)} гр` :
+    formatMNT(Number(purchase.daily_payment || 0));
 
-  if (paidToday(purchase)) {
+  if (gap >= QUIET_DAYS) {
+    if (remindedKind === "quiet") return null;
     return {
-      title: slot === "morning" ?
-        "✅ Өнөөдрийн төлбөр төлөгдсөн" :
-        "🙌 Өнөөдрийн төлбөр амжилттай",
+      title: "Хуваан төлөлтөө үргэлжлүүлэх үү?",
       body:
-        `${productName} — ${paidDays}/${totalDays} өдөр төллөө. ` +
-        "Ийм л үргэлжлүүлээрэй!",
-      kind: "thanks",
+        `${productName} — сүүлийн төлбөрөөс хойш ${gap} хоног өнгөрчээ. ` +
+        `${progress}. Өөрт тохирох үедээ ` +
+        `(өдрийн төлбөр ${todayAmount}) үргэлжлүүлээрэй.`,
+      kind: "quiet",
     };
   }
 
-  // Behind on payments. These used to warn that the plan could be cancelled,
-  // which backfired — users read it as a threat and cancelled the plan
-  // themselves. Everyone now gets the same plain nudge; only `kind` still
-  // separates them so the run stats keep showing who is behind.
-  const gap = daysSinceLastPayment(purchase);
-  const lapsing = gap != null && gap >= WARN_GAP_DAYS;
-  if (lapsing || behind > 0) {
-    return {
-      title: "💰 Хуваан төлөлтөө хийнэ үү",
-      body:
-        `${productName} — өнөөдөр ${formatMNT(amount)} төлнө. ` +
-        `${paidDays}/${totalDays} өдөр төлөгдсөн.`,
-      kind: lapsing ? "lapse_warning" : "overdue",
-    };
+  if (remindedThisGap && ubDayDiff(now, reminded) < NUDGE_REPEAT_DAYS) {
+    return null;
   }
-
   return {
-    title: slot === "morning" ?
-      "💰 Өнөөдрийн төлбөрөө хийе" :
-      "🌙 Өдөр дуусахын өмнө сануулга",
+    title: "Өнөөдрийн хуваан төлөлтөө хийх үү?",
     body:
-      `${productName} — өнөөдөр ${formatMNT(amount)} төлнө. ` +
-      `${paidDays + 1}/${totalDays} өдөр.`,
-    kind: "reminder",
+      `${productName} — ${progress}. ` +
+      `Өнөөдөр ${todayAmount} төлөөд үргэлжлүүлж болно.`,
+    kind: "nudge",
   };
 }
 
-// Send reminders for one slot (morning | evening). Touches every active
-// installment purchase exactly once, saves an in-app notification doc per
-// user, and fires the matching FCM message when a token is available.
-async function sendInstallmentReminders(slot) {
+// Идэвхтэй хуваан төлөлт бүрийг шалгаж, сануулга хэрэгтэй хэрэглэгчид
+// in-app notification баримт үүсгэж, FCM мессеж илгээж, purchase дээр
+// last_reminder_at тэмдэглэнэ (дахин сануулахгүйн тулд).
+async function sendInstallmentReminders() {
   const db = admin.firestore();
   const startedAt = Date.now();
-
-  logger.info(`▶️  Installment reminder run start [slot=${slot}]`);
+  const now = new Date();
+  logger.info("▶️  Installment reminder run start");
 
   const snap = await db
     .collection("product_purchases")
     .where("status", "==", "active")
-    .where("purchase_type", "==", "installment")
+    .where("purchase_type", "in", ["installment", "gold_installment"])
     .get();
 
   logger.info(`Active installment purchases: ${snap.size}`);
@@ -165,10 +146,9 @@ async function sendInstallmentReminders(slot) {
   let pendingWrites = 0;
   let savedCount = 0;
   const stats = {
-    thanks: 0,
-    reminder: 0,
-    overdue: 0,
-    lapse_warning: 0,
+    nudge: 0,
+    quiet: 0,
+    skippedOnTrack: 0,
     skippedNoUser: 0,
   };
 
@@ -180,11 +160,16 @@ async function sendInstallmentReminders(slot) {
       continue;
     }
 
-    const msg = buildMessage(slot, purchase);
+    const msg = buildMessage(purchase, now);
+    // Саяхан төлсөн, эсвэл энэ завсарлагад аль хэдийн сануулсан — юу ч илгээхгүй.
+    if (!msg) {
+      stats.skippedOnTrack++;
+      continue;
+    }
     stats[msg.kind]++;
 
-    // In-app notification doc (always — both for paid-today thanks and the
-    // unpaid reminders so the user has a record in their notification list).
+    // In-app notification doc (баярлалаа болон сануулга хоёуланд нь — ингэснээр
+    // хэрэглэгчийн мэдэгдлийн жагсаалтад бичлэг үлдэнэ).
     const notifRef = db
       .collection("users")
       .doc(userId)
@@ -194,13 +179,17 @@ async function sendInstallmentReminders(slot) {
       title: msg.title,
       body: msg.body,
       type: "installment_reminder",
-      slot,
       kind: msg.kind,
       purchase_id: snap.docs[i].id,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       read: false,
     });
-    pendingWrites++;
+    // Энэ завсарлагад дахин сануулахгүй.
+    currentBatch.update(snap.docs[i].ref, {
+      last_reminder_at: admin.firestore.FieldValue.serverTimestamp(),
+      last_reminder_kind: msg.kind,
+    });
+    pendingWrites += 2;
     savedCount++;
 
     if (pendingWrites >= FIRESTORE_BATCH) {
@@ -209,8 +198,7 @@ async function sendInstallmentReminders(slot) {
       pendingWrites = 0;
     }
 
-    // Fetch FCM token (cheap — 1 doc lookup per purchase; could be optimised
-    // by batching but installment volume is low for now).
+    // FCM token-г уншина (мэдэгдэл авах хэрэглэгч бүрт 1 баримт).
     try {
       const userDoc = await db.collection("users").doc(userId).get();
       if (userDoc.exists) {
@@ -223,7 +211,6 @@ async function sendInstallmentReminders(slot) {
             notification: { title: msg.title, body: msg.body },
             data: {
               type: "installment_reminder",
-              slot,
               kind: msg.kind,
               purchase_id: snap.docs[i].id,
             },
@@ -253,7 +240,7 @@ async function sendInstallmentReminders(slot) {
     await currentBatch.commit();
   }
 
-  // Fan out FCM in chunks of 500 (FCM sendEach limit).
+  // FCM-ийг 500-аар бүлэглэж илгээнэ (sendEach-ийн хязгаар).
   let fcmSent = 0;
   let fcmFailed = 0;
   for (let i = 0; i < fcmMessages.length; i += FCM_BATCH) {
@@ -270,7 +257,6 @@ async function sendInstallmentReminders(slot) {
 
   const result = {
     success: true,
-    slot,
     totalActive: snap.size,
     saved: savedCount,
     fcmSent,
@@ -282,7 +268,7 @@ async function sendInstallmentReminders(slot) {
   return result;
 }
 
-// 10:00 Asia/Ulaanbaatar
+// 10:00 Asia/Ulaanbaatar — өдөрт нэг удаа.
 const installmentReminderMorning = onSchedule(
   {
     schedule: "0 10 * * *",
@@ -291,10 +277,13 @@ const installmentReminderMorning = onSchedule(
     timeoutSeconds: 540,
     maxInstances: 1,
   },
-  async () => sendInstallmentReminders("morning"),
+  async () => sendInstallmentReminders(),
 );
 
-// 20:00 Asia/Ulaanbaatar
+// 20:00 Asia/Ulaanbaatar — ижил логик. Өглөө сануулсан бол last_reminder_at
+// тэмдэглэгдсэн тул орой юу ч илгээхгүй; зөвхөн өглөөний ажиллалт алдаж
+// амжаагүй үед нөхөж ажиллана. (Устгахын оронд үлдээсэн: deploy дээр функц
+// устгах интерактив баталгаажуулалт шаардагддаг.)
 const installmentReminderEvening = onSchedule(
   {
     schedule: "0 20 * * *",
@@ -303,10 +292,10 @@ const installmentReminderEvening = onSchedule(
     timeoutSeconds: 540,
     maxInstances: 1,
   },
-  async () => sendInstallmentReminders("evening"),
+  async () => sendInstallmentReminders(),
 );
 
-// Manual trigger for ad-hoc/admin testing: POST/GET ?slot=morning|evening
+// Гар аргаар ажиллуулах (admin/тест): POST/GET
 const installmentReminderManual = onRequest(
   {
     region: "asia-northeast1",
@@ -314,11 +303,8 @@ const installmentReminderManual = onRequest(
     timeoutSeconds: 540,
   },
   async (req, res) => {
-    const slot = (req.query && req.query.slot) === "evening" ?
-      "evening" :
-      "morning";
     try {
-      const result = await sendInstallmentReminders(slot);
+      const result = await sendInstallmentReminders();
       res.status(200).json(result);
     } catch (err) {
       logger.error("Manual installment reminder failed", { error: err.message });
@@ -332,4 +318,11 @@ module.exports = {
   installmentReminderEvening,
   installmentReminderManual,
   sendInstallmentReminders,
+  // Тест / судалгаанд ашиглах цэвэр функцууд.
+  buildMessage,
+  lastPaidAt,
+  daysSinceLastPayment,
+  NUDGE_DAYS,
+  NUDGE_REPEAT_DAYS,
+  QUIET_DAYS,
 };

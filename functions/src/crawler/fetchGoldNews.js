@@ -145,6 +145,7 @@ async function fetchAndSaveNews() {
 exports.fetchGoldNews = onSchedule({
   schedule: "0 9 * * *", // Every day at 9:00 AM
   timeZone: "Asia/Ulaanbaatar",
+  memory: "512MiB", // Node 22 дээр 256MiB-д container эхэлж чаддаггүй
 }, async (event) => {
   try {
     logger.info("Starting scheduled gold news fetch");

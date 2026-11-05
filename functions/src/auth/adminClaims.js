@@ -11,7 +11,7 @@ const admin = require("firebase-admin");
 exports.syncAdminClaim = onDocumentWritten(
   {
     document: "admins/{uid}",
-    memory: "256MiB",
+    memory: "512MiB", // Node 22 дээр 256MiB-д container эхэлж чаддаггүй
     timeoutSeconds: 60,
   },
   async (event) => {

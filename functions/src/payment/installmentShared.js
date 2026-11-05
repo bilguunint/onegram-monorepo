@@ -13,6 +13,7 @@
 const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
+const { ubEndOfDayAfter } = require("../utils/ubDate");
 
 const QPAY_USERNAME = "LISTLY_AGENT";
 const QPAY_PASSWORD = "nbIqiJvG";
@@ -72,6 +73,8 @@ async function checkQPayPayment(invoiceId, token, attempts = 5) {
   return null;
 }
 
+// ХУУЧИН (legacy): callback/autoVerify одоо applyPaidInvoice ашигладаг.
+// Давхцсан өдрийн хоёр дахь төлбөрийг алгасдаг тул шинэ кодонд бүү ашигла.
 // Credit all installment days UP TO (and including) `toDay` on an existing
 // purchase doc atomically. Supports both single-day payments (toDay =
 // paid_days + 1) and multi-day bundles (toDay = paid_days + N).
@@ -157,6 +160,135 @@ async function applyPaidUpToDay(db, purchaseId, toDay) {
   });
 }
 
+// Төлөгдсөн (PAID) нэхэмжлэхийг purchase-д бүртгэнэ — нэхэмжлэхийн day_count
+// ХОНОГИЙГ paid_days-ийн ДАРААГААС нэмнэ. Нэхэмжлэх болон purchase-ийг нэг
+// транзакцид шинэчилдэг тул нэг нэхэмжлэх хэзээ ч хоёр удаа бүртгэгдэхгүй
+// (status === "processed" бол алгасна).
+//
+// Яагаад "day_no хүртэл" биш гэвэл: хэрэглэгч давхцсан өдрийн хоёр QR
+// (ж: 64→93 ба 64→73) үүсгээд хоёуланг нь төлбөл хуучин applyPaidUpToDay
+// хоёр дахийг нь "аль хэдийн төлөгдсөн" гэж алгасаж, 200,000₮ алдагддаг байв
+// (2026-10-30 скан: 6 хэрэглэгч, 330,175₮ гараар нөхсөн). Мөнгө орсон бол
+// тэр хэмжээний хоног нэмэгдэх ёстой.
+async function applyPaidInvoice(db, pendingRef, opts = {}) {
+  const extraInvoiceFields = opts.invoiceFields || {};
+  return db.runTransaction(async (tx) => {
+    const invSnap = await tx.get(pendingRef);
+    if (!invSnap.exists) {
+      throw new Error(`Pending invoice ${pendingRef.id} not found`);
+    }
+    const inv = invSnap.data() || {};
+    if (inv.status === "processed") {
+      logger.info("Idempotent skip — invoice already processed", {
+        pendingId: pendingRef.id,
+        invoiceId: inv.invoice_id,
+      });
+      return { changed: false, reason: "already_processed" };
+    }
+    const purchaseId = inv.purchase_id;
+    if (!purchaseId) {
+      throw new Error(`Pending invoice ${pendingRef.id} has no purchase_id`);
+    }
+    const purchaseRef = db.collection("product_purchases").doc(purchaseId);
+    const snap = await tx.get(purchaseRef);
+    if (!snap.exists) {
+      throw new Error(`Purchase ${purchaseId} not found`);
+    }
+    const data = snap.data() || {};
+    const paidDays = Number(data.paid_days || 0);
+    const totalDays = Number(data.total_days || 0);
+    const daily = Number(data.daily_payment || 0);
+    const totalPrice = Number(data.total_price || 0);
+    const paidAmount = Number(data.paid_amount || 0);
+
+    // Нэхэмжлэхийн хоног: day_count, байхгүй бол day_from..day_no, эс бөгөөс 1.
+    let dayCount = Number(inv.day_count);
+    if (!Number.isFinite(dayCount) || dayCount < 1) {
+      const from = Number(inv.day_from);
+      const to = Number(inv.day_no);
+      dayCount = Number.isFinite(from) && Number.isFinite(to) && to >= from ?
+        to - from + 1 :
+        1;
+    }
+
+    // Сүүлийн өдрөөс хэтрүүлж бүртгэхгүй; хэтэрсэн хоногийг нэхэмжлэх дээр
+    // тэмдэглэнэ (буцаалт/зөрүүг админ харах).
+    const target = Math.min(paidDays + dayCount, totalDays);
+    const creditedDays = Math.max(target - paidDays, 0);
+    const uncreditedDays = dayCount - creditedDays;
+
+    const now = admin.firestore.Timestamp.now();
+    const entries = [];
+    let creditAmount = 0;
+    for (let d = paidDays + 1; d <= target; d++) {
+      const isLast = d >= totalDays;
+      const amt = isLast ?
+        Math.max(totalPrice - paidAmount - creditAmount, 0) :
+        daily;
+      creditAmount += amt;
+      entries.push({
+        day_no: d,
+        amount: amt,
+        paid_at: now,
+        payment_method: "qpay",
+        invoice_id: inv.invoice_id || null,
+      });
+    }
+
+    const newPaidDays = target;
+    const newPaidAmount = paidAmount + creditAmount;
+    const completed = totalDays > 0 && newPaidDays >= totalDays;
+
+    if (entries.length > 0) {
+      const update = {
+        paid_days: newPaidDays,
+        paid_amount: newPaidAmount,
+        payments: Array.isArray(data.payments) ?
+          [...data.payments, ...entries] :
+          entries,
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (completed && data.status !== "completed") {
+        update.status = "completed";
+        update.completed_at = admin.firestore.FieldValue.serverTimestamp();
+        update.pickup_code = generatePickupCode();
+      }
+      tx.update(purchaseRef, update);
+    } else {
+      logger.warn("Paid invoice credited 0 days — plan already full", {
+        pendingId: pendingRef.id,
+        invoiceId: inv.invoice_id,
+        purchaseId,
+        paidDays,
+        totalDays,
+        dayCount,
+      });
+    }
+
+    tx.update(pendingRef, {
+      status: "processed",
+      paid_at: admin.firestore.FieldValue.serverTimestamp(),
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      credited_days: creditedDays,
+      credited_from: creditedDays > 0 ? paidDays + 1 : null,
+      credited_to: creditedDays > 0 ? target : null,
+      credited_amount: creditAmount,
+      ...(uncreditedDays > 0 ? { uncredited_days: uncreditedDays } : {}),
+      ...extraInvoiceFields,
+    });
+
+    return {
+      changed: entries.length > 0,
+      creditedDays,
+      uncreditedDays,
+      creditAmount,
+      newPaidDays,
+      newPaidAmount,
+      completed,
+    };
+  });
+}
+
 // Create the product_purchases doc from a paid installment_init invoice,
 // atomically marking the pending invoice processed. Idempotent — if the plan
 // was already created, returns the existing purchase_id without creating a
@@ -182,16 +314,14 @@ async function createPurchaseFromInit(db, pendingRef, pendingData) {
   // For a 1-day plan, the very first payment IS the full plan — go straight
   // to completed status. For multi-day plans, leave active with paid_days=1
   // and deadline = started_at + total_days days.
+  //
+  // Хугацааг УБ цагаар тооцно. Өмнө нь серверийн локал (=UTC) огноогоор
+  // бодож байсан тул УБ-ын 00:00–08:00 хооронд эхэлсэн төлөвлөгөөний
+  // хугацаа нэг өдрөөр эрт тавигддаг байв.
   const isFullyPaid = totalDays <= 1;
   const deadline = isFullyPaid ?
     null :
-    admin.firestore.Timestamp.fromDate(
-      new Date(
-        nowDate.getFullYear(),
-        nowDate.getMonth(),
-        nowDate.getDate() + totalDays,
-      ),
-    );
+    admin.firestore.Timestamp.fromDate(ubEndOfDayAfter(nowDate, totalDays));
 
   let resultId = purchaseRef.id;
   await db.runTransaction(async (tx) => {
@@ -247,5 +377,6 @@ module.exports = {
   getQPayToken,
   checkQPayPayment,
   applyPaidUpToDay,
+  applyPaidInvoice,
   createPurchaseFromInit,
 };

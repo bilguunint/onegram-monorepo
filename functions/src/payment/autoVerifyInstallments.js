@@ -6,11 +6,19 @@ const cors = require("cors")({ origin: true });
 const {
   getQPayToken,
   checkQPayPayment,
-  applyPaidUpToDay,
+  applyPaidInvoice,
   createPurchaseFromInit,
 } = require("./installmentShared");
+const G = require("./goldInstallmentShared");
+const {
+  SWEEP_DAYS,
+  LAST_CHECK_FIELD,
+  SWEEP_QPAY_ATTEMPTS,
+  sweepStart,
+  dueForRecheck,
+} = require("../utils/verifySweep");
 
-const CHECKPOINT_DOC = "system_config/autoVerifyInstallmentCheckpoint";
+const STATE_DOC = "system_config/autoVerifyInstallmentCheckpoint";
 
 /**
  * autoVerifyInstallments
@@ -22,58 +30,49 @@ const CHECKPOINT_DOC = "system_config/autoVerifyInstallmentCheckpoint";
  *   - installment_init: the product_purchases doc is never created
  *   - installment:      paid_days never increments
  *
- * This mirrors autoVerifyOrders: every 30 minutes it scans recently-created
- * `pending_invoices` that are still "pending", asks QPay whether they were
- * actually PAID, and applies the same idempotent crediting the callbacks
- * would have done — using the shared installmentShared helpers so the logic
- * can never drift from the realtime callbacks.
+ * Энэ нь өмнө нь `createdAt`-checkpoint ашигладаг байсан — нэхэмжлэхийг зөвхөн
+ * үүссэнийх нь дараах эхний ажиллалтад хардаг тул QR-аа хадгалаад хожим төлсөн
+ * хүний төлбөр цонхны ард үлдэж алга болдог байв. Одоо сүүлийн SWEEP_DAYS
+ * хоногийн ХҮЛЭЭГДЭЖ БУЙ нэхэмжлэхүүдийг эргэлдэх цонхоор дахин хардаг
+ * (давтамжийн дүрэм нь ../utils/verifySweep дотор).
  *
- * @param {Date|null} sinceDate - check invoices created since this date.
- *   null → resume from the stored checkpoint.
+ * @param {number|null} lookbackDays - энэ хэдэн хоногоор ухарч шалгана.
+ *   null → SWEEP_DAYS. Утга өгсөн үед давтамжийн хязгаарлалтыг алгасаж
+ *   цонхон дахь БҮХ хүлээгдэж буй нэхэмжлэхийг шалгана (гар ажиллагаа).
  * @return {object} run summary
  */
-async function runAutoVerifyInstallments(sinceDate = null) {
+async function runAutoVerifyInstallments(lookbackDays = null) {
   const db = admin.firestore();
 
-  const checkpointRef = db.doc(CHECKPOINT_DOC);
-  const checkpointSnap = await checkpointRef.get();
-
-  let lastCheckedAt;
-  let isInitialRun = false;
-  if (sinceDate) {
-    lastCheckedAt = admin.firestore.Timestamp.fromDate(sinceDate);
-    isInitialRun = true;
-  } else if (checkpointSnap.exists && checkpointSnap.data().lastCheckedAt) {
-    lastCheckedAt = checkpointSnap.data().lastCheckedAt;
-  } else {
-    // No checkpoint yet — look back over the last 7 days on first run.
-    lastCheckedAt = admin.firestore.Timestamp.fromDate(
-      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    );
-    isInitialRun = true;
-  }
-
+  const forceAll = lookbackDays !== null;
+  const windowStart = sweepStart(forceAll ? lookbackDays : SWEEP_DAYS);
+  const windowStartTs = admin.firestore.Timestamp.fromDate(windowStart);
   const now = admin.firestore.Timestamp.now();
+  const nowMs = now.toMillis();
 
   logger.info("AutoVerifyInstallments started", {
-    isInitialRun,
-    lastCheckedAt: lastCheckedAt.toDate().toISOString(),
+    forceAll,
+    windowStart: windowStart.toISOString(),
     now: now.toDate().toISOString(),
   });
 
   // Query by createdAt range only (no composite index needed) — type/status
-  // are filtered in the loop below, exactly like autoVerifyOrders.
+  // are filtered in the loop below. Зөвхөн хэрэгтэй талбаруудыг сонгоно:
+  // 1000+ баримтын `qpay_invoice` блобыг татахгүй.
   const pendingSnap = await db.collection("pending_invoices")
-    .where("createdAt", ">=", lastCheckedAt)
-    .where("createdAt", "<=", now)
+    .where("createdAt", ">=", windowStartTs)
+    .select("type", "status", "invoice_id", "purchase_id", "day_no", "createdAt", LAST_CHECK_FIELD)
     .get();
 
-  const empty = { checked: 0, autoVerified: 0, alreadyProcessed: 0, notPaid: 0, errors: 0 };
+  const empty = {
+    scanned: 0, checked: 0, autoVerified: 0,
+    alreadyProcessed: 0, notPaid: 0, throttled: 0, errors: 0,
+  };
 
   if (pendingSnap.empty) {
-    logger.info("AutoVerifyInstallments: No pending invoices in range");
-    await checkpointRef.set({
-      lastCheckedAt: now,
+    logger.info("AutoVerifyInstallments: No invoices in sweep window");
+    await db.doc(STATE_DOC).set({
+      lastRunAt: now,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
     return empty;
@@ -90,10 +89,12 @@ async function runAutoVerifyInstallments(sinceDate = null) {
     throw err;
   }
 
+  let scanned = 0;
   let checked = 0;
   let autoVerified = 0;
   let alreadyProcessed = 0;
   let notPaid = 0;
+  let throttled = 0;
   let errors = 0;
   const autoVerifiedIds = [];
 
@@ -101,17 +102,25 @@ async function runAutoVerifyInstallments(sinceDate = null) {
     const data = doc.data();
     const type = data.type;
 
-    // Only the installment flow — direct-order invoices are handled by
-    // autoVerifyOrders.
-    if (type !== "installment" && type !== "installment_init") {
+    // Only the installment flows (ердийн + алтан эдлэл) — direct-order
+    // invoices are handled by autoVerifyOrders.
+    const isGold = type === G.INVOICE_TYPE || type === G.INVOICE_TYPE_INIT;
+    if (type !== "installment" && type !== "installment_init" && !isGold) {
       continue;
     }
 
-    checked++;
+    scanned++;
 
     // Already credited by the realtime callback — skip without a QPay call.
     if (data.status !== "pending") {
       alreadyProcessed++;
+      continue;
+    }
+
+    // Насны дагуух давтамжийн хязгаар — цонхон дахь хуучин нэхэмжлэх бүрийг
+    // ажиллалт болгонд QPay-аас асуухгүй.
+    if (!forceAll && !dueForRecheck(data.createdAt, data[LAST_CHECK_FIELD], nowMs)) {
+      throttled++;
       continue;
     }
 
@@ -125,20 +134,53 @@ async function runAutoVerifyInstallments(sinceDate = null) {
       continue;
     }
 
+    checked++;
+
     try {
-      const paymentStatus = await checkQPayPayment(invoiceId, token);
+      const paymentStatus = await checkQPayPayment(invoiceId, token, SWEEP_QPAY_ATTEMPTS);
 
       if (paymentStatus !== "PAID") {
         notPaid++;
+        // Хэзээ шалгаснаа тэмдэглэнэ — дараагийн ажиллалтууд давтамжийн
+        // дүрмээр сийрэгжинэ.
+        await doc.ref.update({ [LAST_CHECK_FIELD]: now });
         continue;
       }
 
-      if (type === "installment_init") {
-        // First day — create the purchase doc (idempotent).
+      if (isGold) {
+        // Алтан эдлэл: init бол purchase үүсгэнэ, дараагийнх бол грамм нэмнэ.
+        const fullSnap = await doc.ref.get();
+        const full = fullSnap.data() || {};
+        const result = type === G.INVOICE_TYPE_INIT ?
+          await G.createGoldPurchaseFromInit(db, doc.ref, full) :
+          await G.applyPaidGoldInvoice(db, doc.ref, {
+            invoiceFields: {
+              [LAST_CHECK_FIELD]: now,
+              auto_verified: true,
+              auto_verified_at: admin.firestore.FieldValue.serverTimestamp(),
+              auto_verified_source: "scheduledAutoVerifyInstallments",
+            },
+          });
+        autoVerified++;
+        autoVerifiedIds.push(doc.id);
+        logger.info("AutoVerifyInstallments: gold invoice credited", { docId: doc.id, invoiceId, type, result });
+        await db.collection("auto_verified_installments").doc(doc.id).set({
+          pending_id: doc.id,
+          type,
+          invoice_id: invoiceId,
+          purchase_id: full.purchase_id || (result && result.purchaseId) || null,
+          result,
+          verified_at: admin.firestore.FieldValue.serverTimestamp(),
+          source: "scheduledAutoVerifyInstallments",
+        });
+      } else if (type === "installment_init") {
+        // First day — create the purchase doc (idempotent). Projection-оос
+        // болж бүтэн баримт хэрэгтэй (product/user snapshot г.м.).
+        const fullSnap = await doc.ref.get();
         const { purchaseId, created } = await createPurchaseFromInit(
           db,
           doc.ref,
-          data,
+          fullSnap.data() || {},
         );
         autoVerified++;
         autoVerifiedIds.push(doc.id);
@@ -170,14 +212,13 @@ async function runAutoVerifyInstallments(sinceDate = null) {
           errors++;
           continue;
         }
-        const result = await applyPaidUpToDay(db, purchaseId, dayNo);
-        await doc.ref.update({
-          status: "processed",
-          paid_at: admin.firestore.FieldValue.serverTimestamp(),
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
-          auto_verified: true,
-          auto_verified_at: admin.firestore.FieldValue.serverTimestamp(),
-          auto_verified_source: "scheduledAutoVerifyInstallments",
+        const result = await applyPaidInvoice(db, doc.ref, {
+          invoiceFields: {
+            [LAST_CHECK_FIELD]: now,
+            auto_verified: true,
+            auto_verified_at: admin.firestore.FieldValue.serverTimestamp(),
+            auto_verified_source: "scheduledAutoVerifyInstallments",
+          },
         });
         autoVerified++;
         autoVerifiedIds.push(doc.id);
@@ -210,34 +251,52 @@ async function runAutoVerifyInstallments(sinceDate = null) {
         type,
         error: err.message,
       });
+      // Алдаа гарсан ч тэмдэглэнэ — нэг эвдэрсэн нэхэмжлэх ажиллалт болгонд
+      // дахин дахин оролдож бусдыг саатуулахгүй.
+      try {
+        await doc.ref.update({ [LAST_CHECK_FIELD]: now });
+      } catch (stampErr) {
+        logger.warn("AutoVerifyInstallments: failed to stamp last check", {
+          docId: doc.id,
+          error: stampErr.message,
+        });
+      }
     }
   }
 
-  await checkpointRef.set({
-    lastCheckedAt: now,
+  await db.doc(STATE_DOC).set({
+    lastRunAt: now,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    lastRunStats: { checked, autoVerified, alreadyProcessed, notPaid, errors },
+    lastRunStats: {
+      scanned, checked, autoVerified, alreadyProcessed, notPaid, throttled, errors,
+    },
   }, { merge: true });
 
   await db.collection("auto_verify_installment_logs").add({
     ran_at: admin.firestore.FieldValue.serverTimestamp(),
-    range_from: lastCheckedAt,
+    range_from: windowStartTs,
     range_to: now,
+    scanned,
     checked,
     autoVerified,
     alreadyProcessed,
     notPaid,
+    throttled,
     errors,
     autoVerifiedIds,
   });
 
-  const summary = { checked, autoVerified, alreadyProcessed, notPaid, errors, autoVerifiedIds };
+  const summary = {
+    scanned, checked, autoVerified, alreadyProcessed,
+    notPaid, throttled, errors, autoVerifiedIds,
+  };
   logger.info("AutoVerifyInstallments completed", summary);
   return summary;
 }
 
 /**
  * Manual init — re-check the last 7 days of installment invoices (HTTP).
+ * Давтамжийн хязгаарлалтыг алгасаж бүгдийг шалгана.
  */
 exports.initAutoVerifyInstallments = onRequest({
   region: "asia-northeast1",
@@ -247,9 +306,9 @@ exports.initAutoVerifyInstallments = onRequest({
 }, async (req, res) => {
   return cors(req, res, async () => {
     try {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const result = await runAutoVerifyInstallments(sevenDaysAgo);
-      return res.status(200).json({ success: true, ...result });
+      const days = Math.max(1, Math.floor(Number(req.query && req.query.days) || 7));
+      const result = await runAutoVerifyInstallments(days);
+      return res.status(200).json({ success: true, days, ...result });
     } catch (err) {
       logger.error("initAutoVerifyInstallments failed", {
         error: err.message,
@@ -261,7 +320,7 @@ exports.initAutoVerifyInstallments = onRequest({
 });
 
 /**
- * Every 30 minutes — resume from checkpoint and credit any missed payments.
+ * Every 30 minutes — sweep the rolling window and credit any missed payments.
  */
 exports.scheduledAutoVerifyInstallments = onSchedule({
   schedule: "every 30 minutes",

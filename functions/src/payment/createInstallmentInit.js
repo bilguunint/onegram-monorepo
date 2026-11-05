@@ -27,6 +27,11 @@ async function authUid(req) {
 // and the backend immediately translates to N*30 daily installments.
 const DAYS_PER_MONTH = 30;
 
+// Хэрэглэгч нэгэн зэрэг хамгийн ихдээ хэдэн хуваан төлөлт явуулж болох вэ.
+// Апп талын ProductsScreen / ProductDetailScreen-тэй нэг утгатай байх ёстой
+// (ProductPurchase.maxActiveInstallments).
+const MAX_ACTIVE_INSTALLMENTS = 3;
+
 /**
  * createInstallmentInit
  * ---------------------
@@ -41,7 +46,7 @@ const DAYS_PER_MONTH = 30;
  *
  * Flow:
  *  1. Validate user + product (active, has stock, etc.)
- *  2. Reject if the user already has an active installment (one at a time)
+ *  2. Reject once the user already has MAX_ACTIVE_INSTALLMENTS active plans
  *  3. Compute total_days = months*30, daily_payment = ceil(price/total_days)
  *  4. Reserve a pending_invoices doc up front (callback URL needs the id)
  *  5. Create QPay invoice for day 1's amount
@@ -72,18 +77,19 @@ exports.createInstallmentInit = onRequest({
           .json({ error: "months must be an integer between 1 and 12" });
       }
 
-      // Block multiple concurrent installments per user.
+      // Cap concurrent installments per user at MAX_ACTIVE_INSTALLMENTS.
       const activeSnap = await db
         .collection("product_purchases")
         .where("user_id", "==", uid)
         .where("status", "==", "active")
-        .where("purchase_type", "==", "installment")
-        .limit(1)
+        .where("purchase_type", "in", ["installment", "gold_installment"])
+        .limit(MAX_ACTIVE_INSTALLMENTS)
         .get();
-      if (!activeSnap.empty) {
+      if (activeSnap.size >= MAX_ACTIVE_INSTALLMENTS) {
         return res.status(409).json({
           error:
-            "Танд аль хэдийн идэвхтэй хуваан төлөлт байна. Үүнийгээ дуусгасны дараа шинээр эхлүүлнэ үү.",
+            `Танд аль хэдийн ${MAX_ACTIVE_INSTALLMENTS} идэвхтэй хуваан ` +
+            "төлөлт байна. Нэгийг нь дуусгасны дараа шинээр эхлүүлнэ үү.",
         });
       }
 
@@ -96,6 +102,12 @@ exports.createInstallmentInit = onRequest({
         return res.status(404).json({ error: "Product not found" });
       }
       const product = productSnap.data() || {};
+      if (product.product_kind === "gold_jewelry") {
+        // Хуучин апп (грамм дээр суурилсан эдлэлийг мэдэхгүй) энд ирнэ.
+        return res.status(409).json({
+          error: "Алтан эдлэлийн хуваан төлөлт авахын тулд аппаа шинэчилнэ үү.",
+        });
+      }
       if (product.status !== "active") {
         return res.status(409).json({ error: "Product is not active" });
       }

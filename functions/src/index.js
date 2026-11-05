@@ -32,6 +32,15 @@ const { shuteenOrderCallback } = require("./payment/shuteenOrderCallback");
 const { verifyShuteenCertificate } = require("./payment/verifyShuteenCertificate");
 const { createInstallmentInit } = require("./payment/createInstallmentInit");
 const { installmentInitCallback } = require("./payment/installmentInitCallback");
+const {
+  quoteGoldInstallment,
+  createGoldInstallmentInit,
+  createGoldInstallmentPayment,
+} = require("./payment/goldInstallmentHttp");
+const {
+  goldInstallmentInitCallback,
+  goldInstallmentCallback,
+} = require("./payment/goldInstallmentCallbacks");
 const { verifyOrder } = require("./payment/verifyOrder");
 const { crawlGoldRates } = require("./crawler/crawlGoldRate");
 const { fetchGoldNews, fetchGoldNewsManual } = require("./crawler/fetchGoldNews");
@@ -145,6 +154,13 @@ exports.shuteenOrderCallback = shuteenOrderCallback;
 exports.verifyShuteenCertificate = verifyShuteenCertificate;
 exports.createInstallmentInit = createInstallmentInit;
 exports.installmentInitCallback = installmentInitCallback;
+
+// Exports - Алтан эдлэлийн (грамм дээр суурилсан) хуваан төлөлт
+exports.quoteGoldInstallment = quoteGoldInstallment;
+exports.createGoldInstallmentInit = createGoldInstallmentInit;
+exports.createGoldInstallmentPayment = createGoldInstallmentPayment;
+exports.goldInstallmentInitCallback = goldInstallmentInitCallback;
+exports.goldInstallmentCallback = goldInstallmentCallback;
 exports.verifyOrder = verifyOrder;
 exports.crawlGoldRates = crawlGoldRates;
 exports.fetchGoldNews = fetchGoldNews;

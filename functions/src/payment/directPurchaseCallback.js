@@ -3,12 +3,10 @@ const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
 
+const { recordDirectPurchasePaid } = require("./directPurchaseShared");
+
 const QPAY_USERNAME = "ONE_GRAM_GOLD";
 const QPAY_PASSWORD = "zElO7j40";
-
-function generatePickupCode() {
-  return Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
-}
 
 // Fetch a fresh QPay access token.
 async function getQPayToken() {
@@ -137,54 +135,20 @@ exports.directPurchaseCallback = onRequest({
       });
     }
 
-    // Create the product_purchases doc atomically. We do this inside a
-    // transaction so a parallel callback (e.g. QPay retry) can't double-write.
-    const purchaseRef = db.collection("product_purchases").doc();
-    const now = admin.firestore.Timestamp.now();
-    await db.runTransaction(async (tx) => {
-      const cur = await tx.get(pendingRef);
-      const curData = cur.data() || {};
-      if (curData.status === "processed" && curData.purchase_id) {
-        return;
-      }
-      tx.set(purchaseRef, {
-        product_id: pendingData.product_id,
-        product_snapshot: pendingData.product_snapshot || {},
-        user_id: pendingData.user_id,
-        user_snapshot: pendingData.user_snapshot || {},
-        total_price: amount,
-        monthly_payment: amount,
-        months: 1,
-        paid_amount: amount,
-        paid_months: 1,
-        next_due_date: null,
-        status: "completed",
-        started_at: now,
-        completed_at: now,
-        pickup_code: generatePickupCode(),
-        purchase_type: "direct",
-        payments: [
-          {
-            month_no: 1,
-            amount,
-            paid_at: now,
-            payment_method: "qpay",
-            invoice_id: invoiceId,
-          },
-        ],
-      });
-      tx.update(pendingRef, {
-        status: "processed",
-        purchase_id: purchaseRef.id,
-        paid_at: admin.firestore.FieldValue.serverTimestamp(),
-        updated_at: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    });
+    // Бүртгэх логик нь directPurchaseShared дотор — бодит цагийн callback
+    // болон autoVerifyOrders-ийн аюулгүйн тор яг ижил, идемпотент замаар
+    // ажиллана.
+    const { purchaseId, created } = await recordDirectPurchasePaid(
+      db,
+      pendingRef,
+      pendingData,
+    );
 
     logger.info("✅ Direct purchase recorded", {
       pendingId,
       invoiceId,
-      purchase_id: purchaseRef.id,
+      purchase_id: purchaseId,
+      created,
       amount,
     });
 
@@ -193,7 +157,7 @@ exports.directPurchaseCallback = onRequest({
       message: "Direct purchase completed",
       pending_id: pendingId,
       invoice_id: invoiceId,
-      purchase_id: purchaseRef.id,
+      purchase_id: purchaseId,
     });
   } catch (err) {
     logger.error("❌ Direct purchase callback failed", {
