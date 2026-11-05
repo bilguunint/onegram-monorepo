@@ -65,8 +65,8 @@ const _generalSections = [
       ['order.terms_3_1', 'order.terms_3_2', 'order.terms_3_3']),
   _Section('order.terms_s4_title',
       ['order.terms_4_1', 'order.terms_4_2', 'order.terms_4_3']),
-  _Section('order.terms_s5_company_title',
-      ['order.terms_5_1', 'order.terms_5_2']),
+  _Section(
+      'order.terms_s5_company_title', ['order.terms_5_1', 'order.terms_5_2']),
   _Section('order.terms_s6_title', ['order.terms_6_1', 'order.terms_6_2']),
 ];
 
@@ -114,13 +114,11 @@ String _plainWithHeadings(String text) {
       lines.first.trim() == lines.first.trim().toUpperCase()) {
     lines.removeAt(0);
   }
-  return lines
-      .map((line) {
-        final l = line.trimRight();
-        if (l.isNotEmpty && heading.hasMatch(l)) return '# $l';
-        return l;
-      })
-      .join('\n');
+  return lines.map((line) {
+    final l = line.trimRight();
+    if (l.isNotEmpty && heading.hasMatch(l)) return '# $l';
+    return l;
+  }).join('\n');
 }
 
 String _shuteenBody(String lang) {

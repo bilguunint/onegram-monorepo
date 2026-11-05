@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onegrgold/elements/gold_badge.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
 import 'package:onegrgold/models/product_model.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -80,23 +81,25 @@ class ProductCardWidget extends StatelessWidget {
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.55),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          tr('purchase.months_short', {'months': months}),
-                          style: const TextStyle(
-                            fontFamily: AppText.medium,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                      child: product.isGoldJewelry
+                          ? GoldBadge(label: tr('gold.jewelry_badge'))
+                          : Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.55),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                tr('purchase.months_short', {'months': months}),
+                                style: const TextStyle(
+                                  fontFamily: AppText.medium,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -116,7 +119,9 @@ class ProductCardWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 6.0),
                     Text(
-                      formatMNT(product.price),
+                      product.isGoldJewelry
+                          ? formatGrams(product.totalGrams)
+                          : formatMNT(product.price),
                       style: TextStyle(
                         fontFamily: AppText.bold,
                         fontSize: 14.0,
@@ -133,7 +138,10 @@ class ProductCardWidget extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        tr('home.daily_amount', {'amount': formatMNT(daily)}),
+                        product.isGoldJewelry
+                            ? tr('gold.card_hint', {'grams': formatGrams(0.1)})
+                            : tr('home.daily_amount',
+                                {'amount': formatMNT(daily)}),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

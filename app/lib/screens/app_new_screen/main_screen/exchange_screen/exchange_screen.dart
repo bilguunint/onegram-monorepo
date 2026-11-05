@@ -153,7 +153,7 @@ class _ExchangeScreenState extends State<ExchangeScreen> {
             children: [
               AppIconTile(
                 size: 40,
-                child: Icon(Ionicons.diamond_outline,
+                child: Icon(Ionicons.diamondOutline,
                     size: 18, color: CustomColors.accent),
               ),
               const SizedBox(width: 12),
@@ -195,7 +195,7 @@ class _ExchangeScreenState extends State<ExchangeScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(up ? Ionicons.caret_up : Ionicons.caret_down,
+                    Icon(up ? Ionicons.caretUp : Ionicons.caretDown,
                         size: 11, color: cc),
                     const SizedBox(width: 3),
                     Text(
@@ -603,7 +603,7 @@ class _ExchangeScreenState extends State<ExchangeScreen> {
                   color: cc.withOpacity(0.16),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(up ? Ionicons.caret_up : Ionicons.caret_down,
+                child: Icon(up ? Ionicons.caretUp : Ionicons.caretDown,
                     size: 14, color: cc),
               ),
             ],

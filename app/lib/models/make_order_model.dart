@@ -9,12 +9,11 @@ class MakeOrder extends Equatable {
   final num quantity;
   final List<DeeplinkModel> links;
 
-  const MakeOrder(this.invoiceId, this.qpayShortUrl, this.qrImage,
-      this.qrText, this.quantity, this.links);
+  const MakeOrder(this.invoiceId, this.qpayShortUrl, this.qrImage, this.qrText,
+      this.quantity, this.links);
 
   MakeOrder.fromJson(Map<String, dynamic> json)
-      : 
-        invoiceId = json["invoice_id"] ?? "",
+      : invoiceId = json["invoice_id"] ?? "",
         qpayShortUrl = json["qPay_shortUrl"] ?? "",
         qrImage = json["qr_image"] ?? "",
         qrText = json["qr_text"] ?? "",

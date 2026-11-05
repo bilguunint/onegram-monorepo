@@ -226,7 +226,7 @@ class _RateCardWidgetState extends State<RateCardWidget>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(up ? Ionicons.caret_up : Ionicons.caret_down,
+                  Icon(up ? Ionicons.caretUp : Ionicons.caretDown,
                       size: 10.0, color: cc),
                   const SizedBox(width: 2.0),
                   Text(

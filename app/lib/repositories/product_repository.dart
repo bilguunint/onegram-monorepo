@@ -59,7 +59,7 @@ class ProductRepository {
         .map((snap) {
       final list = snap.docs
           .map((d) => ProductPurchase.fromMap(d.id, d.data()))
-          .where((p) => p.purchaseType == PurchaseType.installment)
+          .where((p) => p.isAnyInstallment)
           .toList()
         ..sort((a, b) {
           final ta = a.startedAt?.millisecondsSinceEpoch ?? 0;
@@ -68,6 +68,29 @@ class ProductRepository {
         });
       return list.isEmpty ? null : list.first;
     });
+  }
+
+  /// Stream ALL of the caller's currently active installment plans, newest
+  /// first. Direct purchases (which immediately become "completed") are
+  /// excluded.
+  ///
+  /// The user may run up to [ProductPurchase.maxActiveInstallments] at once;
+  /// the catalog uses the length of this list to decide whether a new plan
+  /// can be started.
+  Stream<List<ProductPurchase>> watchMyActiveInstallments(String userId) {
+    return _purchases
+        .where('user_id', isEqualTo: userId)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => ProductPurchase.fromMap(d.id, d.data()))
+            .where((p) => p.isAnyInstallment)
+            .toList()
+          ..sort((a, b) {
+            final ta = a.startedAt?.millisecondsSinceEpoch ?? 0;
+            final tb = b.startedAt?.millisecondsSinceEpoch ?? 0;
+            return tb.compareTo(ta);
+          }));
   }
 
   /// Stream the caller's most-recent fully-paid-but-not-yet-delivered
@@ -223,6 +246,146 @@ class ProductRepository {
     );
   }
 
+  // ---------------- Алтан эдлэл (грамм дээр суурилсан) ----------------
+
+  static const String _quoteGoldInstallmentUrl =
+      'https://asia-northeast1-grammgold.cloudfunctions.net/quoteGoldInstallment';
+  static const String _createGoldInstallmentInitUrl =
+      'https://asia-northeast1-grammgold.cloudfunctions.net/createGoldInstallmentInit';
+  static const String _createGoldInstallmentPaymentUrl =
+      'https://asia-northeast1-grammgold.cloudfunctions.net/createGoldInstallmentPayment';
+
+  /// Өнөөдрийн ханш ба эдлэлийн 1 гр-ын эцсийн үнэ (ханш × (1+татвар) +
+  /// ажлын хөлс) — тооцоолуурт. Серверийн томьёотой яг ижил байхын тулд
+  /// аппд тооцоолохгүй, серверээс асууна.
+  Future<GoldQuote> fetchGoldQuote() async {
+    final res = await http.get(Uri.parse(_quoteGoldInstallmentUrl));
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw StateError(
+          tr('common.unexpected_response', {'code': res.statusCode}));
+    }
+    if (res.statusCode != 200) {
+      final rawError = body['error'] as String?;
+      throw StateError(rawError != null
+          ? trServer(rawError)
+          : tr('common.unexpected_response', {'code': res.statusCode}));
+    }
+    return GoldQuote(
+      rate: (body['rate'] as num?)?.toDouble() ?? 0,
+      pricePerGram: (body['price_per_gram'] as num?)?.toInt() ?? 0,
+      laborPerGram: (body['labor_per_gram'] as num?)?.toInt() ?? 0,
+      taxPercent: (body['tax_percent'] as num?)?.toDouble() ?? 0,
+      minStepGrams: (body['min_step_grams'] as num?)?.toDouble() ?? 0.1,
+    );
+  }
+
+  /// Алтан эдлэлийн хуваан төлөлт эхлүүлнэ: эхний төлбөр = [dailyGrams]
+  /// (хэрэглэгчийн сонгосон өдрийн грамм) тухайн өдрийн ханшаар.
+  Future<
+      ({
+        MakeOrder invoice,
+        String pendingId,
+        int amount,
+        double grams,
+        int estimatedDays
+      })> requestGoldInstallmentInit({
+    required String productId,
+    required double dailyGrams,
+  }) async {
+    final body = await _postJson(
+        _createGoldInstallmentInitUrl,
+        {
+          'product_id': productId,
+          'daily_grams': dailyGrams,
+        },
+        errorKey: 'purchase.err_installment_init');
+    final invoice = body['qpay_invoice'];
+    if (invoice is! Map<String, dynamic>) {
+      throw StateError(tr('purchase.err_no_qpay_invoice'));
+    }
+    final pendingId = body['pending_id'] as String?;
+    if (pendingId == null || pendingId.isEmpty) {
+      throw StateError(tr('purchase.err_no_pending_id'));
+    }
+    return (
+      invoice: MakeOrder.fromJson(invoice),
+      pendingId: pendingId,
+      amount: (body['amount'] as num?)?.toInt() ?? 0,
+      grams: (body['grams'] as num?)?.toDouble() ?? dailyGrams,
+      estimatedDays: (body['estimated_days'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Дараагийн төлбөр: [grams] граммыг өнөөдрийн ханшаар. Сервер үлдсэнээс
+  /// хэтэрвэл үлдсэнийг, 0.1-ийн үржвэр биш бол алдаа буцаана.
+  Future<
+      ({
+        MakeOrder invoice,
+        int amount,
+        double grams,
+        double targetPaidGrams
+      })> requestGoldInstallmentPayment({
+    required String purchaseId,
+    required double grams,
+    required double paidGramsNow,
+  }) async {
+    final body = await _postJson(
+        _createGoldInstallmentPaymentUrl,
+        {
+          'purchase_id': purchaseId,
+          'grams': grams,
+        },
+        errorKey: 'purchase.err_create_invoice');
+    final invoice = body['qpay_invoice'];
+    if (invoice is! Map<String, dynamic>) {
+      throw StateError(tr('purchase.err_no_qpay_invoice'));
+    }
+    final g = (body['grams'] as num?)?.toDouble() ?? grams;
+    return (
+      invoice: MakeOrder.fromJson(invoice),
+      amount: (body['amount'] as num?)?.toInt() ?? 0,
+      grams: g,
+      targetPaidGrams: ((paidGramsNow + g) * 100).round() / 100,
+    );
+  }
+
+  Future<Map<String, dynamic>> _postJson(
+    String url,
+    Map<String, Object?> payload, {
+    required String errorKey,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError(tr('common.not_signed_in'));
+    }
+    final idToken = await user.getIdToken();
+    final res = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: jsonEncode(payload),
+    );
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw StateError(
+          tr('common.unexpected_response', {'code': res.statusCode}));
+    }
+    if (res.statusCode != 200) {
+      final rawError = body['error'] as String?;
+      throw StateError(rawError != null
+          ? trServer(rawError)
+          : tr(errorKey, {'code': res.statusCode}));
+    }
+    return body;
+  }
+
   static const String _requestInstallmentCancelUrl =
       'https://asia-northeast1-grammgold.cloudfunctions.net/requestInstallmentCancel';
 
@@ -334,4 +497,24 @@ class ProductRepository {
     }
     return (invoice: MakeOrder.fromJson(invoice), pendingId: pendingId);
   }
+}
+
+/// Алтан эдлэлийн өнөөдрийн үнийн мэдээлэл (серверээс).
+class GoldQuote {
+  final double rate;
+  final int pricePerGram;
+  final int laborPerGram;
+  final double taxPercent;
+  final double minStepGrams;
+
+  const GoldQuote({
+    required this.rate,
+    required this.pricePerGram,
+    required this.laborPerGram,
+    required this.taxPercent,
+    required this.minStepGrams,
+  });
+
+  /// Серверийн quoteGrams-тэй ижил: round(1 гр үнэ × грамм).
+  int amountFor(double grams) => (pricePerGram * grams).round();
 }

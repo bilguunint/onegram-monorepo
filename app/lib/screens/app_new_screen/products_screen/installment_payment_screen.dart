@@ -26,6 +26,11 @@ class InstallmentPaymentScreen extends StatefulWidget {
   final MakeOrder invoice;
   final String productName;
 
+  /// Алтан эдлэл: төлбөр бүртгэгдмэгц paid_grams энэ утгад хүрнэ
+  /// (өдрийн оронд граммаар шалгана). [gramsLabel] нь "0.3 гр" гэх мэт.
+  final double? targetPaidGrams;
+  final String? gramsLabel;
+
   const InstallmentPaymentScreen({
     super.key,
     required this.purchaseId,
@@ -34,13 +39,17 @@ class InstallmentPaymentScreen extends StatefulWidget {
     required this.amount,
     required this.invoice,
     required this.productName,
+    this.targetPaidGrams,
+    this.gramsLabel,
   });
 
   /// Human label for the day range — "5-р өдөр" for a single day, or
-  /// "5–11-р өдөр" for a multi-day bundle.
-  String get dayLabel => dayFrom == dayTo
-      ? tr('purchase.day_single', {'day': dayFrom})
-      : tr('purchase.day_range', {'from': dayFrom, 'to': dayTo});
+  /// "5–11-р өдөр" for a multi-day bundle. Алтан эдлэлд граммын label.
+  String get dayLabel => gramsLabel != null
+      ? gramsLabel!
+      : dayFrom == dayTo
+          ? tr('purchase.day_single', {'day': dayFrom})
+          : tr('purchase.day_range', {'from': dayFrom, 'to': dayTo});
 
   @override
   State<InstallmentPaymentScreen> createState() =>
@@ -64,10 +73,14 @@ class _InstallmentPaymentScreenState extends State<InstallmentPaymentScreen> {
         builder: (context, snapshot) {
           final data = snapshot.data?.data();
           final paidDays = (data?['paid_days'] as num?)?.toInt() ?? 0;
+          final paidGrams = (data?['paid_grams'] as num?)?.toDouble() ?? 0;
           final purchaseStatus = data?['status'] as String?;
-          final isPaid = paidDays >= widget.dayTo;
-          final isCompleted = purchaseStatus == 'completed' ||
-              purchaseStatus == 'delivered';
+          final target = widget.targetPaidGrams;
+          final isPaid = target != null
+              ? paidGrams + 0.001 >= target
+              : paidDays >= widget.dayTo;
+          final isCompleted =
+              purchaseStatus == 'completed' || purchaseStatus == 'delivered';
 
           // Auto-close once the bundle becomes paid so the user lands back on
           // the detail screen with the updated progress.

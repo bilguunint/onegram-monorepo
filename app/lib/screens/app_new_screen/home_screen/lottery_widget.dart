@@ -147,8 +147,8 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                 decoration: BoxDecoration(
                   color: CustomColors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      width: 1.0, color: CustomColors.surfaceBorder),
+                  border:
+                      Border.all(width: 1.0, color: CustomColors.surfaceBorder),
                   boxShadow: [
                     BoxShadow(
                       color: CustomColors.accent.withOpacity(0.08),
@@ -296,6 +296,7 @@ class _ProductsPromo extends StatelessWidget {
         // Хамгийн бага өдрийн төлбөр — "…-өөс" гэж харуулна
         num? minDaily;
         for (final p in products) {
+          if (p.isGoldJewelry) continue;
           final d = dailyAmount(p.price, p.maxMonths.clamp(1, 12));
           if (minDaily == null || d < minDaily) minDaily = d;
         }
@@ -404,7 +405,7 @@ class _ProductsPromo extends StatelessWidget {
                                     color: CustomColors.surfaceAlt,
                                   ),
                                   child: const Icon(
-                                      Ionicons.arrow_forward_outline,
+                                      Ionicons.arrowForwardOutline,
                                       size: 14,
                                       color: Colors.white),
                                 ),
@@ -488,9 +489,7 @@ class _ActiveInstallmentPromo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ps = purchase.productSnapshot;
-    final pct = purchase.totalDays > 0
-        ? (purchase.paidDays / purchase.totalDays * 100).clamp(0, 100)
-        : 0;
+    final pct = (purchase.progress * 100).clamp(0, 100);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,13 +572,11 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: purchase.totalDays > 0
-                            ? purchase.paidDays / purchase.totalDays
-                            : 0,
+                        value: purchase.progress,
                         minHeight: 5,
                         backgroundColor: Colors.white.withOpacity(0.08),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            CustomColors.accent),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(CustomColors.accent),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -587,10 +584,15 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          tr('home.days_progress', {
-                            'paid': purchase.paidDays,
-                            'total': purchase.totalDays
-                          }),
+                          purchase.isGold
+                              ? tr('gold.grams_paid_of', {
+                                  'paid': formatGrams(purchase.paidGrams),
+                                  'total': formatGrams(purchase.totalGrams),
+                                })
+                              : tr('home.days_progress', {
+                                  'paid': purchase.paidDays,
+                                  'total': purchase.totalDays
+                                }),
                           style: AppText.caption.copyWith(fontSize: 9.5),
                         ),
                         Text(

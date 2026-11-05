@@ -23,19 +23,24 @@ class ShuteenBuyScreen extends StatefulWidget {
 }
 
 class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
-  static const List<int> _quick = [1, 10, 100, 500, 1000, 10000];
+  static const List<int> _quick = [10, 50, 100, 500, 1000, 10000];
+
+  /// Хамгийн багадаа авах нэгж — сервер талын MIN_UNITS_PER_ORDER
+  /// (createShuteenOrder.js)-тэй ижил байх ёстой.
+  static const int _minUnits = 10;
   static const int _maxUnits = 100000;
 
   final ShuteenRepository _repo = ShuteenRepository();
-  final TextEditingController _ctrl = TextEditingController(text: '1');
-  int _units = 1;
+  final TextEditingController _ctrl = TextEditingController(text: '10');
+  int _units = _minUnits;
   bool _agreed = false;
   bool _busy = false;
 
   ShuteenProgramInfo get p => widget.program;
 
-  int get _remaining =>
-      p.totalUnits > 0 ? (p.totalUnits - p.soldUnits).clamp(0, p.totalUnits) : _maxUnits;
+  int get _remaining => p.totalUnits > 0
+      ? (p.totalUnits - p.soldUnits).clamp(0, p.totalUnits)
+      : _maxUnits;
 
   @override
   void dispose() {
@@ -44,7 +49,7 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
   }
 
   void _setUnits(int v) {
-    final int clamped = v.clamp(1, _maxUnits);
+    final int clamped = v.clamp(_minUnits, _maxUnits);
     setState(() {
       _units = clamped;
       final txt = '$clamped';
@@ -59,6 +64,11 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
 
   Future<void> _submit() async {
     if (_busy) return;
+    if (_units < _minUnits) {
+      _setUnits(_minUnits);
+      _snack(tr('shuteen.min_units', {'min': _fmt(_minUnits)}));
+      return;
+    }
     if (_units > _remaining) {
       _snack(tr('shuteen.remaining_units',
           {'sold': _fmt(p.soldUnits), 'total': _fmt(p.totalUnits)}));
@@ -119,7 +129,9 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
                   children: [
                     _StepBtn(
                       icon: Icons.remove_rounded,
-                      onTap: _units > 1 ? () => _setUnits(_units - 1) : null,
+                      onTap: _units > _minUnits
+                          ? () => _setUnits(_units - 1)
+                          : null,
                     ),
                     Expanded(
                       child: TextField(
@@ -137,6 +149,8 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
+                        // Бичиж байх үед (ж: "1" → "100") шууд 10 болгож
+                        // засахгүй; доод хязгаарыг Төлөх дээр шалгана.
                         onChanged: (v) {
                           final n = int.tryParse(v) ?? 0;
                           if (n >= 1) {
@@ -181,8 +195,7 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
                       value: (p.soldUnits / p.totalUnits).clamp(0.0, 1.0),
                       minHeight: 6,
                       backgroundColor: Colors.white.withOpacity(0.08),
-                      valueColor:
-                          AlwaysStoppedAnimation(CustomColors.accent),
+                      valueColor: AlwaysStoppedAnimation(CustomColors.accent),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -206,7 +219,8 @@ class _ShuteenBuyScreenState extends State<ShuteenBuyScreen> {
               children: [
                 Text(tr('shuteen.calc_title'), style: AppText.sectionTitle),
                 const SizedBox(height: 6),
-                AppInfoRow(label: tr('shuteen.calc_pay'), value: formatMNT(pay)),
+                AppInfoRow(
+                    label: tr('shuteen.calc_pay'), value: formatMNT(pay)),
                 const AppDivider(),
                 AppInfoRow(
                   label: tr('shuteen.calc_after', {'months': p.holdMonths}),
@@ -350,7 +364,8 @@ class _StepBtn extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.selected, required this.onTap});
+  const _Pill(
+      {required this.label, required this.selected, required this.onTap});
   final String label;
   final bool selected;
   final VoidCallback onTap;

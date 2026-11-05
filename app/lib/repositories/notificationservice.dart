@@ -67,8 +67,9 @@ class NotificationService {
 
       // Type of time interpretation
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime, androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-   // To show notification even when the app is closed
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      // To show notification even when the app is closed
     );
   }
 
@@ -77,30 +78,32 @@ class NotificationService {
     String? picturePath =
         await _downloadAndSaveFile(imageUrl, 'notifimage.jpg');
     await flutterLocalNotificationsPlugin.zonedSchedule(
-        id,
-        tr('home.savings_reminder_title', {'title': title}),
-        tr('home.savings_reminder_body'),
-        tz.TZDateTime.now(tz.local).add(duration),
-        NotificationDetails(
-          // Android details
-          android: const AndroidNotificationDetails(
-              'main_channel', 'Main Channel',
-              channelDescription: "ashwin",
-              importance: Importance.max,
-              priority: Priority.max),
-          // iOS details
-          iOS: DarwinNotificationDetails(
-            attachments: <DarwinNotificationAttachment>[
-              DarwinNotificationAttachment(picturePath)
-            ],
-            sound: 'default.wav',
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
+      id,
+      tr('home.savings_reminder_title', {'title': title}),
+      tr('home.savings_reminder_body'),
+      tz.TZDateTime.now(tz.local).add(duration),
+      NotificationDetails(
+        // Android details
+        android: const AndroidNotificationDetails(
+            'main_channel', 'Main Channel',
+            channelDescription: "ashwin",
+            importance: Importance.max,
+            priority: Priority.max),
+        // iOS details
+        iOS: DarwinNotificationDetails(
+          attachments: <DarwinNotificationAttachment>[
+            DarwinNotificationAttachment(picturePath)
+          ],
+          sound: 'default.wav',
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
         ),
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime, androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,);
+      ),
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
   }
 
   Future<String> _downloadAndSaveFile(String url, String fileName) async {

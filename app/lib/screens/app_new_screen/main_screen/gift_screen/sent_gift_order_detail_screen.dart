@@ -378,15 +378,15 @@ class _SentGiftOrderDetailScreenState extends State<SentGiftOrderDetailScreen> {
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return Ionicons.time_outline;
+        return Ionicons.timeOutline;
       case 'received':
-        return Ionicons.checkmark_circle_outline;
+        return Ionicons.checkmarkCircleOutline;
       case 'cancelled':
-        return Ionicons.close_circle_outline;
+        return Ionicons.closeCircleOutline;
       case 'failed':
-        return Ionicons.alert_circle_outline;
+        return Ionicons.alertCircleOutline;
       default:
-        return Ionicons.help_circle_outline;
+        return Ionicons.helpCircleOutline;
     }
   }
 

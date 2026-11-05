@@ -86,13 +86,13 @@ const Map<String, Map<String, String>> kServerTranslations = {
   },
   // ---- payment/createInstallmentInit.js ----
   'server.installment_already_active': {
-    'mn': 'Танд аль хэдийн идэвхтэй хуваан төлөлт байна. '
-        'Үүнийгээ дуусгасны дараа шинээр эхлүүлнэ үү.',
-    'en': 'You already have an active installment plan. '
-        'Finish it before starting a new one.',
-    'zh': '您已有一个进行中的分期付款。请先完成后再开始新的分期。',
-    'ru': 'У вас уже есть активная рассрочка. '
-        'Завершите её, прежде чем начинать новую.',
+    'mn': 'Танд аль хэдийн {p0} идэвхтэй хуваан төлөлт байна. '
+        'Нэгийг нь дуусгасны дараа шинээр эхлүүлнэ үү.',
+    'en': 'You already have {p0} active installment plans. '
+        'Finish one before starting another.',
+    'zh': '您已有 {p0} 个进行中的分期付款。请先完成一个再开始新的分期。',
+    'ru': 'У вас уже есть активных рассрочек: {p0}. '
+        'Завершите одну, прежде чем начинать новую.',
   },
   // ---- payment/createInstallmentPayment.js ----
   'server.installment_cancel_pending': {

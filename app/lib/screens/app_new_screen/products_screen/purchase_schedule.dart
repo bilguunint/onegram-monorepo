@@ -17,10 +17,16 @@ class ScheduleRow {
   /// Amount paid for this day.
   final int amount;
 
+  /// goldInstallment: энэ төлбөрийн грамм ба тухайн өдрийн ханш.
+  final double? grams;
+  final int? rate;
+
   const ScheduleRow({
     required this.dayNo,
     required this.paidAt,
     required this.amount,
+    this.grams,
+    this.rate,
   });
 }
 
@@ -47,6 +53,8 @@ List<ScheduleRow> buildPaymentHistory(ProductPurchase p) {
             dayNo: r.dayNo,
             paidAt: r.paidAt!,
             amount: r.amount,
+            grams: r.grams,
+            rate: r.rate,
           ))
       .toList()
     ..sort((a, b) => b.paidAt.compareTo(a.paidAt));

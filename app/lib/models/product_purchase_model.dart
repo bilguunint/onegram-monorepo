@@ -3,7 +3,8 @@ import 'package:equatable/equatable.dart';
 
 enum ProductPurchaseStatus { active, completed, delivered, cancelled }
 
-enum PurchaseType { installment, direct }
+/// goldInstallment — грамм дээр суурилсан алтан эдлэлийн хуваан төлөлт.
+enum PurchaseType { installment, direct, goldInstallment }
 
 class PaymentRecord extends Equatable {
   /// 1-based day index within the installment plan. For [PurchaseType.direct]
@@ -14,12 +15,18 @@ class PaymentRecord extends Equatable {
   final String? paymentMethod;
   final String? transactionId;
 
+  /// goldInstallment: энэ төлбөрөөр авсан грамм ба тухайн үеийн 1 гр ханш.
+  final double? grams;
+  final int? rate;
+
   const PaymentRecord({
     required this.dayNo,
     required this.amount,
     required this.paidAt,
     required this.paymentMethod,
     required this.transactionId,
+    this.grams,
+    this.rate,
   });
 
   factory PaymentRecord.fromMap(Map<String, dynamic> map) {
@@ -29,12 +36,14 @@ class PaymentRecord extends Equatable {
       paidAt: ProductPurchase._toDate(map['paid_at']),
       paymentMethod: map['payment_method'] as String?,
       transactionId: map['transaction_id'] as String?,
+      grams: (map['grams'] as num?)?.toDouble(),
+      rate: map['rate'] == null ? null : ProductPurchase._toInt(map['rate']),
     );
   }
 
   @override
   List<Object?> get props =>
-      [dayNo, amount, paidAt, paymentMethod, transactionId];
+      [dayNo, amount, paidAt, paymentMethod, transactionId, grams, rate];
 }
 
 class ProductSnapshot extends Equatable {
@@ -147,7 +156,23 @@ class ProductPurchase extends Equatable {
   /// "pending" while a user-initiated cancel request awaits admin review.
   final String? cancelRequestStatus;
 
+  /// goldInstallment: эдлэлийн нийт грамм, цугласан грамм, өдөрт төлөхөөр
+  /// сонгосон грамм, системийн санал болгосон хоног.
+  final double totalGrams;
+  final double paidGrams;
+  final double dailyGrams;
+  final int estimatedDays;
+
   bool get hasPendingCancelRequest => cancelRequestStatus == 'pending';
+
+  bool get isGold => purchaseType == PurchaseType.goldInstallment;
+
+  /// Ердийн ба алтан эдлэлийн хуваан төлөлт хоёулаа "хуваан төлөлт".
+  bool get isAnyInstallment =>
+      purchaseType == PurchaseType.installment || isGold;
+
+  double get remainingGrams =>
+      ((totalGrams - paidGrams) * 100).round().clamp(0, 1 << 30) / 100;
 
   const ProductPurchase({
     required this.id,
@@ -174,6 +199,10 @@ class ProductPurchase extends Equatable {
     required this.payments,
     required this.pickupCode,
     this.cancelRequestStatus,
+    this.totalGrams = 0,
+    this.paidGrams = 0,
+    this.dailyGrams = 0,
+    this.estimatedDays = 0,
   });
 
   factory ProductPurchase.fromMap(String id, Map<String, dynamic> map) {
@@ -207,6 +236,10 @@ class ProductPurchase extends Equatable {
       payments: _parsePayments(map['payments']),
       pickupCode: map['pickup_code'] as String?,
       cancelRequestStatus: map['cancel_request_status'] as String?,
+      totalGrams: (map['total_grams'] as num?)?.toDouble() ?? 0,
+      paidGrams: (map['paid_grams'] as num?)?.toDouble() ?? 0,
+      dailyGrams: (map['daily_grams'] as num?)?.toDouble() ?? 0,
+      estimatedDays: _toInt(map['estimated_days']),
     );
   }
 
@@ -219,7 +252,9 @@ class ProductPurchase extends Equatable {
   }
 
   static PurchaseType _parsePurchaseType(dynamic v) {
-    return v == 'direct' ? PurchaseType.direct : PurchaseType.installment;
+    if (v == 'direct') return PurchaseType.direct;
+    if (v == 'gold_installment') return PurchaseType.goldInstallment;
+    return PurchaseType.installment;
   }
 
   static ProductPurchaseStatus _parseStatus(dynamic v) {
@@ -252,8 +287,16 @@ class ProductPurchase extends Equatable {
 
   int get remainingAmount => (totalPrice - paidAmount).clamp(0, totalPrice);
 
-  double get progress =>
-      totalPrice <= 0 ? 0 : (paidAmount / totalPrice).clamp(0, 1).toDouble();
+  double get progress {
+    if (isGold) {
+      return totalGrams <= 0
+          ? 0
+          : (paidGrams / totalGrams).clamp(0, 1).toDouble();
+    }
+    return totalPrice <= 0
+        ? 0
+        : (paidAmount / totalPrice).clamp(0, 1).toDouble();
+  }
 
   /// Days remaining until [deadline], or null when not applicable.
   /// Negative values mean overdue.
@@ -268,15 +311,48 @@ class ProductPurchase extends Equatable {
   /// Remaining unpaid daily installments (totalDays - paidDays).
   int get remainingDays => (totalDays - paidDays).clamp(0, totalDays);
 
-  /// Days without a payment before the app warns the user.
-  static const int installmentWarnGapDays = 5;
+  /// Хэрэглэгч нэгэн зэрэг хамгийн ихдээ хэдэн хуваан төлөлт явуулж болох вэ.
+  /// Backend-ийн `MAX_ACTIVE_INSTALLMENTS` (createInstallmentInit.js)-тэй нэг
+  /// утгатай байх ёстой — апп нь зөвхөн UI-г урьдчилан хаадаг, жинхэнэ
+  /// хамгаалалт нь server талд байна.
+  static const int maxActiveInstallments = 3;
 
-  /// Days without a payment before the plan may be cancelled.
-  static const int installmentCancelGapDays = 10;
+  /// Өнөөдрийг хүртэл төлсөн байх ЁСТОЙ өдрийн тоо (1-ээс эхэлж [totalDays]-
+  /// ээр хязгаарлагдана). [startedAt] мэдэгдэхгүй бол null.
+  int? get expectedPaidDays {
+    final start = startedAt;
+    if (start == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final from = DateTime(start.year, start.month, start.day);
+    final elapsed = today.difference(from).inDays;
+    final expected = (elapsed < 0 ? 0 : elapsed) + 1;
+    return expected > totalDays ? totalDays : expected;
+  }
+
+  /// Хуваариасаа хэдэн өдөр хоцорсон. 0 = хоцроогүй эсвэл түрүүлж яваа.
+  /// [startedAt] мэдэгдэхгүй бол null.
+  int? get daysBehind {
+    final expected = expectedPaidDays;
+    if (expected == null) return null;
+    final behind = expected - paidDays;
+    return behind < 0 ? 0 : behind;
+  }
+
+  /// Хуваариасаа хэдэн өдөр түрүүлж яваа. 0 = түрүүлээгүй.
+  int? get daysAhead {
+    final expected = expectedPaidDays;
+    if (expected == null) return null;
+    final ahead = paidDays - expected;
+    return ahead < 0 ? 0 : ahead;
+  }
 
   /// Calendar days since the most recent payment (falling back to
   /// [startedAt] when no payment carries a timestamp). Null when there is no
   /// reference date. Mirrors the admin-side `purchaseDaysSinceLastPayment`.
+  ///
+  /// Зөвхөн МЭДЭЭЛЛИЙН зорилгоор — хоцорсон эсэхийг шийдэхэд ашиглаж
+  /// БОЛОХГҮЙ (урьдчилж төлсөн хэрэглэгчийг буруу тэмдэглэнэ).
   int? get daysSinceLastPayment {
     DateTime? last;
     for (final p in payments) {
@@ -290,14 +366,6 @@ class ProductPurchase extends Equatable {
     final ref = DateTime(last.year, last.month, last.day);
     final diff = today.difference(ref).inDays;
     return diff < 0 ? 0 : diff;
-  }
-
-  /// True when this is an active installment that has not been paid for
-  /// [installmentWarnGapDays]+ days — surfaces the in-app warning banner.
-  bool get isPaymentLapsing {
-    if (status != ProductPurchaseStatus.active) return false;
-    final gap = daysSinceLastPayment;
-    return gap != null && gap >= installmentWarnGapDays;
   }
 
   @override

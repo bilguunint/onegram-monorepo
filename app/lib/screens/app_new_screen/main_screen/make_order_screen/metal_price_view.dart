@@ -121,7 +121,7 @@ class DetailView extends StatelessWidget {
             children: [
               AppIconTile(
                 size: 40.0,
-                child: Icon(Ionicons.diamond_outline,
+                child: Icon(Ionicons.diamondOutline,
                     size: 18.0, color: CustomColors.accent),
               ),
               const SizedBox(width: 12.0),

@@ -26,10 +26,8 @@ class VersionService {
       final platform = Platform.isIOS ? 'ios' : 'android';
 
       // Get version from Firestore
-      final versionDoc = await _firestore
-          .collection('versions')
-          .doc(platform)
-          .get();
+      final versionDoc =
+          await _firestore.collection('versions').doc(platform).get();
 
       if (!versionDoc.exists) {
         print('Version document not found for platform: $platform');
@@ -46,7 +44,8 @@ class VersionService {
 
       // Update is needed only when the installed version is strictly older
       // than the required version published in Firestore.
-      print('Installed version: $currentVersion, Required version: $firestoreVersion');
+      print(
+          'Installed version: $currentVersion, Required version: $firestoreVersion');
       return currentVersion < firestoreVersion;
     } catch (e) {
       print('Error checking version: $e');
@@ -60,12 +59,14 @@ class VersionService {
       String storeUrl;
       if (Platform.isIOS) {
         // Replace with your actual App Store ID
-        storeUrl = 'https://apps.apple.com/app/ikh-khaadiin-chuluu/id6572300454';
+        storeUrl =
+            'https://apps.apple.com/app/ikh-khaadiin-chuluu/id6572300454';
       } else {
         // Replace with your actual package name
-        storeUrl = 'https://play.google.com/store/apps/details?id=mn.u999.onegrgold';
+        storeUrl =
+            'https://play.google.com/store/apps/details?id=mn.u999.onegrgold';
       }
-      
+
       final Uri url = Uri.parse(storeUrl);
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);

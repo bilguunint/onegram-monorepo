@@ -3,12 +3,21 @@ import 'package:equatable/equatable.dart';
 
 enum ProductStatus { active, inactive }
 
+/// standard — үнэтэй, хоногоор хуваадаг ердийн бараа.
+/// goldJewelry — үнэгүй, ГРАММ дээр суурилсан алтан эдлэл: хэрэглэгч тухайн
+/// өдрийн ханшаар 0.1 гр-ын үржвэрээр цуглуулна (сервер: goldInstallmentShared).
+enum ProductKind { standard, goldJewelry }
+
 class Product extends Equatable {
   final String id;
   final String name;
   final String description;
   final List<String> images;
-  final int price; // MNT
+  final ProductKind kind;
+  final int price; // MNT (goldJewelry бол 0)
+
+  /// goldJewelry: эдлэлийн нийт грамм.
+  final double totalGrams;
   final int minMonths;
   final int maxMonths;
   final int cancelFeePercent;
@@ -21,7 +30,9 @@ class Product extends Equatable {
     required this.name,
     required this.description,
     required this.images,
+    this.kind = ProductKind.standard,
     required this.price,
+    this.totalGrams = 0,
     required this.minMonths,
     required this.maxMonths,
     required this.cancelFeePercent,
@@ -32,6 +43,8 @@ class Product extends Equatable {
 
   String? get coverImage => images.isNotEmpty ? images.first : null;
 
+  bool get isGoldJewelry => kind == ProductKind.goldJewelry;
+
   bool get isAvailable =>
       status == ProductStatus.active && (stock == null || stock! > 0);
 
@@ -41,7 +54,11 @@ class Product extends Equatable {
       name: (map['name'] ?? '') as String,
       description: (map['description'] ?? '') as String,
       images: List<String>.from(map['images'] ?? const <String>[]),
+      kind: map['product_kind'] == 'gold_jewelry'
+          ? ProductKind.goldJewelry
+          : ProductKind.standard,
       price: _toInt(map['price']),
+      totalGrams: (map['total_grams'] as num?)?.toDouble() ?? 0,
       minMonths: _toInt(map['min_months'], fallback: 1),
       maxMonths: _toInt(map['max_months'], fallback: 12),
       cancelFeePercent: _toInt(map['cancel_fee_percent']),
@@ -68,7 +85,9 @@ class Product extends Equatable {
         name,
         description,
         images,
+        kind,
         price,
+        totalGrams,
         minMonths,
         maxMonths,
         cancelFeePercent,

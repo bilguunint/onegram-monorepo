@@ -210,7 +210,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                           height: 28.0, // 🆕 Fixed size
                                           alignment: Alignment
                                               .center, // 🆕 Perfect centering
-                                          child: Icon(
+                                          child: FaIcon(
                                             FontAwesomeIcons
                                                 .magnifyingGlassPlus,
                                             color: appTheme == ThemeMode.dark
@@ -244,7 +244,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                           height: 28.0, // 🆕 Fixed size
                                           alignment: Alignment
                                               .center, // 🆕 Perfect centering
-                                          child: Icon(
+                                          child: FaIcon(
                                             FontAwesomeIcons
                                                 .magnifyingGlassMinus,
                                             color: appTheme == ThemeMode.dark
@@ -283,7 +283,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(
+                                        FaIcon(
                                           FontAwesomeIcons.link,
                                           color: appTheme == ThemeMode.dark
                                               ? Colors.white
@@ -332,7 +332,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(
+                                        FaIcon(
                                           FontAwesomeIcons.share,
                                           color: appTheme == ThemeMode.dark
                                               ? Colors.white

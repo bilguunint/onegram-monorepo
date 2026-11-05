@@ -79,10 +79,10 @@ class HomeScreenTest extends StatelessWidget {
                 height: 22.0,
                 child: Stack(
                   children: [
-                    _miniCoin(0, const Color(0xFF2BB673), Ionicons.logo_usd),
+                    _miniCoin(0, const Color(0xFF2BB673), Ionicons.logoUsd),
                     _miniCoin(11, const Color(0xFF4A90D9), Icons.diamond),
                     _miniCoin(
-                        22, const Color(0xFFF7931A), Ionicons.logo_bitcoin),
+                        22, const Color(0xFFF7931A), Ionicons.logoBitcoin),
                   ],
                 ),
               ),
@@ -97,7 +97,7 @@ class HomeScreenTest extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4.0),
-              const Icon(Ionicons.chevron_down,
+              const Icon(Ionicons.chevronDown,
                   size: 14.0, color: Colors.white70),
             ],
           ),
@@ -176,7 +176,7 @@ class HomeScreenTest extends StatelessWidget {
               ),
             ),
             SizedBox(width: 6.0),
-            Icon(Ionicons.copy_outline, size: 13.0, color: _textMuted),
+            Icon(Ionicons.copyOutline, size: 13.0, color: _textMuted),
           ],
         ),
       ],
@@ -240,7 +240,7 @@ class HomeScreenTest extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: const [
-                            Icon(Ionicons.trending_up,
+                            Icon(Ionicons.trendingUp,
                                 size: 11.0, color: Colors.black),
                             SizedBox(width: 3.0),
                             Text(
@@ -354,9 +354,9 @@ class HomeScreenTest extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _actionTile(Ionicons.add, "Add", filled: true),
-        _actionTile(Ionicons.arrow_up_circle_outline, "Send"),
-        _actionTile(Ionicons.arrow_down_circle_outline, "Receive"),
-        _actionTile(Ionicons.swap_horizontal, "Swap"),
+        _actionTile(Ionicons.arrowUpCircleOutline, "Send"),
+        _actionTile(Ionicons.arrowDownCircleOutline, "Receive"),
+        _actionTile(Ionicons.swapHorizontal, "Swap"),
       ],
     );
   }
@@ -436,7 +436,7 @@ class HomeScreenTest extends StatelessWidget {
           "\$78,548",
           4.79,
           const Color(0xFFF7931A),
-          Ionicons.logo_bitcoin,
+          Ionicons.logoBitcoin,
           const [2, 3, 5, 4, 6, 5, 7, 6, 8, 9]),
       _CoinData(
           "Solana",
@@ -444,7 +444,7 @@ class HomeScreenTest extends StatelessWidget {
           "\$104.48",
           1.29,
           const Color(0xFF2BB673),
-          Ionicons.logo_usd,
+          Ionicons.logoUsd,
           const [4, 5, 3, 6, 4, 7, 5, 6, 7, 8]),
       _CoinData(
           "Dogecoin",
@@ -452,7 +452,7 @@ class HomeScreenTest extends StatelessWidget {
           "\$0.10",
           -3.58,
           const Color(0xFFC9A93B),
-          Ionicons.logo_bitcoin,
+          Ionicons.logoBitcoin,
           const [6, 5, 7, 4, 5, 3, 4, 2, 3, 2]),
     ];
     return coins
@@ -534,8 +534,8 @@ class HomeScreenTest extends StatelessWidget {
                 children: [
                   Icon(
                     isDown
-                        ? Ionicons.arrow_down_outline
-                        : Ionicons.arrow_up_outline,
+                        ? Ionicons.arrowDownOutline
+                        : Ionicons.arrowUpOutline,
                     size: 10.0,
                     color: isDown ? _red : _green,
                   ),
@@ -569,7 +569,7 @@ class HomeScreenTest extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _navItem(Ionicons.home, "Home", active: true),
-          _navItem(Ionicons.heart_outline, "Wishlist"),
+          _navItem(Ionicons.heartOutline, "Wishlist"),
           Container(
             width: 52.0,
             height: 52.0,
@@ -577,11 +577,11 @@ class HomeScreenTest extends StatelessWidget {
               shape: BoxShape.circle,
               color: _accent,
             ),
-            child: const Icon(Ionicons.sync_outline,
+            child: const Icon(Ionicons.syncOutline,
                 size: 24.0, color: Colors.black),
           ),
-          _navItem(Ionicons.briefcase_outline, "Portfolio"),
-          _navItem(Ionicons.settings_outline, "Settings"),
+          _navItem(Ionicons.briefcaseOutline, "Portfolio"),
+          _navItem(Ionicons.settingsOutline, "Settings"),
         ],
       ),
     );

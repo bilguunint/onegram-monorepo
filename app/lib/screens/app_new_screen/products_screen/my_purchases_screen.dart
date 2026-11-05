@@ -202,12 +202,17 @@ class _PurchaseRowCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              isInstallment
-                                  ? tr('purchase.days_progress', {
-                                      'paid': purchase.paidDays,
-                                      'total': purchase.totalDays,
+                              purchase.isGold
+                                  ? tr('gold.grams_paid_of', {
+                                      'paid': formatGrams(purchase.paidGrams),
+                                      'total': formatGrams(purchase.totalGrams),
                                     })
-                                  : tr('purchase.direct_short'),
+                                  : isInstallment
+                                      ? tr('purchase.days_progress', {
+                                          'paid': purchase.paidDays,
+                                          'total': purchase.totalDays,
+                                        })
+                                      : tr('purchase.direct_short'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppText.caption,

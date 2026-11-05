@@ -145,111 +145,121 @@ class _EnterPincodeScreenState extends State<EnterPincodeScreen> {
                 child: LanguageSwitcherButton(),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: 70.0,
-                    child:
-                        Image.asset('assets/images/logo_white_horizontal.png'),
-                  ),
-                  const SizedBox(height: 20.0),
-                  FutureBuilder<UserModel>(
-                    future: _userFuture,
-                    builder: (context, snapshot) {
-                      final user = snapshot.data ?? UserModel.empty;
-                      final text = _formatGreeting(user);
-                      if (text.isEmpty) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          text,
-                          style: AppText.title,
-                          textAlign: TextAlign.center,
+            // Богино дэлгэц (iPhone Duo-ийн гадна дэлгэц, дээд inset 0) дээр
+            // агуулга өндрөөсөө хэтрэхэд дээш наалдаж таардаг байсан тул
+            // гүйлгэх боломжтой болгож, дээд/доод талд хамгийн багадаа зай
+            // үлдээнэ. Урт дэлгэц дээр өмнөх шигээ голд нь төвлөрнө.
+            LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 16.0),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight - 48.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 70.0,
+                        child: Image.asset(
+                            'assets/images/logo_white_horizontal.png'),
+                      ),
+                      const SizedBox(height: 20.0),
+                      FutureBuilder<UserModel>(
+                        future: _userFuture,
+                        builder: (context, snapshot) {
+                          final user = snapshot.data ?? UserModel.empty;
+                          final text = _formatGreeting(user);
+                          if (text.isEmpty) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Text(
+                              text,
+                              style: AppText.title,
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        },
+                      ),
+                      Text(
+                        tr('auth.enter_your_pin'),
+                        style: AppText.caption,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24.0),
+                      IgnorePointer(
+                        ignoring: true, // prevent opening system keyboard
+                        child: PinCodeTextField(
+                          controller: _codeController,
+                          maxLength: 6,
+                          autofocus: false,
+                          isCupertino: true,
+                          hideCharacter: true,
+                          highlightColor: CustomColors.accent,
+                          defaultBorderColor: CustomColors.surfaceBorder,
+                          pinBoxColor: CustomColors.surfaceAlt,
+                          pinBoxRadius: 12.0,
+                          pinBoxBorderWidth: 1.0,
+                          hasTextBorderColor: CustomColors.accent,
+                          errorBorderColor: CustomColors.negative,
+                          pinBoxWidth: 44.0,
+                          pinBoxHeight: 44.0,
+                          pinTextStyle: AppText.title.copyWith(fontSize: 20.0),
+                          onDone: (text) {
+                            // handled by on-screen keyboard
+                          },
+                          wrapAlignment: WrapAlignment.spaceAround,
+                          pinBoxDecoration:
+                              ProvidedPinBoxDecoration.defaultPinBoxDecoration,
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 12.0),
+                      TextButton(
+                          onPressed: _showForgotPinDialog,
+                          child: Text(
+                            tr('auth.forgot_pin'),
+                            style: AppText.link,
+                          )),
+                      const SizedBox(height: 8.0),
+                      NumericKeyboard(
+                        onKeyboardTap: _onKeyboardTap,
+                        textStyle: AppText.title.copyWith(fontSize: 26.0),
+                        rightButtonFn: _onBackspace,
+                        rightButtonLongPressFn: _onClear,
+                        rightIcon: Icon(Icons.backspace_outlined,
+                            color: CustomColors.textSecondary),
+                        leftButtonFn: _verify,
+                        leftIcon: _loading
+                            ? const CupertinoActivityIndicator(
+                                color: Colors.white,
+                              )
+                            : Icon(Icons.lock_open_rounded,
+                                color: CustomColors.accent),
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ),
+                      const SizedBox(height: 16.0),
+                      const AppDivider(vertical: 0.0),
+                      const SizedBox(height: 12.0),
+                      TextButton(
+                          onPressed: () {
+                            // Logout and navigate to GenerateScreen
+                            context.read<AuthBloc>().add(LoggedOut());
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (_) => GenerateScreen(
+                                    authenticationRepository:
+                                        widget.authRepository),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                          child: Text(
+                            tr('auth.sign_in_other_user'),
+                            style: AppText.link
+                                .copyWith(color: CustomColors.textSecondary),
+                          )),
+                    ],
                   ),
-                  Text(
-                    tr('auth.enter_your_pin'),
-                    style: AppText.caption,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24.0),
-                  IgnorePointer(
-                    ignoring: true, // prevent opening system keyboard
-                    child: PinCodeTextField(
-                      controller: _codeController,
-                      maxLength: 6,
-                      autofocus: false,
-                      isCupertino: true,
-                      hideCharacter: true,
-                      highlightColor: CustomColors.accent,
-                      defaultBorderColor: CustomColors.surfaceBorder,
-                      pinBoxColor: CustomColors.surfaceAlt,
-                      pinBoxRadius: 12.0,
-                      pinBoxBorderWidth: 1.0,
-                      hasTextBorderColor: CustomColors.accent,
-                      errorBorderColor: CustomColors.negative,
-                      pinBoxWidth: 44.0,
-                      pinBoxHeight: 44.0,
-                      pinTextStyle: AppText.title.copyWith(fontSize: 20.0),
-                      onDone: (text) {
-                        // handled by on-screen keyboard
-                      },
-                      wrapAlignment: WrapAlignment.spaceAround,
-                      pinBoxDecoration:
-                          ProvidedPinBoxDecoration.defaultPinBoxDecoration,
-                    ),
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextButton(
-                      onPressed: _showForgotPinDialog,
-                      child: Text(
-                        tr('auth.forgot_pin'),
-                        style: AppText.link,
-                      )),
-                  const SizedBox(height: 8.0),
-                  NumericKeyboard(
-                    onKeyboardTap: _onKeyboardTap,
-                    textStyle: AppText.title.copyWith(fontSize: 26.0),
-                    rightButtonFn: _onBackspace,
-                    rightButtonLongPressFn: _onClear,
-                    rightIcon: Icon(Icons.backspace_outlined,
-                        color: CustomColors.textSecondary),
-                    leftButtonFn: _verify,
-                    leftIcon: _loading
-                        ? const CupertinoActivityIndicator(
-                            color: Colors.white,
-                          )
-                        : Icon(Icons.lock_open_rounded,
-                            color: CustomColors.accent),
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  ),
-                  const SizedBox(height: 16.0),
-                  const AppDivider(vertical: 0.0),
-                  const SizedBox(height: 12.0),
-                  TextButton(
-                      onPressed: () {
-                        // Logout and navigate to GenerateScreen
-                        context.read<AuthBloc>().add(LoggedOut());
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (_) => GenerateScreen(
-                                authenticationRepository:
-                                    widget.authRepository),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                      child: Text(
-                        tr('auth.sign_in_other_user'),
-                        style: AppText.link
-                            .copyWith(color: CustomColors.textSecondary),
-                      )),
-                ],
+                ),
               ),
             ),
           ],

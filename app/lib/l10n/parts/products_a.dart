@@ -194,41 +194,6 @@ const Map<String, Map<String, String>> kProductsATranslations = {
     'ru': 'Возвращено: {amount}'
   },
 
-  // Missed-payment warning
-  'product.lapse_critical_title': {
-    'mn': 'Төлбөрөө үргэлжлүүлээрэй',
-    'en': 'Keep your plan going',
-    'zh': '继续您的分期付款',
-    'ru': 'Продолжите оплату'
-  },
-
-  'product.lapse_warning_title': {
-    'mn': 'Төлбөрөө хийнэ үү',
-    'en': 'Time for your payment',
-    'zh': '该付款啦',
-    'ru': 'Пора внести платёж'
-  },
-
-  'product.lapse_critical_body': {
-    'mn': 'Та {gap} хоног төлбөр хийгээгүй байна. '
-        'Хуваан төлөлтөө үргэлжлүүлэхийн тулд өнөөдөр төлбөрөө хийнэ үү.',
-    'en': "It's been {gap} days since your last payment. "
-        'Make a payment today to keep your plan going.',
-    'zh': '距离您上次付款已有 {gap} 天。请今天付款以继续您的分期付款。',
-    'ru': 'С последнего платежа прошло дней: {gap}. '
-        'Внесите платёж сегодня, чтобы продолжить рассрочку.'
-  },
-
-  'product.lapse_warning_body': {
-    'mn': 'Та {gap} хоног төлбөр хийгээгүй байна. '
-        'Төлбөрөө хийж үргэлжлүүлээрэй.',
-    'en': "It's been {gap} days since your last payment. "
-        'Make a payment to keep going.',
-    'zh': '距离您上次付款已有 {gap} 天。请继续付款。',
-    'ru': 'С последнего платежа прошло дней: {gap}. '
-        'Внесите платёж, чтобы продолжить.'
-  },
-
   'product.cancel_pending_banner': {
     'mn': 'Цуцлах хүсэлт илгээгдсэн. Админ шалгаж баталгаажуулсны дараа '
         'хуваан төлөлт цуцлагдаж, буцаан олгох дүн таны данс руу '
@@ -400,20 +365,27 @@ const Map<String, Map<String, String>> kProductsATranslations = {
 
   // ── Product detail ───────────────────────────────────────────────────────
   'product.active_installment_exists': {
-    'mn': 'Танд аль хэдийн идэвхтэй хуваан төлөлт байна.',
-    'en': 'You already have an active instalment plan.',
-    'zh': '您已有正在进行的分期付款。',
-    'ru': 'У вас уже есть активная рассрочка.'
+    'mn': 'Та зэрэг {max} хуваан төлөлт явуулж байна.',
+    'en': 'You already have {max} instalment plans running.',
+    'zh': '您已同时进行 {max} 个分期付款。',
+    'ru': 'У вас уже {max} активных рассрочек.'
   },
   'product.active_installment_banner': {
-    'mn': 'Танд аль хэдийн идэвхтэй хуваан төлөлт байна. '
-        'Уг хуваан төлөлтөө дуусгасны дараа шинэ худалдан авалт '
-        'хийх боломжтой болно.',
-    'en': 'You already have an active instalment plan. You can make a new '
-        'purchase once it is completed.',
-    'zh': '您已有正在进行的分期付款。完成后方可进行新的购买。',
-    'ru': 'У вас уже есть активная рассрочка. Новую покупку можно оформить '
-        'после её завершения.'
+    'mn': 'Та зэрэг {max} хуваан төлөлт явуулж байна. Нэгийг нь '
+        'дуусгасны дараа шинэ хуваан төлөлт эхлүүлэх боломжтой. '
+        'Шууд худалдан авалт хийхэд хязгаар байхгүй.',
+    'en': 'You already have {max} instalment plans running. Finish one to '
+        'start another. Direct purchases are not limited.',
+    'zh': '您已同时进行 {max} 个分期付款。完成一个后方可开始新的分期。'
+        '直接购买不受限制。',
+    'ru': 'У вас уже {max} активных рассрочек. Завершите одну, чтобы начать '
+        'новую. Прямые покупки не ограничены.'
+  },
+  'product.active_plans_title': {
+    'mn': 'Идэвхтэй хуваан төлөлт',
+    'en': 'Active instalment plans',
+    'zh': '进行中的分期付款',
+    'ru': 'Активные рассрочки'
   },
   'product.installment_day_one_title': {
     'mn': 'Хуваан төлөлт — 1-р өдөр',

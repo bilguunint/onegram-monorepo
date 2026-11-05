@@ -6,6 +6,7 @@ import 'package:onegrgold/models/product_purchase_model.dart';
 import 'package:onegrgold/repositories/product_repository.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/installment_day_select_sheet.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/cancel_installment_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/gold_grams_select_sheet.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/installment_payment_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_view.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
@@ -88,6 +89,52 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
     }
   }
 
+  /// Алтан эдлэл: граммаа сонгоод өнөөдрийн ханшаар QR төлнө.
+  Future<void> _onPayGramsTap(ProductPurchase purchase) async {
+    if (_requestingInvoice) return;
+    final grams = await showModalBottomSheet<double>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => GoldGramsSelectSheet(
+        remainingGrams: purchase.remainingGrams,
+        dailyGrams: purchase.dailyGrams,
+      ),
+    );
+    if (grams == null || !mounted) return;
+
+    setState(() => _requestingInvoice = true);
+    try {
+      final result = await _repo.requestGoldInstallmentPayment(
+        purchaseId: purchase.id,
+        grams: grams,
+        paidGramsNow: purchase.paidGrams,
+      );
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => InstallmentPaymentScreen(
+            purchaseId: purchase.id,
+            dayFrom: 0,
+            dayTo: 0,
+            amount: result.amount,
+            invoice: result.invoice,
+            productName: purchase.productSnapshot.name,
+            targetPaidGrams: result.targetPaidGrams,
+            gramsLabel: formatGrams(result.grams),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('product.error_with', {'error': e}))),
+      );
+    } finally {
+      if (mounted) setState(() => _requestingInvoice = false);
+    }
+  }
+
   Future<void> _onCancelTap(ProductPurchase purchase) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -127,12 +174,16 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         if (data != null) {
           purchase = ProductPurchase.fromMap(widget.purchase.id, data);
         }
-        final isInstallment = purchase.purchaseType == PurchaseType.installment;
+        final isGold = purchase.isGold;
+        final isInstallment = purchase.isAnyInstallment;
         final history = buildPaymentHistory(purchase);
         final cancelPending = purchase.hasPendingCancelRequest;
+        final hasRemaining = isGold
+            ? purchase.remainingGrams > 0
+            : purchase.paidDays < purchase.totalDays;
         final showPayButton = isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
-            purchase.paidDays < purchase.totalDays &&
+            hasRemaining &&
             !cancelPending;
         final showCancelAction = isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
@@ -142,7 +193,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
 
         // Дараагийн төлөгдөөгүй өдрийг түүхийн дээр "хүлээгдэж буй" мөрөөр
         // харуулна — хоцорсон бол улаан анхааруулгатай.
-        final ScheduleRow? upcoming = showPayButton
+        final ScheduleRow? upcoming = showPayButton && !isGold
             ? ScheduleRow(
                 dayNo: nextDay,
                 paidAt: DateTime.now(),
@@ -163,12 +214,6 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                     _ProgressCard(purchase: purchase)
                   else
                     _AmountsCard(purchase: purchase),
-                  if (isInstallment &&
-                      purchase.status == ProductPurchaseStatus.active &&
-                      purchase.isPaymentLapsing) ...[
-                    const SizedBox(height: 12),
-                    _PaymentLapseWarning(purchase: purchase),
-                  ],
                   if (purchase.status == ProductPurchaseStatus.cancelled) ...[
                     const SizedBox(height: 12),
                     _CancelledCard(purchase: purchase),
@@ -189,11 +234,13 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                   if (isInstallment) ...[
                     const SizedBox(height: 4),
                     Text(
-                      tr('product.schedule_summary', {
-                        'days': purchase.totalDays,
-                        'amount': formatMNT(purchase.dailyPayment),
-                        'months': purchase.months,
-                      }),
+                      isGold
+                          ? tr('gold.history_hint')
+                          : tr('product.schedule_summary', {
+                              'days': purchase.totalDays,
+                              'amount': formatMNT(purchase.dailyPayment),
+                              'months': purchase.months,
+                            }),
                       style: AppText.caption,
                     ),
                   ],
@@ -201,7 +248,6 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                   _HistoryCard(
                     history: history,
                     upcoming: upcoming,
-                    overdue: purchase.isPaymentLapsing,
                   ),
                 ],
               ),
@@ -218,13 +264,17 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                         AppPrimaryButton(
                           label: _requestingInvoice
                               ? tr('product.creating_invoice')
-                              : tr('product.pay_from_day', {
-                                  'day': nextDay,
-                                  'remaining': remainingDays,
-                                }),
+                              : isGold
+                                  ? tr('gold.pay_next')
+                                  : tr('product.pay_from_day', {
+                                      'day': nextDay,
+                                      'remaining': remainingDays,
+                                    }),
                           icon: Icons.qr_code_rounded,
                           loading: _requestingInvoice,
-                          onPressed: () => _onPayDayTap(purchase),
+                          onPressed: () => isGold
+                              ? _onPayGramsTap(purchase)
+                              : _onPayDayTap(purchase),
                         ),
                       if (showPayButton && showCancelAction)
                         const SizedBox(height: 8),
@@ -268,12 +318,10 @@ class _HistoryCard extends StatelessWidget {
   final ScheduleRow? upcoming;
 
   /// Дараагийн өдрийн төлбөр хоцорсон эсэх — улаан icon.
-  final bool overdue;
 
   const _HistoryCard({
     required this.history,
     required this.upcoming,
-    required this.overdue,
   });
 
   @override
@@ -286,14 +334,13 @@ class _HistoryCard extends StatelessWidget {
 
     final List<Widget> rows = [];
     if (upcoming != null) {
-      final Color c =
-          overdue ? CustomColors.negative : CustomColors.textSecondary;
+      final Color c = CustomColors.textSecondary;
       rows.add(AppListRow(
         leading: AppIconTile(
           size: 40,
           color: c.withOpacity(0.15),
           child: Icon(
-            overdue ? Icons.priority_high_rounded : Icons.schedule_rounded,
+            Icons.schedule_rounded,
             size: 18,
             color: c,
           ),
@@ -309,10 +356,15 @@ class _HistoryCard extends StatelessWidget {
         leading: AppIconTile(
           size: 40,
           color: CustomColors.positive.withOpacity(0.15),
-          child: Icon(Icons.check_rounded,
-              size: 18, color: CustomColors.positive),
+          child:
+              Icon(Icons.check_rounded, size: 18, color: CustomColors.positive),
         ),
-        title: tr('product.day_payment', {'day': row.dayNo}),
+        title: row.grams != null
+            ? tr('gold.payment_row', {
+                'grams': formatGrams(row.grams!),
+                'rate': formatMNT(row.rate ?? 0),
+              })
+            : tr('product.day_payment', {'day': row.dayNo}),
         subtitle: _fmtDate(row.paidAt),
         trailing: Text(formatMNT(row.amount), style: AppText.bodyBold),
       ));
@@ -378,12 +430,17 @@ class _HeaderCard extends StatelessWidget {
                 _StatusBadge(status: purchase.status),
                 const SizedBox(height: 6),
                 Text(
-                  purchase.purchaseType == PurchaseType.installment
-                      ? tr('product.installment_summary', {
-                          'months': purchase.months,
-                          'days': purchase.totalDays,
+                  purchase.isGold
+                      ? tr('gold.summary', {
+                          'total': formatGrams(purchase.totalGrams),
+                          'daily': formatGrams(purchase.dailyGrams),
                         })
-                      : tr('product.direct_purchase'),
+                      : purchase.purchaseType == PurchaseType.installment
+                          ? tr('product.installment_summary', {
+                              'months': purchase.months,
+                              'days': purchase.totalDays,
+                            })
+                          : tr('product.direct_purchase'),
                   style: AppText.caption,
                 ),
               ],
@@ -464,7 +521,63 @@ class _ProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daysLeft = purchase.daysUntilDeadline;
-    final bool overdue = daysLeft != null && daysLeft < 0;
+    if (purchase.isGold) {
+      // Алтан эдлэл: явц граммаар. Deadline нь зөвхөн санал тул харуулахгүй.
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                tr('gold.grams_paid_of', {
+                  'paid': formatGrams(purchase.paidGrams),
+                  'total': formatGrams(purchase.totalGrams),
+                }),
+                style: AppText.caption),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Flexible(
+                  child: Text(
+                    formatGrams(purchase.paidGrams),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.display.copyWith(fontSize: 28),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text('/ ${formatGrams(purchase.totalGrams)}',
+                    style: AppText.caption.copyWith(fontSize: 13)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: purchase.progress,
+                minHeight: 6,
+                backgroundColor: Colors.white.withOpacity(0.08),
+                valueColor: AlwaysStoppedAnimation(CustomColors.accent),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const AppDivider(),
+            AppInfoRow(
+              icon: Icons.account_balance_wallet_outlined,
+              label: tr('gold.paid_total_amount'),
+              value: formatMNT(purchase.paidAmount),
+              valueColor: CustomColors.accent,
+            ),
+            AppInfoRow(
+              icon: Icons.scale_outlined,
+              label: tr('gold.remaining_label'),
+              value: formatGrams(purchase.remainingGrams),
+            ),
+          ],
+        ),
+      );
+    }
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,12 +635,11 @@ class _ProgressCard extends StatelessWidget {
               icon: Icons.event_outlined,
               label: tr('product.deadline_with',
                   {'date': _fmtDate(purchase.deadline!)}),
-              value: daysLeft == null
+              // Хугацаа хэтэрсэн ч "хоцорсон" гэж улаанаар бичихгүй — зөвхөн
+              // огноог харуулна. Хуваан төлөлт дарамтгүй байх бодлого (2026-11).
+              value: daysLeft == null || daysLeft < 0
                   ? _fmtDate(purchase.deadline!)
-                  : overdue
-                      ? tr('product.days_overdue', {'days': -daysLeft})
-                      : tr('product.days_left', {'days': daysLeft}),
-              valueColor: overdue ? CustomColors.negative : null,
+                  : tr('product.days_left', {'days': daysLeft}),
             ),
         ],
       ),
@@ -563,34 +675,6 @@ class _CancelledCard extends StatelessWidget {
       color: CustomColors.negative,
       title: tr('product.status_cancelled'),
       text: details.join('\n'),
-    );
-  }
-}
-
-/// Reminds an active installment buyer who has gone several days without a
-/// payment. Deliberately calm — an earlier version warned in red that the plan
-/// could be cancelled, and users read that as a verdict and cancelled the plan
-/// themselves instead of catching up.
-class _PaymentLapseWarning extends StatelessWidget {
-  final ProductPurchase purchase;
-  const _PaymentLapseWarning({required this.purchase});
-
-  @override
-  Widget build(BuildContext context) {
-    final gap = purchase.daysSinceLastPayment ?? 0;
-    final critical = gap >= ProductPurchase.installmentCancelGapDays;
-
-    final String body = critical
-        ? tr('product.lapse_critical_body', {'gap': gap})
-        : tr('product.lapse_warning_body', {'gap': gap});
-
-    // One calm gold treatment for both levels — no red, no alarm icon.
-    return AppBanner(
-      icon: Icons.payments_outlined,
-      title: critical
-          ? tr('product.lapse_critical_title')
-          : tr('product.lapse_warning_title'),
-      text: body,
     );
   }
 }

@@ -187,10 +187,13 @@ const Map<String, Map<String, String>> kCommonTranslations = {
     'ru': 'Нарисуйте подпись пальцем здесь'
   },
   'terms.sign_agree_note': {
-    'mn': 'Гарын үсэг зурснаар "{title}" (хувилбар {version})-ийг бүрэн уншиж танилцан, хүлээн зөвшөөрсөнд тооцно.',
-    'en': 'By signing you confirm that you have read and accept "{title}" (version {version}).',
+    'mn':
+        'Гарын үсэг зурснаар "{title}" (хувилбар {version})-ийг бүрэн уншиж танилцан, хүлээн зөвшөөрсөнд тооцно.',
+    'en':
+        'By signing you confirm that you have read and accept "{title}" (version {version}).',
     'zh': '签名即表示您已阅读并接受"{title}"（版本 {version}）。',
-    'ru': 'Подписывая, вы подтверждаете, что прочитали и принимаете «{title}» (версия {version}).'
+    'ru':
+        'Подписывая, вы подтверждаете, что прочитали и принимаете «{title}» (версия {version}).'
   },
   'terms.sign_clear': {
     'mn': 'Арилгах',
@@ -229,10 +232,13 @@ const Map<String, Map<String, String>> kCommonTranslations = {
     'ru': 'Подписано {date} (версия {version})'
   },
   'terms.status_updated': {
-    'mn': 'Нөхцөл {date}-нд шинэчлэгдсэн (хувилбар {version}). Үргэлжлүүлэхийн тулд дахин гарын үсэг зурна уу.',
-    'en': 'The terms were updated on {date} (version {version}). Please sign again to continue.',
+    'mn':
+        'Нөхцөл {date}-нд шинэчлэгдсэн (хувилбар {version}). Үргэлжлүүлэхийн тулд дахин гарын үсэг зурна уу.',
+    'en':
+        'The terms were updated on {date} (version {version}). Please sign again to continue.',
     'zh': '条款已于 {date} 更新（版本 {version}），请重新签名以继续。',
-    'ru': 'Условия обновлены {date} (версия {version}). Подпишите снова, чтобы продолжить.'
+    'ru':
+        'Условия обновлены {date} (версия {version}). Подпишите снова, чтобы продолжить.'
   },
   'terms.status_sign_required': {
     'mn': 'Зөвшөөрөхөд гарын үсэг зурна.',

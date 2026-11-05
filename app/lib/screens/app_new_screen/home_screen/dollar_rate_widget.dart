@@ -40,7 +40,7 @@ class DollarRateWidget extends StatelessWidget {
             children: [
               AppIconTile(
                   child: Icon(
-                Ionicons.logo_usd,
+                Ionicons.logoUsd,
                 size: 18.0,
                 color: CustomColors.accent,
               )),

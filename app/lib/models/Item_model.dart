@@ -6,5 +6,6 @@ class ItemModel {
   final bool isAdditional;
   final String prodType;
 
-  ItemModel(this.id, this.title, this.asset, this.description, this.isAdditional, this.prodType);
+  ItemModel(this.id, this.title, this.asset, this.description,
+      this.isAdditional, this.prodType);
 }

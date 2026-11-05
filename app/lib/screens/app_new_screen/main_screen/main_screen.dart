@@ -148,12 +148,19 @@ class _MainScreenState extends State<MainScreen> {
         builder: (BuildContext context, AsyncSnapshot<NavBarItem> snapshot) {
           final int current = snapshot.data!.index;
           // BottomAppBar доод safe area-г бүхлээр нь нэмдэг тул өөрсдөө
-          // удирдаж, хоосон зайг багасгана.
+          // удирдаж, хоосон зайг багасгана. Доод хязгаар 10: Android-ийн
+          // 3 товчтой навигаци (inset 0) дээр бар хэт намхан харагдахгүй.
           final double bottomPad =
-              (MediaQuery.of(context).padding.bottom - 14.0).clamp(0.0, 40.0);
+              (MediaQuery.of(context).padding.bottom - 14.0).clamp(10.0, 40.0);
+          // Хажуугийн padding-ийг ч арилгана: голын захиалах товч (FAB) дэлгэцийн
+          // бүтэн өргөнд төвлөрдөг тул мөр мөн бүтэн өргөнтэй байж байж дүрсүүд
+          // FAB-ийн хоёр талд тэгш хэмтэй байрлана (Duo дээр баруун inset 84pt
+          // байхад "+" товч баруун дүрс рүү шахагдаж байв).
           return MediaQuery.removePadding(
             context: context,
             removeBottom: true,
+            removeLeft: true,
+            removeRight: true,
             child: BottomAppBar(
               color: CustomColors.bottomDarkBack,
               shape: const CircularNotchedRectangle(),
@@ -167,19 +174,21 @@ class _MainScreenState extends State<MainScreen> {
                         top: BorderSide(
                             width: 1.0, color: CustomColors.surfaceBorder))),
                 child: SizedBox(
-                  height: 46.0,
+                  height: 54.0,
                   child: Row(
                     children: [
                       Expanded(
-                          child: _navItem(0, current, "assets/icons/home-active.svg",
-                              tr('nav.home'))),
+                          child: _navItem(0, current,
+                              "assets/icons/home-active.svg", tr('nav.home'))),
                       Expanded(
-                          child: _navItem(1, current, "assets/icons/bar-active.svg",
-                              tr('nav.rates'))),
+                          child: _navItem(1, current,
+                              "assets/icons/bar-active.svg", tr('nav.rates'))),
                       // Голын "Захиалах" товчны зай
                       const SizedBox(width: 64.0),
                       Expanded(
-                          child: _navItem(2, current,
+                          child: _navItem(
+                              2,
+                              current,
                               "assets/icons/shopping-bag-active.svg",
                               tr('nav.products'))),
                       Expanded(

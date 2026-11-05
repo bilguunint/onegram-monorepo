@@ -37,9 +37,12 @@ class OrderModel extends Equatable {
         amount = _toNum(json["amount"]),
         price = _toNum(json["price"]),
         quantity = _toNum(json["quantity"]),
-        paymentStatus = json["payment_status"]?.toString() ?? json["status"]?.toString() ?? "",
+        paymentStatus = json["payment_status"]?.toString() ??
+            json["status"]?.toString() ??
+            "",
         adminStatus = json["admin_status"]?.toString() ?? "",
-        prodType = json["prod_type"]?.toString() ?? json["type"]?.toString() ?? "",
+        prodType =
+            json["prod_type"]?.toString() ?? json["type"]?.toString() ?? "",
         createdAt = json["created_at"]?.toString() ?? "",
         qpayDescription = json["qpay_description"]?.toString() ?? "",
         client = json['client'] is Map<String, dynamic>

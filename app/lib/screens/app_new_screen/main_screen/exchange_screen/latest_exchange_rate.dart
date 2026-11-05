@@ -107,7 +107,7 @@ class DetailView extends StatelessWidget {
                           color: changePercent.isNegative ? CustomColors.alerRed : CustomColors.successGreen,
                         ),
                         child: Icon(
-                          changePercent.isNegative ? Ionicons.caret_down : Ionicons.caret_up,
+                          changePercent.isNegative ? Ionicons.caretDown : Ionicons.caretUp,
                           color: Colors.white,
                           size: 18.0,
                         ),

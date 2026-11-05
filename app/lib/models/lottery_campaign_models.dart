@@ -34,8 +34,7 @@ class LotteryCampaignInfo {
     required this.popup,
   });
 
-  static LotteryCampaignInfo fromDoc(
-      String id, Map<String, dynamic> data) {
+  static LotteryCampaignInfo fromDoc(String id, Map<String, dynamic> data) {
     DateTime? asDate(dynamic v) => v is Timestamp ? v.toDate() : null;
     return LotteryCampaignInfo(
       id: id,
@@ -75,8 +74,8 @@ class LotteryCampaignInfo {
         .limit(1)
         .get();
     if (snap.docs.isEmpty) return null;
-    final c = LotteryCampaignInfo.fromDoc(
-        snap.docs.first.id, snap.docs.first.data());
+    final c =
+        LotteryCampaignInfo.fromDoc(snap.docs.first.id, snap.docs.first.data());
     final now = DateTime.now();
     // The hourly closer lags a little; don't show a campaign past its end.
     if (c.startDate != null && now.isBefore(c.startDate!)) return null;
@@ -108,6 +107,7 @@ class LotteryPopupInfo {
 /// One of the user's own tickets, from `users/{uid}/lottery_tickets`.
 class LotteryTicketInfo {
   final String code;
+
   /// Null while the ticket is still waiting for the next draw.
   final int? drawNumber;
   final String status; // active | drawn | won
@@ -131,15 +131,18 @@ class LotteryTicketInfo {
         .collection('lottery_tickets')
         .where('campaign_id', isEqualTo: campaignId)
         .get();
-    final list = snap.docs.map((d) {
-      final v = d.data();
-      return LotteryTicketInfo(
-        code: (v['ticket_code'] as String?) ?? '',
-        drawNumber: (v['draw_number'] as num?)?.toInt(),
-        status: (v['status'] as String?) ?? 'active',
-        prize: v['prize'] as String?,
-      );
-    }).where((t) => t.code.isNotEmpty).toList();
+    final list = snap.docs
+        .map((d) {
+          final v = d.data();
+          return LotteryTicketInfo(
+            code: (v['ticket_code'] as String?) ?? '',
+            drawNumber: (v['draw_number'] as num?)?.toInt(),
+            status: (v['status'] as String?) ?? 'active',
+            prize: v['prize'] as String?,
+          );
+        })
+        .where((t) => t.code.isNotEmpty)
+        .toList();
     // Wins first, then the live pool, then settled draws newest-first.
     int rank(LotteryTicketInfo t) => t.isWon ? 0 : (t.isPending ? 1 : 2);
     list.sort((a, b) {
@@ -181,8 +184,9 @@ class LotteryDrawInfo {
       return LotteryDrawInfo(
         drawNumber: (v['draw_number'] as num?)?.toInt() ?? 0,
         ticketCount: (v['ticket_count'] as num?)?.toInt() ?? 0,
-        startedAt:
-            v['started_at'] is Timestamp ? (v['started_at'] as Timestamp).toDate() : null,
+        startedAt: v['started_at'] is Timestamp
+            ? (v['started_at'] as Timestamp).toDate()
+            : null,
         winners: winners,
       );
     }).toList()
@@ -215,8 +219,11 @@ class LotteryWinnerInfo {
 
   /// "Батболд Сүхбат" → "Б. Сүхбат" — winners are public, full names are not.
   String get displayName {
-    final parts =
-        userName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = userName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.length < 2) return userName;
     return '${parts.first[0]}. ${parts.sublist(1).join(' ')}';
   }

@@ -39,30 +39,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
       backgroundColor: CustomColors.appBackground,
       body: SafeArea(
         bottom: false,
-        child: StreamBuilder<ProductPurchase?>(
-          stream: _repo.watchMyActiveInstallment(widget.uid),
+        child: StreamBuilder<List<ProductPurchase>>(
+          stream: _repo.watchMyActiveInstallments(widget.uid),
           builder: (context, activeSnapshot) {
             if (activeSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CupertinoActivityIndicator());
             }
 
-            final activePurchase = activeSnapshot.data;
-
-            // When the user already has an active installment we hide the
-            // catalog grid entirely and show the full purchase detail. This
-            // keeps the user focused on completing their current commitment
-            // before browsing for more.
-            if (activePurchase != null) {
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: _TitleRow(onMyPurchases: _openMyPurchases),
-                  ),
-                  Expanded(child: PurchaseDetailView(purchase: activePurchase)),
-                ],
-              );
-            }
+            // Хэрэглэгч нэгэн зэрэг ProductPurchase.maxActiveInstallments
+            // хүртэл хуваан төлөлт явуулж болно. Өмнө нь идэвхтэй төлөлттэй
+            // үед каталогийг бүхэлд нь нууж, тухайн нэг төлөлтийг л
+            // харуулдаг байсан — тэгвэл хоёр дахийг нь эхлүүлэх боломжгүй.
+            // Одоо каталог үргэлж харагдаж, идэвхтэй төлөлтүүд түүний дээр
+            // товч картаар гарна.
+            final active = activeSnapshot.data ?? const <ProductPurchase>[];
 
             return StreamBuilder<ProductPurchase?>(
               stream: _repo.watchMyPickupReadyPurchase(widget.uid),
@@ -82,6 +72,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         repo: _repo,
                         uid: widget.uid,
                         userRepository: widget.userRepository,
+                        activeInstallments: active,
                       ),
                     ),
                   ],
@@ -93,12 +84,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
     );
   }
-
-  void _openMyPurchases() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => MyPurchasesScreen(uid: widget.uid)),
-    );
-  }
 }
 
 class _ProductsGrid extends StatelessWidget {
@@ -106,10 +91,16 @@ class _ProductsGrid extends StatelessWidget {
   final String uid;
   final UserRepository userRepository;
 
+  /// Хэрэглэгчийн одоо явж буй хуваан төлөлтүүд. Каталогийн дээр товч
+  /// картаар харагдах ба тоо нь худалдан авах товчийг идэвхгүй болгоход
+  /// ашиглагдана.
+  final List<ProductPurchase> activeInstallments;
+
   const _ProductsGrid({
     required this.repo,
     required this.uid,
     required this.userRepository,
+    required this.activeInstallments,
   });
 
   @override
@@ -145,6 +136,7 @@ class _ProductsGrid extends StatelessWidget {
 
         num? minDaily;
         for (final p in products) {
+          if (p.isGoldJewelry) continue; // үнэгүй — өдрийн дүн тооцохгүй
           final d = dailyAmount(p.price, p.maxMonths.clamp(1, 12));
           if (minDaily == null || d < minDaily) minDaily = d;
         }
@@ -156,6 +148,7 @@ class _ProductsGrid extends StatelessWidget {
                 child: _CatalogHeader(
                   count: products.length,
                   minDaily: minDaily,
+                  activeInstallments: activeInstallments,
                   onMyPurchases: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => MyPurchasesScreen(uid: uid),
@@ -186,6 +179,7 @@ class _ProductsGrid extends StatelessWidget {
                               product: product,
                               uid: uid,
                               userRepository: userRepository,
+                              activeInstallmentCount: activeInstallments.length,
                             ),
                           ),
                         );
@@ -239,10 +233,12 @@ class _TitleRow extends StatelessWidget {
 class _CatalogHeader extends StatelessWidget {
   final int count;
   final num? minDaily;
+  final List<ProductPurchase> activeInstallments;
   final VoidCallback onMyPurchases;
   const _CatalogHeader(
       {required this.count,
       required this.minDaily,
+      required this.activeInstallments,
       required this.onMyPurchases});
 
   @override
@@ -253,6 +249,8 @@ class _CatalogHeader extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
         _TitleRow(onMyPurchases: onMyPurchases),
+        if (activeInstallments.isNotEmpty)
+          _ActiveInstallmentsStrip(purchases: activeInstallments),
         const SizedBox(height: 10),
         Row(
           children: [
@@ -319,6 +317,130 @@ class _ErrorState extends StatelessWidget {
 /// Compact banner shown above the catalog while a fully-paid purchase waits
 /// to be picked up. Tapping opens the full pickup screen (code + store info)
 /// — the catalog itself stays browsable so the user can start a new purchase.
+/// Каталогийн дээр гарах идэвхтэй хуваан төлөлтүүдийн товч зурвас.
+///
+/// Хэрэглэгч зэрэг [ProductPurchase.maxActiveInstallments] хүртэл төлөлт
+/// явуулж болох тул картууд хэвтээгээр гүйнэ. Карт дээр дарвал тухайн
+/// төлөлтийн дэлгэрэнгүй рүү орно.
+class _ActiveInstallmentsStrip extends StatelessWidget {
+  final List<ProductPurchase> purchases;
+  const _ActiveInstallmentsStrip({required this.purchases});
+
+  @override
+  Widget build(BuildContext context) {
+    const maxPlans = ProductPurchase.maxActiveInstallments;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: Text(tr('product.active_plans_title'),
+                  style: AppText.sectionTitle),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: CustomColors.accentSoft,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${purchases.length}/$maxPlans',
+                style: TextStyle(
+                  fontFamily: AppText.bold,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: CustomColors.accent,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 94,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.zero,
+            itemCount: purchases.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) =>
+                _ActivePlanCard(purchase: purchases[i]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Нэг идэвхтэй хуваан төлөлтийн товч карт: нэр, төлөгдсөн өдөр, явц.
+class _ActivePlanCard extends StatelessWidget {
+  final ProductPurchase purchase;
+  const _ActivePlanCard({required this.purchase});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 168,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PurchaseDetailScreen(purchase: purchase),
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: CustomColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: CustomColors.surfaceBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                purchase.productSnapshot.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.bodyBold.copyWith(fontSize: 12.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                purchase.isGold
+                    ? tr('gold.grams_paid_of', {
+                        'paid': formatGrams(purchase.paidGrams),
+                        'total': formatGrams(purchase.totalGrams),
+                      })
+                    : tr('product.days_paid_of', {
+                        'paid': purchase.paidDays,
+                        'total': purchase.totalDays,
+                      }),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption,
+              ),
+              const Spacer(),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: purchase.progress,
+                  minHeight: 5,
+                  backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  valueColor: AlwaysStoppedAnimation(CustomColors.accent),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PickupReadyBanner extends StatelessWidget {
   final ProductPurchase purchase;
   const _PickupReadyBanner({required this.purchase});

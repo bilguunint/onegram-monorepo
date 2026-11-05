@@ -168,8 +168,8 @@ class _CancelInstallmentScreenState extends State<CancelInstallmentScreen> {
               Text(tr('product.refund_amount'), style: AppText.bodyBold),
               Text(
                 formatMNT(_refund),
-                style: AppText.displayUnit.copyWith(
-                    color: CustomColors.positive, fontSize: 20),
+                style: AppText.displayUnit
+                    .copyWith(color: CustomColors.positive, fontSize: 20),
               ),
             ],
           ),

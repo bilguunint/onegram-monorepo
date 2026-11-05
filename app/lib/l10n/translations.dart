@@ -8,6 +8,7 @@ import 'parts/nav.dart';
 import 'parts/orders.dart';
 import 'parts/products_a.dart';
 import 'parts/products_b.dart';
+import 'parts/products_gold.dart';
 import 'parts/register_profile.dart';
 import 'parts/server.dart';
 import 'parts/shuteen.dart';
@@ -24,6 +25,7 @@ final Map<String, Map<String, String>> kTranslations = {
   ...kRegisterProfileTranslations,
   ...kProductsATranslations,
   ...kProductsBTranslations,
+  ...kProductsGoldTranslations,
   ...kCenterTranslations,
   ...kOrdersTranslations,
   ...kHomeMiscTranslations,

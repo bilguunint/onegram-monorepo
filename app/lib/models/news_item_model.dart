@@ -66,21 +66,21 @@ class NewsItem extends Equatable {
   // Helper method to parse DateTime from various formats (String, Timestamp, etc.)
   static DateTime? _parseDateTime(dynamic value) {
     if (value == null) return null;
-    
+
     // If it's already a DateTime
     if (value is DateTime) return value;
-    
+
     // If it's a Firestore Timestamp
     if (value.runtimeType.toString() == 'Timestamp') {
       return (value as dynamic).toDate();
     }
-    
+
     // If it's a String, try to parse it
     if (value is String) {
       if (value.isEmpty) return null;
       return DateTime.tryParse(value);
     }
-    
+
     // If it's a Map (sometimes Firestore returns timestamp as map)
     if (value is Map) {
       final seconds = value['_seconds'] ?? value['seconds'];
@@ -91,7 +91,7 @@ class NewsItem extends Equatable {
         );
       }
     }
-    
+
     // Fallback
     return DateTime.now();
   }

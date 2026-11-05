@@ -70,7 +70,7 @@ class SuccessWithdrawScreen extends StatelessWidget {
                       ),
                       AppStatusChip(
                         label: tr('common.pending'),
-                        icon: Ionicons.time_outline,
+                        icon: Ionicons.timeOutline,
                         color: CustomColors.accent,
                       ),
                     ],

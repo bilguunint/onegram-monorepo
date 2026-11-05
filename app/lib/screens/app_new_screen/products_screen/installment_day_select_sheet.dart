@@ -47,7 +47,8 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
   // left so the sum matches the backend exactly.
   int get _selectedAmount {
     if (_upToDay >= widget.totalDays) {
-      return (widget.totalPrice - widget.paidAmount).clamp(0, widget.totalPrice);
+      return (widget.totalPrice - widget.paidAmount)
+          .clamp(0, widget.totalPrice);
     }
     return widget.dailyPayment * _selectedCount;
   }
@@ -92,8 +93,8 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
                   onTap: () => _setUpToDay(widget.nextDay + 29),
                 ),
               _PresetChip(
-                label: tr('purchase.preset_all_remaining',
-                    {'count': _remainingDays}),
+                label: tr(
+                    'purchase.preset_all_remaining', {'count': _remainingDays}),
                 selected: _upToDay >= widget.totalDays,
                 onTap: () => _setUpToDay(widget.totalDays),
               ),
@@ -181,9 +182,8 @@ class _InstallmentDaySelectSheetState extends State<InstallmentDaySelectSheet> {
             child: AppInfoRow(
               label: tr('purchase.selected_days', {
                 'count': _selectedCount,
-                'range': _selectedCount > 1
-                    ? ' (${widget.nextDay}–$_upToDay)'
-                    : '',
+                'range':
+                    _selectedCount > 1 ? ' (${widget.nextDay}–$_upToDay)' : '',
               }),
               value: formatMNT(_selectedAmount),
               valueColor: CustomColors.accent,

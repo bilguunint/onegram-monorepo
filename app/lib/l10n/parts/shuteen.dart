@@ -8,6 +8,12 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'zh': '份额所有权',
     'ru': 'Долевое владение'
   },
+  'shuteen.min_units': {
+    'mn': 'Хамгийн багадаа {min} нэгж авна.',
+    'en': 'Minimum {min} units.',
+    'zh': '最少购买 {min} 份。',
+    'ru': 'Минимум {min} единиц.'
+  },
   'shuteen.card_unit_price': {
     'mn': 'Нэгжийн үнэ',
     'en': 'Unit price',
@@ -189,7 +195,8 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'ru': 'Финансовые условия'
   },
   'shuteen.finance_note': {
-    'mn': 'Нэгжийн үнэлгээ анхны үнийн {growth}%-тай тэнцэх хэмжээгээр жил бүр нэмэгдэнэ.',
+    'mn':
+        'Нэгжийн үнэлгээ анхны үнийн {growth}%-тай тэнцэх хэмжээгээр жил бүр нэмэгдэнэ.',
     'en': 'The unit value grows by {growth}% of the initial price every year.'
   },
   'shuteen.at_purchase': {
@@ -210,12 +217,7 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'zh': '购买示例',
     'ru': 'Примеры покупки'
   },
-  'shuteen.col_units': {
-    'mn': 'Нэгж',
-    'en': 'Units',
-    'zh': '份数',
-    'ru': 'Доли'
-  },
+  'shuteen.col_units': {'mn': 'Нэгж', 'en': 'Units', 'zh': '份数', 'ru': 'Доли'},
   'shuteen.col_pay': {
     'mn': 'Төлөх дүн',
     'en': 'You pay',
@@ -268,12 +270,16 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'en': '5% off all stone products at the Ikh Khaadiin Chuluu store'
   },
   'shuteen.tier2_benefit': {
-    'mn': 'Дэлхийн морин хуурын төв цогцолборт 2 жилийн хугацаанд тасалбаргүй үйлчлүүлэх эрх',
-    'en': 'Ticket-free access to the World Morin Khuur Center Complex for 2 years'
+    'mn':
+        'Дэлхийн морин хуурын төв цогцолборт 2 жилийн хугацаанд тасалбаргүй үйлчлүүлэх эрх',
+    'en':
+        'Ticket-free access to the World Morin Khuur Center Complex for 2 years'
   },
   'shuteen.tier3_benefit': {
-    'mn': 'Бүх төрлийн чулуун эдлэлээс 10% хөнгөлөлт ба цогцолборт 2 жилийн хугацаанд тасалбаргүй үйлчлүүлэх эрх',
-    'en': '10% off all stone products plus ticket-free access to the complex for 2 years'
+    'mn':
+        'Бүх төрлийн чулуун эдлэлээс 10% хөнгөлөлт ба цогцолборт 2 жилийн хугацаанд тасалбаргүй үйлчлүүлэх эрх',
+    'en':
+        '10% off all stone products plus ticket-free access to the complex for 2 years'
   },
 
   'shuteen.section_steps': {
@@ -377,8 +383,10 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'ru': 'Без уровня (от 100 долей)'
   },
   'shuteen.agree_terms': {
-    'mn': 'Хөтөлбөрийн нөхцөлтэй танилцаж, {months} сарын дараа {buyback}₮-өөр буцаан худалдан авах нөхцөлийг зөвшөөрч байна.',
-    'en': 'I have read the program terms and accept the buyback at {buyback}₮ per unit after {months} months.'
+    'mn':
+        'Хөтөлбөрийн нөхцөлтэй танилцаж, {months} сарын дараа {buyback}₮-өөр буцаан худалдан авах нөхцөлийг зөвшөөрч байна.',
+    'en':
+        'I have read the program terms and accept the buyback at {buyback}₮ per unit after {months} months.'
   },
   'shuteen.continue_pay': {
     'mn': 'Төлбөр төлөх',
@@ -399,8 +407,10 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'ru': 'Оплата долей'
   },
   'shuteen.payment_auto_note': {
-    'mn': 'Төлбөр төлөгдмөгц гэрчилгээ автоматаар үүснэ. Энэ дэлгэцээс гарах шаардлагагүй.',
-    'en': 'Your certificate is issued automatically once the payment lands. No need to leave this screen.'
+    'mn':
+        'Төлбөр төлөгдмөгц гэрчилгээ автоматаар үүснэ. Энэ дэлгэцээс гарах шаардлагагүй.',
+    'en':
+        'Your certificate is issued automatically once the payment lands. No need to leave this screen.'
   },
   'shuteen.paid_title': {
     'mn': 'Та эзэмшигч боллоо!',
@@ -409,8 +419,10 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'ru': 'Вы стали владельцем!'
   },
   'shuteen.paid_body': {
-    'mn': 'Цахим гэрчилгээ таны нэр дээр үүслээ. Гэрчилгээг Шүтээн хуурын дэлгэцээс хэдийд ч харах, QR кодоор шалгах боломжтой.',
-    'en': 'A digital certificate has been issued in your name. You can view it any time from the Shuteen Khuur screen and verify it by QR code.'
+    'mn':
+        'Цахим гэрчилгээ таны нэр дээр үүслээ. Гэрчилгээг Шүтээн хуурын дэлгэцээс хэдийд ч харах, QR кодоор шалгах боломжтой.',
+    'en':
+        'A digital certificate has been issued in your name. You can view it any time from the Shuteen Khuur screen and verify it by QR code.'
   },
   'shuteen.view_certificate': {
     'mn': 'Гэрчилгээ харах',
@@ -541,8 +553,10 @@ const Map<String, Map<String, String>> kShuteenTranslations = {
     'ru': 'Поделиться'
   },
   'shuteen.share_text': {
-    'mn': 'Би “Шүтээн хуур” хөтөлбөрийн {units} нэгжийн эзэмшигч боллоо. Гэрчилгээ: {no}. Их Хаадын Чулуу апп.',
-    'en': 'I now own {units} units of the “Shuteen Khuur” program. Certificate {no}. Ikh Khaadiin Chuluu app.'
+    'mn':
+        'Би “Шүтээн хуур” хөтөлбөрийн {units} нэгжийн эзэмшигч боллоо. Гэрчилгээ: {no}. Их Хаадын Чулуу апп.',
+    'en':
+        'I now own {units} units of the “Shuteen Khuur” program. Certificate {no}. Ikh Khaadiin Chuluu app.'
   },
   'shuteen.days_left': {
     'mn': '{n} хоног үлдсэн',
