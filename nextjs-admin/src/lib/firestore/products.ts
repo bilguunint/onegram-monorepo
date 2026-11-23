@@ -23,7 +23,14 @@ export type ProductStatus = "active" | "inactive";
  *                goldInstallmentShared.js). Ажлын хөлс/татвар нийтлэг тохиргоо
  *                (system_config/gold_jewelry).
  */
-export type ProductKind = "standard" | "gold_jewelry";
+/**
+ * silver_jewelry — МӨНГӨН эдлэл: ЛАН дээр суурилна. Хэрэглэгч админы
+ *                баталгаажуулсан 1 лангийн үнээр (system_config/silver_jewelry)
+ *                0.1 лангийн үржвэрээр хуваан төлнө. `price` талбар нь
+ *                нийт лан × 1 лангийн үнээр автоматаар шинэчлэгдэнэ (хуучин апп
+ *                болон бүтэн төлбөрийн харагдац).
+ */
+export type ProductKind = "standard" | "gold_jewelry" | "silver_jewelry";
 
 export type Product = {
   id: string;
@@ -34,6 +41,8 @@ export type Product = {
   price: number; // MNT (gold_jewelry бол 0)
   /** gold_jewelry: эдлэлийн нийт грамм */
   total_grams: number | null;
+  /** silver_jewelry: эдлэлийн нийт лан */
+  total_lan: number | null;
   min_months: number;
   max_months: number;
   cancel_fee_percent: number; // 0-100
@@ -52,6 +61,7 @@ export type ProductDraft = {
   product_kind: ProductKind;
   price: number;
   total_grams: number | null;
+  total_lan: number | null;
   min_months: number;
   max_months: number;
   cancel_fee_percent: number;
@@ -66,9 +76,12 @@ function mapProduct(id: string, raw: DocumentData): Product {
     description: raw.description ?? "",
     images: Array.isArray(raw.images) ? (raw.images as string[]) : [],
     product_kind:
-      raw.product_kind === "gold_jewelry" ? "gold_jewelry" : "standard",
+      raw.product_kind === "gold_jewelry" || raw.product_kind === "silver_jewelry"
+        ? raw.product_kind
+        : "standard",
     price: Number(raw.price ?? 0),
     total_grams: raw.total_grams == null ? null : Number(raw.total_grams),
+    total_lan: raw.total_lan == null ? null : Number(raw.total_lan),
     min_months: Number(raw.min_months ?? 1),
     max_months: Number(raw.max_months ?? 12),
     cancel_fee_percent: Number(raw.cancel_fee_percent ?? 0),
@@ -121,6 +134,7 @@ export async function createProduct(
     product_kind: draft.product_kind,
     price: draft.price,
     total_grams: draft.total_grams,
+    total_lan: draft.total_lan,
     min_months: draft.min_months,
     max_months: draft.max_months,
     cancel_fee_percent: draft.cancel_fee_percent,
@@ -145,6 +159,7 @@ export async function updateProduct(
     product_kind: draft.product_kind,
     price: draft.price,
     total_grams: draft.total_grams,
+    total_lan: draft.total_lan,
     min_months: draft.min_months,
     max_months: draft.max_months,
     cancel_fee_percent: draft.cancel_fee_percent,

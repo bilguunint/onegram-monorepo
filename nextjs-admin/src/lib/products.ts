@@ -53,8 +53,25 @@ export function formatPriceMNT2(n: number | null | undefined): string {
   return `${MNT2.format(n)}₮`;
 }
 
+/**
+ * Жин дээр суурилсан хуваан төлөлт эсэх: алтан эдлэл (гр) ЭСВЭЛ мөнгөн эдлэл
+ * (лан). Нэр нь түүхэн; хоёуланд нь үнэн.
+ */
 export function isGoldPurchase(p: ProductPurchase): boolean {
-  return p.purchase_type === "gold_installment";
+  return (
+    p.purchase_type === "gold_installment" ||
+    p.purchase_type === "silver_installment"
+  );
+}
+
+/** "гр" эсвэл "лан". */
+export function purchaseUnitLabel(p: ProductPurchase): string {
+  return p.unit === "lan" ? "лан" : "гр";
+}
+
+/** "алтан эдлэл" / "мөнгөн эдлэл". */
+export function purchaseKindLabel(p: ProductPurchase): string {
+  return p.purchase_type === "silver_installment" ? "мөнгөн эдлэл" : "алтан эдлэл";
 }
 
 export function formatGrams(n: number | null | undefined): string {
@@ -74,7 +91,7 @@ export function purchaseProgress(p: ProductPurchase): number {
 /** "67/360 өдөр" эсвэл эдлэлд "1.3/5.2 гр". */
 export function purchaseProgressLabel(p: ProductPurchase): string {
   return isGoldPurchase(p)
-    ? `${p.paid_grams}/${p.total_grams} гр`
+    ? `${p.paid_grams}/${p.total_grams} ${purchaseUnitLabel(p)}`
     : `${p.paid_days}/${p.total_days} өдөр`;
 }
 

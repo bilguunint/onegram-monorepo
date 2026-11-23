@@ -12,10 +12,14 @@ import 'package:onegrgold/style/colors.dart';
 class GoldGramsSelectSheet extends StatefulWidget {
   final double remainingGrams;
   final double dailyGrams;
+
+  /// Нэгж: 'gr' (алт) | 'lan' (мөнгө).
+  final String unit;
   const GoldGramsSelectSheet({
     super.key,
     required this.remainingGrams,
     required this.dailyGrams,
+    this.unit = 'gr',
   });
 
   @override
@@ -37,14 +41,17 @@ class _GoldGramsSelectSheetState extends State<GoldGramsSelectSheet> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      final q = await _repo.fetchGoldQuote();
+      final q = await _repo.fetchGoldQuote(
+        kind: widget.unit == 'lan' ? 'silver_jewelry' : 'gold_jewelry',
+      );
       if (!mounted) return;
       setState(() {
         _quote = q;
         _grams = GoldGramsPicker.clampGrams(
-            widget.dailyGrams > 0 ? widget.dailyGrams : q.minStepGrams,
-            widget.remainingGrams,
-            q.minStepGrams);
+          widget.dailyGrams > 0 ? widget.dailyGrams : q.minStepGrams,
+          widget.remainingGrams,
+          q.minStepGrams,
+        );
       });
     } catch (e) {
       if (mounted) setState(() => _error = e);
@@ -55,30 +62,33 @@ class _GoldGramsSelectSheetState extends State<GoldGramsSelectSheet> {
   Widget build(BuildContext context) {
     final q = _quote;
     return AppSheet(
-      title: tr('gold.pay_grams_title'),
+      title: wtr(widget.unit, 'gold.pay_grams_title'),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-              tr('gold.remaining_grams',
-                  {'grams': formatGrams(widget.remainingGrams)}),
-              style: AppText.caption),
+            wtr(widget.unit, 'gold.remaining_grams', {
+              'grams': formatGrams(widget.remainingGrams, widget.unit),
+            }),
+            style: AppText.caption,
+          ),
           const SizedBox(height: 14),
           if (q == null)
             Row(
               children: [
                 if (_error == null)
                   const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _error == null
-                        ? tr('gold.quote_loading')
-                        : tr('gold.quote_error'),
+                        ? wtr(widget.unit, 'gold.quote_loading')
+                        : wtr(widget.unit, 'gold.quote_error'),
                     style: AppText.caption,
                   ),
                 ),
@@ -92,6 +102,7 @@ class _GoldGramsSelectSheetState extends State<GoldGramsSelectSheet> {
               max: widget.remainingGrams,
               step: q.minStepGrams,
               showAll: true,
+              unit: widget.unit,
               onChanged: (g) => setState(() => _grams = g),
             ),
             const SizedBox(height: 14),
@@ -102,11 +113,11 @@ class _GoldGramsSelectSheetState extends State<GoldGramsSelectSheet> {
               child: Column(
                 children: [
                   AppInfoRow(
-                    label: tr('gold.today_rate'),
+                    label: wtr(widget.unit, 'gold.today_rate'),
                     value: formatMNT(q.rate),
                   ),
                   AppInfoRow(
-                    label: tr('gold.today_payment'),
+                    label: wtr(widget.unit, 'gold.today_payment'),
                     value: formatMNT(q.amountFor(_grams)),
                     valueColor: CustomColors.accent,
                   ),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ChevronLeft, Info, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +15,10 @@ import {
   formatPriceMNT,
 } from "@/lib/products";
 import type { Product, ProductDraft, ProductKind } from "@/lib/firestore/products";
+import {
+  fetchSilverJewelrySettings,
+  silverProductPrice,
+} from "@/lib/firestore/silverJewelrySettings";
 
 type Props = {
   /** Firestore doc id used as the Storage path namespace for images. */
@@ -48,6 +52,23 @@ export function ProductForm({
     initial?.product_kind ?? "standard"
   );
   const isGold = kind === "gold_jewelry";
+  const isSilver = kind === "silver_jewelry";
+  /** Жин дээр суурилсан (үнэ гараар оруулахгүй, сарын тохиргоогүй) */
+  const isWeight = isGold || isSilver;
+  const [totalLan, setTotalLan] = useState<string>(
+    initial?.total_lan != null ? String(initial.total_lan) : ""
+  );
+  /** Админы баталгаажуулсан 1 лангийн үнэ; null = ачааллаж байна, 0 = тохируулаагүй */
+  const [pricePerLan, setPricePerLan] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchSilverJewelrySettings()
+      .then((st) => alive && setPricePerLan(st.price_per_lan))
+      .catch(() => alive && setPricePerLan(0));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [price, setPrice] = useState<string>(
     initial?.price != null && initial.price > 0 ? String(initial.price) : ""
   );
@@ -74,10 +95,15 @@ export function ProductForm({
 
   const priceNum = Number(price);
   const totalGramsNum = Math.round(Number(totalGrams) * 100) / 100;
+  const totalLanNum = Math.round(Number(totalLan) * 100) / 100;
+  const silverPrice =
+    isSilver && pricePerLan && totalLanNum > 0
+      ? silverProductPrice(totalLanNum, pricePerLan)
+      : 0;
   const minMonthsNum = Math.max(1, Math.floor(Number(minMonths) || 0));
   const maxMonthsNum = Math.max(1, Math.floor(Number(maxMonths) || 0));
   const monthlyPreview =
-    !isGold && Number.isFinite(priceNum) && priceNum > 0 && maxMonthsNum > 0
+    !isWeight && Number.isFinite(priceNum) && priceNum > 0 && maxMonthsNum > 0
       ? Math.round(priceNum / maxMonthsNum)
       : 0;
 
@@ -92,6 +118,15 @@ export function ProductForm({
     if (isGold) {
       if (!Number.isFinite(totalGramsNum) || totalGramsNum < 0.1) {
         setError("Эдлэлийн нийт граммыг оруулна уу (≥ 0.1).");
+        return;
+      }
+    } else if (isSilver) {
+      if (!Number.isFinite(totalLanNum) || totalLanNum < 0.1) {
+        setError("Эдлэлийн нийт ланг оруулна уу (≥ 0.1).");
+        return;
+      }
+      if (!pricePerLan) {
+        setError("Эхлээд мөнгөн эдлэлийн 1 лангийн үнийг баталгаажуулна уу.");
         return;
       }
     } else {
@@ -138,8 +173,9 @@ export function ProductForm({
         description,
         images,
         product_kind: kind,
-        price: isGold ? 0 : Math.round(priceNum),
+        price: isGold ? 0 : isSilver ? silverPrice : Math.round(priceNum),
         total_grams: isGold ? totalGramsNum : null,
+        total_lan: isSilver ? totalLanNum : null,
         min_months: minMonthsNum,
         max_months: maxMonthsNum,
         cancel_fee_percent: Math.round(feeNum),
@@ -225,11 +261,30 @@ export function ProductForm({
                 id="kind"
                 value={kind}
                 onChange={(e) => setKind(e.target.value as ProductKind)}
-                disabled={submitting || !!initial}
+                disabled={submitting}
               >
                 <option value="standard">Ердийн бараа (үнэ, хоногоор хуваана)</option>
+                <option value="silver_jewelry">Мөнгөн эдлэл (лан, 1 лангийн үнээр)</option>
                 <option value="gold_jewelry">Алтан эдлэл (грамм, өдрийн ханшаар)</option>
               </Select>
+              {isSilver && (
+                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Үнэ оруулахгүй, зөвхөн нийт лан. Хэрэглэгч 0.1 лангийн үржвэрээр,{" "}
+                    <Link href="/products/silver-settings" className="underline">
+                      баталгаажуулсан 1 лангийн үнээр
+                    </Link>{" "}
+                    хуваан төлнө; бүтэн үнэ = нийт лан × 1 лангийн үнэ (үнэ өөрчлөгдөхөд
+                    автоматаар шинэчлэгдэнэ).{" "}
+                    {pricePerLan == null
+                      ? "Үнэ ачааллаж байна..."
+                      : pricePerLan > 0
+                        ? `Одоо 1 лан = ${formatPriceMNT(pricePerLan)}.`
+                        : "1 лангийн үнэ тохируулаагүй байна!"}
+                  </span>
+                </p>
+              )}
               {isGold && (
                 <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -242,9 +297,11 @@ export function ProductForm({
                   шинэчлэл гартал &quot;Идэвхгүй&quot; байлгана уу.
                 </p>
               )}
-              {!!initial && (
-                <p className="text-[11px] text-muted-foreground">
-                  Төрлийг үүсгэсний дараа өөрчлөх боломжгүй.
+              {!!initial && kind !== initial.product_kind && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  Төрөл солигдоно. Энэ бараан дээр аль хэдийн явж буй хуваан төлөлтүүд
+                  эхэлсэн нөхцөлөөрөө (төгрөг/хоногоор) үргэлжилнэ; зөвхөн шинээр эхлэх
+                  хүмүүст шинэ төрөл үйлчилнэ.
                 </p>
               )}
             </div>
@@ -263,6 +320,29 @@ export function ProductForm({
                     onChange={(e) => setTotalGrams(e.target.value)}
                     disabled={submitting}
                   />
+                </div>
+              ) : isSilver ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="total-lan">Нийт лан</Label>
+                  <Input
+                    id="total-lan"
+                    type="number"
+                    inputMode="decimal"
+                    min={0.1}
+                    step="any"
+                    placeholder="5"
+                    value={totalLan}
+                    onChange={(e) => setTotalLan(e.target.value)}
+                    disabled={submitting}
+                  />
+                  {silverPrice > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Бүтэн үнэ одоо:{" "}
+                      <strong className="text-foreground">
+                        {formatPriceMNT(silverPrice)}
+                      </strong>
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-1.5">
@@ -295,7 +375,7 @@ export function ProductForm({
                   disabled={submitting}
                 />
               </div>
-              {!isGold && (
+              {!isWeight && (
               <>
               <div className="space-y-1.5">
                 <Label htmlFor="min-months">Min сар</Label>
@@ -396,7 +476,8 @@ export function ProductForm({
               description={description}
               kind={kind}
               totalGrams={totalGramsNum}
-              price={priceNum}
+              totalLan={totalLanNum}
+              price={isSilver ? silverPrice : priceNum}
               images={images}
               minMonths={minMonthsNum}
               maxMonths={maxMonthsNum}
@@ -452,6 +533,7 @@ function ProductPreview({
   description,
   kind,
   totalGrams,
+  totalLan,
   price,
   images,
   minMonths,
@@ -463,6 +545,7 @@ function ProductPreview({
   description: string;
   kind: ProductKind;
   totalGrams: number;
+  totalLan: number;
   price: number;
   images: string[];
   minMonths: number;
@@ -509,7 +592,9 @@ function ProductPreview({
         <div className="mt-2 text-[16px] font-bold text-primary-600">
           {kind === "gold_jewelry"
             ? `${totalGrams || 0} гр · өдрийн ханшаар`
-            : formatPriceMNT(price)}
+            : kind === "silver_jewelry"
+              ? `${totalLan || 0} лан · ${formatPriceMNT(price)}`
+              : formatPriceMNT(price)}
         </div>
         {monthlyPreview > 0 && (
           <div className="text-[11px] text-muted-foreground">
@@ -522,6 +607,8 @@ function ProductPreview({
         <div className="text-[11px] text-muted-foreground">
           {kind === "gold_jewelry"
             ? "0.1 гр-ын үржвэрээр, өөрийн хурдаар цуглуулна"
+            : kind === "silver_jewelry"
+              ? "0.1 лангийн үржвэрээр, өөрийн хурдаар хуваан төлнө"
             : `${minMonths}-${maxMonths} сараар хувааж төлнө`}
         </div>
       </div>

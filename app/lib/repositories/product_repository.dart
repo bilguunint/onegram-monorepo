@@ -10,7 +10,7 @@ import 'package:onegrgold/models/product_purchase_model.dart';
 
 class ProductRepository {
   ProductRepository({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+    : _db = db ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
 
@@ -26,8 +26,10 @@ class ProductRepository {
         .where('status', isEqualTo: 'active')
         .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => Product.fromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => Product.fromMap(d.id, d.data())).toList(),
+        );
   }
 
   Future<Product?> fetchProduct(String id) async {
@@ -42,9 +44,11 @@ class ProductRepository {
         .where('user_id', isEqualTo: userId)
         .orderBy('started_at', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => ProductPurchase.fromMap(d.id, d.data()))
-            .toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => ProductPurchase.fromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   /// Stream the caller's currently active installment plan, if any.
@@ -57,17 +61,18 @@ class ProductRepository {
         .where('status', isEqualTo: 'active')
         .snapshots()
         .map((snap) {
-      final list = snap.docs
-          .map((d) => ProductPurchase.fromMap(d.id, d.data()))
-          .where((p) => p.isAnyInstallment)
-          .toList()
-        ..sort((a, b) {
-          final ta = a.startedAt?.millisecondsSinceEpoch ?? 0;
-          final tb = b.startedAt?.millisecondsSinceEpoch ?? 0;
-          return tb.compareTo(ta);
+          final list =
+              snap.docs
+                  .map((d) => ProductPurchase.fromMap(d.id, d.data()))
+                  .where((p) => p.isAnyInstallment)
+                  .toList()
+                ..sort((a, b) {
+                  final ta = a.startedAt?.millisecondsSinceEpoch ?? 0;
+                  final tb = b.startedAt?.millisecondsSinceEpoch ?? 0;
+                  return tb.compareTo(ta);
+                });
+          return list.isEmpty ? null : list.first;
         });
-      return list.isEmpty ? null : list.first;
-    });
   }
 
   /// Stream ALL of the caller's currently active installment plans, newest
@@ -82,15 +87,18 @@ class ProductRepository {
         .where('user_id', isEqualTo: userId)
         .where('status', isEqualTo: 'active')
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => ProductPurchase.fromMap(d.id, d.data()))
-            .where((p) => p.isAnyInstallment)
-            .toList()
-          ..sort((a, b) {
-            final ta = a.startedAt?.millisecondsSinceEpoch ?? 0;
-            final tb = b.startedAt?.millisecondsSinceEpoch ?? 0;
-            return tb.compareTo(ta);
-          }));
+        .map(
+          (snap) =>
+              snap.docs
+                  .map((d) => ProductPurchase.fromMap(d.id, d.data()))
+                  .where((p) => p.isAnyInstallment)
+                  .toList()
+                ..sort((a, b) {
+                  final ta = a.startedAt?.millisecondsSinceEpoch ?? 0;
+                  final tb = b.startedAt?.millisecondsSinceEpoch ?? 0;
+                  return tb.compareTo(ta);
+                }),
+        );
   }
 
   /// Stream the caller's most-recent fully-paid-but-not-yet-delivered
@@ -102,15 +110,17 @@ class ProductRepository {
         .where('status', isEqualTo: 'completed')
         .snapshots()
         .map((snap) {
-      final list =
-          snap.docs.map((d) => ProductPurchase.fromMap(d.id, d.data())).toList()
-            ..sort((a, b) {
-              final ta = a.completedAt?.millisecondsSinceEpoch ?? 0;
-              final tb = b.completedAt?.millisecondsSinceEpoch ?? 0;
-              return tb.compareTo(ta);
-            });
-      return list.isEmpty ? null : list.first;
-    });
+          final list =
+              snap.docs
+                  .map((d) => ProductPurchase.fromMap(d.id, d.data()))
+                  .toList()
+                ..sort((a, b) {
+                  final ta = a.completedAt?.millisecondsSinceEpoch ?? 0;
+                  final tb = b.completedAt?.millisecondsSinceEpoch ?? 0;
+                  return tb.compareTo(ta);
+                });
+          return list.isEmpty ? null : list.first;
+        });
   }
 
   static const String _createInstallmentPaymentUrl =
@@ -129,7 +139,7 @@ class ProductRepository {
   /// `pendingId` (the doc the app should subscribe to until the purchase is
   /// created).
   Future<({MakeOrder invoice, String pendingId, int amount, int months})>
-      requestInstallmentInit({
+  requestInstallmentInit({
     required String productId,
     required int months,
   }) async {
@@ -153,7 +163,8 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          tr('common.unexpected_response', {'code': res.statusCode}));
+        tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
 
     if (res.statusCode != 200) {
@@ -172,7 +183,8 @@ class ProductRepository {
     if (pendingId == null || pendingId.isEmpty) {
       throw StateError(tr('purchase.err_no_pending_id'));
     }
-    final amount = (body['amount'] as num?)?.toInt() ??
+    final amount =
+        (body['amount'] as num?)?.toInt() ??
         (body['daily_payment'] as num?)?.toInt() ??
         0;
     final monthsResp = (body['months'] as num?)?.toInt() ?? months;
@@ -192,10 +204,7 @@ class ProductRepository {
   /// The backend determines the starting day from `paid_days + 1`, so callers
   /// only pass [purchaseId] and how many days to bundle.
   Future<({MakeOrder invoice, int dayFrom, int dayTo, int amount})>
-      requestInstallmentPayment({
-    required String purchaseId,
-    int days = 1,
-  }) async {
+  requestInstallmentPayment({required String purchaseId, int days = 1}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw StateError(tr('common.not_signed_in'));
@@ -216,7 +225,8 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          tr('common.unexpected_response', {'code': res.statusCode}));
+        tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
 
     if (res.statusCode != 200) {
@@ -231,10 +241,12 @@ class ProductRepository {
     if (invoice is! Map<String, dynamic>) {
       throw StateError(tr('purchase.err_no_qpay_invoice'));
     }
-    final dayFrom = (body['day_from'] as num?)?.toInt() ??
+    final dayFrom =
+        (body['day_from'] as num?)?.toInt() ??
         (body['day_no'] as num?)?.toInt() ??
         0;
-    final dayTo = (body['day_to'] as num?)?.toInt() ??
+    final dayTo =
+        (body['day_to'] as num?)?.toInt() ??
         (body['day_no'] as num?)?.toInt() ??
         dayFrom;
     final amount = (body['amount'] as num?)?.toInt() ?? 0;
@@ -258,20 +270,28 @@ class ProductRepository {
   /// Өнөөдрийн ханш ба эдлэлийн 1 гр-ын эцсийн үнэ (ханш × (1+татвар) +
   /// ажлын хөлс) — тооцоолуурт. Серверийн томьёотой яг ижил байхын тулд
   /// аппд тооцоолохгүй, серверээс асууна.
-  Future<GoldQuote> fetchGoldQuote() async {
-    final res = await http.get(Uri.parse(_quoteGoldInstallmentUrl));
+  ///
+  /// [kind] 'silver_jewelry' бол мөнгөн эдлэл: rate = pricePerGram = админы
+  /// баталгаажуулсан 1 ЛАНГИЙН үнэ (татвар, ажлын хөлс тусдаа байхгүй).
+  Future<GoldQuote> fetchGoldQuote({String kind = 'gold_jewelry'}) async {
+    final res = await http.get(
+      Uri.parse('$_quoteGoldInstallmentUrl?kind=$kind'),
+    );
     Map<String, dynamic> body;
     try {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          tr('common.unexpected_response', {'code': res.statusCode}));
+        tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
     if (res.statusCode != 200) {
       final rawError = body['error'] as String?;
-      throw StateError(rawError != null
-          ? trServer(rawError)
-          : tr('common.unexpected_response', {'code': res.statusCode}));
+      throw StateError(
+        rawError != null
+            ? trServer(rawError)
+            : tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
     return GoldQuote(
       rate: (body['rate'] as num?)?.toDouble() ?? 0,
@@ -279,29 +299,29 @@ class ProductRepository {
       laborPerGram: (body['labor_per_gram'] as num?)?.toInt() ?? 0,
       taxPercent: (body['tax_percent'] as num?)?.toDouble() ?? 0,
       minStepGrams: (body['min_step_grams'] as num?)?.toDouble() ?? 0.1,
+      unit: body['unit'] == 'lan' ? 'lan' : 'gr',
     );
   }
 
   /// Алтан эдлэлийн хуваан төлөлт эхлүүлнэ: эхний төлбөр = [dailyGrams]
   /// (хэрэглэгчийн сонгосон өдрийн грамм) тухайн өдрийн ханшаар.
   Future<
-      ({
-        MakeOrder invoice,
-        String pendingId,
-        int amount,
-        double grams,
-        int estimatedDays
-      })> requestGoldInstallmentInit({
+    ({
+      MakeOrder invoice,
+      String pendingId,
+      int amount,
+      double grams,
+      int estimatedDays,
+    })
+  >
+  requestGoldInstallmentInit({
     required String productId,
     required double dailyGrams,
   }) async {
-    final body = await _postJson(
-        _createGoldInstallmentInitUrl,
-        {
-          'product_id': productId,
-          'daily_grams': dailyGrams,
-        },
-        errorKey: 'purchase.err_installment_init');
+    final body = await _postJson(_createGoldInstallmentInitUrl, {
+      'product_id': productId,
+      'daily_grams': dailyGrams,
+    }, errorKey: 'purchase.err_installment_init');
     final invoice = body['qpay_invoice'];
     if (invoice is! Map<String, dynamic>) {
       throw StateError(tr('purchase.err_no_qpay_invoice'));
@@ -322,23 +342,17 @@ class ProductRepository {
   /// Дараагийн төлбөр: [grams] граммыг өнөөдрийн ханшаар. Сервер үлдсэнээс
   /// хэтэрвэл үлдсэнийг, 0.1-ийн үржвэр биш бол алдаа буцаана.
   Future<
-      ({
-        MakeOrder invoice,
-        int amount,
-        double grams,
-        double targetPaidGrams
-      })> requestGoldInstallmentPayment({
+    ({MakeOrder invoice, int amount, double grams, double targetPaidGrams})
+  >
+  requestGoldInstallmentPayment({
     required String purchaseId,
     required double grams,
     required double paidGramsNow,
   }) async {
-    final body = await _postJson(
-        _createGoldInstallmentPaymentUrl,
-        {
-          'purchase_id': purchaseId,
-          'grams': grams,
-        },
-        errorKey: 'purchase.err_create_invoice');
+    final body = await _postJson(_createGoldInstallmentPaymentUrl, {
+      'purchase_id': purchaseId,
+      'grams': grams,
+    }, errorKey: 'purchase.err_create_invoice');
     final invoice = body['qpay_invoice'];
     if (invoice is! Map<String, dynamic>) {
       throw StateError(tr('purchase.err_no_qpay_invoice'));
@@ -375,13 +389,16 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          tr('common.unexpected_response', {'code': res.statusCode}));
+        tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
     if (res.statusCode != 200) {
       final rawError = body['error'] as String?;
-      throw StateError(rawError != null
-          ? trServer(rawError)
-          : tr(errorKey, {'code': res.statusCode}));
+      throw StateError(
+        rawError != null
+            ? trServer(rawError)
+            : tr(errorKey, {'code': res.statusCode}),
+      );
     }
     return body;
   }
@@ -395,7 +412,7 @@ class ProductRepository {
   /// purchase with `cancel_request_status: "pending"`. Returns the computed
   /// refund breakdown.
   Future<({int paidAmount, int feePercent, int feeAmount, int refundAmount})>
-      requestInstallmentCancel({
+  requestInstallmentCancel({
     required String purchaseId,
     required String bankName,
     required String accountNumber,
@@ -426,7 +443,8 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          tr('common.unexpected_response', {'code': res.statusCode}));
+        tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
 
     if (res.statusCode != 200) {
@@ -476,7 +494,8 @@ class ProductRepository {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       throw StateError(
-          tr('common.unexpected_response', {'code': res.statusCode}));
+        tr('common.unexpected_response', {'code': res.statusCode}),
+      );
     }
 
     if (res.statusCode != 200) {
@@ -507,12 +526,16 @@ class GoldQuote {
   final double taxPercent;
   final double minStepGrams;
 
+  /// 'gr' | 'lan'
+  final String unit;
+
   const GoldQuote({
     required this.rate,
     required this.pricePerGram,
     required this.laborPerGram,
     required this.taxPercent,
     required this.minStepGrams,
+    this.unit = 'gr',
   });
 
   /// Серверийн quoteGrams-тэй ижил: round(1 гр үнэ × грамм).

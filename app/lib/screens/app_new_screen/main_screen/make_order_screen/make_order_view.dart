@@ -41,11 +41,16 @@ class _MakeOrderViewState extends State<MakeOrderView> {
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.metalId == 1) {
       types.addAll([
-        ItemModel("gold", tr('order.type_gold_sycee'),
-            "assets/images/chinese.png", tr('order.type_gold_desc'), false, "ingot"),
+        ItemModel(
+            "gold",
+            tr('order.type_gold_sycee'),
+            "assets/images/chinese.png",
+            tr('order.type_gold_desc'),
+            false,
+            "ingot"),
         ItemModel("gold", tr('order.type_gold_coin'), "assets/images/coin.png",
             tr('order.type_gold_desc'), false, "coin"),
         ItemModel("gold", tr('order.type_gold_bar'), "assets/images/bars.png",
@@ -55,20 +60,21 @@ class _MakeOrderViewState extends State<MakeOrderView> {
       print('Silver types');
     }
     selectedType = types[0];
-    
+
     // Set initial text based on selected type
     if (selectedType.prodType == "bar") {
       text = "100";
     } else {
       text = "0";
     }
-    
+
     print(types);
   }
 
   String text = "0";
   PageController pageController = PageController();
   bool monVal = false;
+
   /// Сонгосон алтан хуримтлалын зорилт (гр); null бол үргэлжлүүлэхгүй.
   int? _goalGrams;
 
@@ -98,7 +104,8 @@ class _MakeOrderViewState extends State<MakeOrderView> {
               builder: (context) => PaymentScreen(
                     makeOrder: state.makeOrder,
                     userRepository: widget.userRepository,
-                    uid: widget.uid, order: state.order,
+                    uid: widget.uid,
+                    order: state.order,
                   )),
         );
       }
@@ -146,14 +153,11 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                                 context, tr('order.goal_required'), 85);
                           } else if (!monVal) {
                             showAlertPopUpDialog(
-                                context,
-                                tr('order.must_accept_terms'),
-                                85);
+                                context, tr('order.must_accept_terms'), 85);
                           } else {
                             pageController.animateToPage(
                                 pageController.page!.toInt() + 1,
-                                duration: const Duration(
-                                    milliseconds: 100),
+                                duration: const Duration(milliseconds: 100),
                                 curve: Curves.easeIn);
                           }
                         },
@@ -209,8 +213,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                   onPressed: () {
                     pageController.animateToPage(
                         pageController.page!.toInt() + 1,
-                        duration:
-                            const Duration(milliseconds: 100),
+                        duration: const Duration(milliseconds: 100),
                         curve: Curves.easeIn);
                   },
                 ),
@@ -240,6 +243,8 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                             selectedType.id == "gold"
                                 ? tr('order.quantity_gram', {'qty': text})
                                 : tr('order.quantity_lan', {'qty': text}),
+                            // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+                            textScaler: TextScaler.noScaling,
                             style: AppText.display.copyWith(fontSize: 32.0),
                           ),
                         ],
@@ -259,16 +264,16 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                               const SizedBox(height: 12.0),
                               NumericKeyboard(
                                   onKeyboardTap: _onKeyboardTap,
-                                  textStyle: AppText.title.copyWith(
-                                      fontSize: 24.0, height: 1.0),
+                                  textStyle: AppText.title
+                                      .copyWith(fontSize: 24.0, height: 1.0),
                                   rightButtonFn: () {
                                     if (text.isEmpty) return;
                                     setState(() {
                                       if (text.length == 1 || text == "0.") {
                                         text = "0";
                                       } else {
-                                        text = text.substring(
-                                            0, text.length - 1);
+                                        text =
+                                            text.substring(0, text.length - 1);
                                       }
                                     });
                                   },
@@ -302,25 +307,22 @@ class _MakeOrderViewState extends State<MakeOrderView> {
                   onPressed: () async {
                     // Parse text to double instead of int
                     final double parsedValue = double.tryParse(text) ?? 0.0;
-                    
+
                     if (parsedValue > 0) {
                       if (parsedValue > 10000) {
                         showAlertPopUpDialog(
-                            context,
-                            tr('order.max_per_order_exceeded'),
-                            85.0);
+                            context, tr('order.max_per_order_exceeded'), 85.0);
                       } else {
                         final num quantity = selectedType.id == "gold"
                             ? parsedValue
                             : (parsedValue * 37.5);
-                        final int metalId =
-                            selectedType.id == "gold" ? 1 : 3;
-                        final String prodType = selectedType.prodType; // must not be empty
+                        final int metalId = selectedType.id == "gold" ? 1 : 3;
+                        final String prodType =
+                            selectedType.prodType; // must not be empty
 
                         num price = 0;
                         try {
-                          final q = await FirebaseFirestore
-                              .instance
+                          final q = await FirebaseFirestore.instance
                               .collection('latest_rates')
                               .where('id', isEqualTo: metalId)
                               .limit(1)
@@ -336,24 +338,18 @@ class _MakeOrderViewState extends State<MakeOrderView> {
 
                         if (price == 0) {
                           showAlertPopUpDialog(
-                              context,
-                              tr('order.rate_not_found_retry'),
-                              85.0);
+                              context, tr('order.rate_not_found_retry'), 85.0);
                           return;
                         }
 
                         context.read<MakeOrderBloc>().add(
-                              MakeOrderPressed(
-                                  widget.uid,
-                                  quantity,
-                                  metalId,
-                                  prodType,
-                                  price),
+                              MakeOrderPressed(widget.uid, quantity, metalId,
+                                  prodType, price),
                             );
                       }
                     } else {
-                      showAlertPopUpDialog(context,
-                          tr('order.enter_quantity_prompt'), 65.0);
+                      showAlertPopUpDialog(
+                          context, tr('order.enter_quantity_prompt'), 65.0);
                     }
                   },
                 ),
@@ -380,7 +376,7 @@ class _MakeOrderViewState extends State<MakeOrderView> {
         }
         return;
       }
-      
+
       // Check if text already has decimal point
       if (text.contains('.')) {
         // If already has decimal, check decimal places
@@ -390,12 +386,12 @@ class _MakeOrderViewState extends State<MakeOrderView> {
           return;
         }
       }
-      
+
       // Limit total length (including decimal point)
       if (text.length >= 6) {
         return;
       }
-      
+
       // Regular number input
       if (text == "0") {
         text = "";

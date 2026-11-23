@@ -29,6 +29,43 @@ const PURCHASE_TYPE = "gold_installment";
 const INVOICE_TYPE = "gold_installment";
 const INVOICE_TYPE_INIT = "gold_installment_init";
 
+/**
+ * ЖИН ДЭЭР СУУРИЛСАН хуваан төлөлтийн төрлүүд. Алтан эдлэл (грамм, ханш +
+ * татвар + ажлын хөлс) ба мөнгөн эдлэл (ЛАН, админы оруулсан 1 лангийн үнэ)
+ * хоёр яг ижил механизмаар ажиллана: нэгжээр цуглуулж, нийт жинд хүрмэгц авна.
+ *
+ * Түүхэн шалтгаанаар баримтын талбарууд "grams" нэртэй (total_grams,
+ * paid_grams, daily_grams, grams) — мөнгөн эдлэлд эдгээр нь ЛАН-гийн тоо бөгөөд
+ * баримт дээрх `unit` ("gr" | "lan") талбар нэгжийг заана. Нэхэмжлэхийн type
+ * хоёуланд ижил (gold_installment[_init]) — боловсруулалт нь адилхан.
+ */
+const KINDS = {
+  gold_jewelry: {
+    kind: "gold_jewelry",
+    purchaseType: "gold_installment",
+    unit: "gr",
+    unitLabel: "гр",
+    totalField: "total_grams",
+    title: "Алтан эдлэл",
+    invoicePrefix: "GOLDINST",
+  },
+  silver_jewelry: {
+    kind: "silver_jewelry",
+    purchaseType: "silver_installment",
+    unit: "lan",
+    unitLabel: "лан",
+    totalField: "total_lan",
+    title: "Мөнгөн эдлэл",
+    invoicePrefix: "SILVINST",
+  },
+};
+// Жин дээр суурилсан purchase_type-ууд (идэвхтэй тоолох, цуцлах, сануулгад).
+const WEIGHT_PURCHASE_TYPES = Object.values(KINDS).map((k) => k.purchaseType);
+const kindByPurchaseType = (t) =>
+  Object.values(KINDS).find((k) => k.purchaseType === t) || null;
+
+const SILVER_SETTINGS_DOC = "system_config/silver_jewelry";
+
 const DEFAULT_SETTINGS = {
   labor_per_gram: 60000, // ажлын хөлс ₮/гр
   tax_percent: 20, // татвар, ханш дээр нэмэгдэнэ
@@ -62,6 +99,38 @@ async function loadGoldRate(db) {
     throw new Error("Алтны ханш олдсонгүй.");
   }
   return rate;
+}
+
+/**
+ * Тухайн төрлийн үнийн мэдээлэл: { settings, rate }.
+ *   алт:   rate = Монголбанкны 1 гр ханш; settings = татвар, ажлын хөлс, алхам
+ *   мөнгө: rate = админы баталгаажуулсан 1 ЛАНГИЙН ҮНЭ (эцсийн, нэмэгдэлгүй);
+ *          settings = { tax 0, labor 0, алхам (анхдагч 0.1 лан) }
+ * Мөнгөний үнэ тохируулаагүй бол алдаа — үнэгүйгээр гэрээ үүсэхгүй.
+ * @param {FirebaseFirestore.Firestore} db - Firestore
+ * @param {string} kind - "gold_jewelry" | "silver_jewelry"
+ * @return {Promise<{settings: object, rate: number}>} үнийн мэдээлэл
+ */
+async function loadPricing(db, kind) {
+  if (kind === "silver_jewelry") {
+    const snap = await db.doc(SILVER_SETTINGS_DOC).get();
+    const d = snap.exists ? snap.data() || {} : {};
+    const rate = Number(d.price_per_lan);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error("Мөнгөн эдлэлийн 1 лангийн үнэ тохируулаагүй байна.");
+    }
+    const step = Number(d.min_step_lan);
+    return {
+      settings: {
+        labor_per_gram: 0,
+        tax_percent: 0,
+        min_step_grams: Number.isFinite(step) && step > 0 ? step : 0.1,
+      },
+      rate,
+    };
+  }
+  const [settings, rate] = await Promise.all([loadSettings(db), loadGoldRate(db)]);
+  return { settings, rate };
 }
 
 // 1 гр-ын эцсийн үнэ ба өгөгдсөн граммын төлбөр.
@@ -131,7 +200,8 @@ async function createGoldPurchaseFromInit(db, pendingRef, pendingData) {
       return;
     }
     tx.set(purchaseRef, {
-      purchase_type: PURCHASE_TYPE,
+      purchase_type: pendingData.purchase_type || PURCHASE_TYPE,
+      unit: pendingData.unit || "gr",
       product_id: pendingData.product_id,
       product_snapshot: pendingData.product_snapshot || {},
       user_id: pendingData.user_id,
@@ -259,6 +329,11 @@ async function applyPaidGoldInvoice(db, pendingRef, opts = {}) {
 }
 
 module.exports = {
+  KINDS,
+  WEIGHT_PURCHASE_TYPES,
+  kindByPurchaseType,
+  SILVER_SETTINGS_DOC,
+  loadPricing,
   SETTINGS_DOC,
   RATE_DOC,
   PRODUCT_KIND,

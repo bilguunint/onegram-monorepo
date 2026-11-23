@@ -47,12 +47,18 @@ export type PaymentRecord = {
 };
 
 /** installment — үнэ/хоног дээр; gold_installment — грамм дээр суурилсан эдлэл */
-export type PurchaseType = "installment" | "gold_installment" | "direct";
+export type PurchaseType =
+  | "installment"
+  | "gold_installment"
+  | "silver_installment"
+  | "direct";
 
 export type ProductPurchase = {
   id: string;
   purchase_type: PurchaseType;
   /** gold_installment: эдлэлийн нийт грамм / цугласан грамм / өдрийн сонголт */
+  /** Жингийн нэгж: "gr" (алт) | "lan" (мөнгө). total/paid/daily_grams нь энэ нэгжээр. */
+  unit: "gr" | "lan";
   total_grams: number;
   paid_grams: number;
   daily_grams: number;
@@ -93,9 +99,12 @@ function mapPurchase(id: string, raw: DocumentData): ProductPurchase {
   return {
     id,
     purchase_type:
-      raw.purchase_type === "gold_installment" || raw.purchase_type === "direct"
+      raw.purchase_type === "gold_installment" ||
+      raw.purchase_type === "silver_installment" ||
+      raw.purchase_type === "direct"
         ? raw.purchase_type
         : "installment",
+    unit: raw.unit === "lan" ? "lan" : "gr",
     total_grams: Number(raw.total_grams ?? 0),
     paid_grams: Number(raw.paid_grams ?? 0),
     daily_grams: Number(raw.daily_grams ?? 0),

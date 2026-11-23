@@ -266,6 +266,27 @@ const Map<String, Map<String, String>> kAuthPinTranslations = {
     'zh': '发送OTP验证码失败。代码：{code}',
     'ru': 'Не удалось отправить OTP-код. Код: {code}'
   },
+  'auth.verify_wrong_code': {
+    'mn': 'Код буруу байна. Хамгийн сүүлд ирсэн мессежний кодыг оруулна уу.',
+    'en': 'Wrong code. Enter the code from the latest message.',
+    'zh': '验证码错误。请输入最新短信中的验证码。',
+    'ru': 'Неверный код. Введите код из последнего сообщения.'
+  },
+  'auth.verify_expired': {
+    'mn': 'Кодын хугацаа дууссан (5 минут). Кодыг дахин авна уу.',
+    'en': 'The code has expired (5 minutes). Request a new code.',
+    'zh': '验证码已过期（5分钟）。请重新获取。',
+    'ru': 'Срок кода истёк (5 минут). Запросите новый код.'
+  },
+  'auth.verify_network': {
+    'mn': 'Сервертэй холбогдож чадсангүй. Интернэт холболт, VPN, DNS '
+        'тохиргоогоо шалгаад дахин оролдоно уу.',
+    'en': 'Could not reach the server. Check your internet, VPN or DNS '
+        'settings and try again.',
+    'zh': '无法连接服务器。请检查网络、VPN 或 DNS 设置后重试。',
+    'ru': 'Не удалось связаться с сервером. Проверьте интернет, VPN или DNS '
+        'и попробуйте снова.'
+  },
   'auth.verify_failed': {
     'mn': 'Баталгаажуулахад алдаа гарлаа!',
     'en': 'Verification failed!',

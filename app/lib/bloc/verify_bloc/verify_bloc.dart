@@ -25,7 +25,22 @@ class VerifyBloc extends Bloc<VerifyEvent, VerifyState> {
     if (loginResponse.statusCode == 200) {
       emit(VerifySuccess(phone: event.phone, loginResponse: loginResponse));
     } else {
-      emit(VerifyFailed(msg: tr('auth.verify_failed')));
+      emit(VerifyFailed(msg: _failureMessage(loginResponse)));
     }
+  }
+
+  /// Серверийн хариунаас хэрэглэгчид ойлгомжтой шалтгааныг гаргана.
+  /// Өмнө нь бүх тохиолдолд "Баталгаажуулахад алдаа гарлаа!" гэдэг байсан тул
+  /// код буруу / хугацаа дууссан / сүлжээ гэдгийг ялгах боломжгүй байв.
+  static String _failureMessage(LoginResponse r) {
+    final e = r.error;
+    if (r.statusCode == 0 || e.startsWith('NETWORK:')) {
+      return tr('auth.verify_network');
+    }
+    if (e.contains('Invalid OTP')) return tr('auth.verify_wrong_code');
+    if (e.contains('OTP expired') || e.contains('No OTP request')) {
+      return tr('auth.verify_expired');
+    }
+    return tr('auth.verify_failed');
   }
 }

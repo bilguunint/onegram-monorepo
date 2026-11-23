@@ -64,8 +64,8 @@ class MyApp extends StatelessWidget {
     return ValueListenableBuilder<AppLanguage>(
       valueListenable: AppLocale.notifier,
       builder: (context, language, _) => MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: CustomTheme.darkTheme,
+        debugShowCheckedModeBanner: false,
+        theme: CustomTheme.darkTheme,
         themeMode: ThemeMode.dark,
         locale: language.locale,
         supportedLocales:
@@ -78,55 +78,72 @@ class MyApp extends StatelessWidget {
         navigatorObservers: [
           observer,
         ],
+        // Системийн "Text Size"-ийг 1.0–1.2 хооронд хязгаарлана. Хэрэглэгч
+        // 2x тавьсан ч апп дотор дээд тал нь 1.2x: тоо, карт ихтэй layout
+        // хальж эвдрэхээс сэргийлнэ (банк/финтек аппуудын нийтлэг практик).
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          final double scale = mq.textScaler.scale(1.0).clamp(1.0, 1.2);
+          return MediaQuery(
+            data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         routes: {
           '/': (context) => BlocConsumer<AuthBloc, AuthState>(
-            listener: (context, state) {
-              // Force navigation when auth state changes
-              print('AuthBloc listener triggered with state: $state');
-            },
-            builder: (context, state) {
-              print('MyApp - AuthBloc building with state: $state');
-              if (state is AuthAuthenticated) {
-                print('MyApp - Building authenticated screen for uid: ${state.uid}');
-                return _buildAuthenticatedScreen(state);
-              } else if (state is AuthNeedsRegistration) {
-                print('MyApp - Building registration screen');
-                return RegisterScreen(authenticationRepository: authRepository, phoneNum: state.phoneNumber, userRepository: userRepository);
-              } else if (state is AuthLoading) {
-                print('MyApp - Building loading screen');
-                return Scaffold(
-                  backgroundColor: CustomColors.darkContainerColor,
-                  body: const Center(child: CupertinoActivityIndicator()),
-                );
-              } else if (state is AuthFailure) {
-                print('MyApp - Building failure screen: ${state.message}');
-                return Scaffold(
-                  backgroundColor: CustomColors.darkContainerColor,
-                  body: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Auth Error: ${state.message}', style: TextStyle(color: Colors.white)),
-                        SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => context.read<AuthBloc>().add(AppStarted()),
-                          child: Text('Retry'),
+                listener: (context, state) {
+                  // Force navigation when auth state changes
+                  print('AuthBloc listener triggered with state: $state');
+                },
+                builder: (context, state) {
+                  print('MyApp - AuthBloc building with state: $state');
+                  if (state is AuthAuthenticated) {
+                    print(
+                        'MyApp - Building authenticated screen for uid: ${state.uid}');
+                    return _buildAuthenticatedScreen(state);
+                  } else if (state is AuthNeedsRegistration) {
+                    print('MyApp - Building registration screen');
+                    return RegisterScreen(
+                        authenticationRepository: authRepository,
+                        phoneNum: state.phoneNumber,
+                        userRepository: userRepository);
+                  } else if (state is AuthLoading) {
+                    print('MyApp - Building loading screen');
+                    return Scaffold(
+                      backgroundColor: CustomColors.darkContainerColor,
+                      body: const Center(child: CupertinoActivityIndicator()),
+                    );
+                  } else if (state is AuthFailure) {
+                    print('MyApp - Building failure screen: ${state.message}');
+                    return Scaffold(
+                      backgroundColor: CustomColors.darkContainerColor,
+                      body: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('Auth Error: ${state.message}',
+                                style: TextStyle(color: Colors.white)),
+                            SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () =>
+                                  context.read<AuthBloc>().add(AppStarted()),
+                              child: Text('Retry'),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              } else {
-                // Default to registration/login flow
-                return GenerateScreen(
-                  authenticationRepository: authRepository,
-                );
-              }
-            },
-          ),
+                      ),
+                    );
+                  } else {
+                    // Default to registration/login flow
+                    return GenerateScreen(
+                      authenticationRepository: authRepository,
+                    );
+                  }
+                },
+              ),
         },
         initialRoute: '/',
-        ),
+      ),
     );
   }
 }

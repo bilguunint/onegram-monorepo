@@ -14,6 +14,7 @@ import {
   formatPriceMNT,
   getPurchaseUserName,
   isGoldPurchase,
+  purchaseUnitLabel,
   purchaseProgress,
   purchaseStatusBadge,
   purchaseStatusText,
@@ -45,6 +46,7 @@ export function PurchaseDetailDialog({ open, purchase, onOpenChange }: Props) {
 function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
   const progress = purchaseProgress(p);
   const gold = isGoldPurchase(p);
+  const u = purchaseUnitLabel(p);
   const remaining = Math.max(0, p.total_price - p.paid_amount);
   const payments = [...(p.payments ?? [])].sort(
     (a, b) => (a.day_no ?? 0) - (b.day_no ?? 0)
@@ -92,9 +94,9 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
       <div className="rounded-lg border border-border-light bg-card p-3">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
           <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">{gold ? "Нийт грамм" : "Нийт үнэ"}</dt>
+            <dt className="text-muted-foreground">{gold ? `Нийт ${u}` : "Нийт үнэ"}</dt>
             <dd className="font-medium tabular-nums">
-              {gold ? `${p.total_grams} гр` : formatPriceMNT(p.total_price)}
+              {gold ? `${p.total_grams} ${u}` : formatPriceMNT(p.total_price)}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
@@ -107,14 +109,14 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
             <dt className="text-muted-foreground">Үлдэгдэл</dt>
             <dd className="font-medium tabular-nums">
               {gold
-                ? `${Math.round((p.total_grams - p.paid_grams) * 100) / 100} гр`
+                ? `${Math.round((p.total_grams - p.paid_grams) * 100) / 100} ${u}`
                 : formatPriceMNT(remaining)}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-muted-foreground">Өдрийн төлбөр</dt>
             <dd className="font-medium tabular-nums">
-              {gold ? `${p.daily_grams} гр (ханшаар)` : formatPriceMNT(p.daily_payment)}
+              {gold ? `${p.daily_grams} ${u} (тухайн үеийн үнээр)` : formatPriceMNT(p.daily_payment)}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
@@ -129,7 +131,7 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
             <dt className="text-muted-foreground">{gold ? "Цугласан" : "Төлсөн өдөр"}</dt>
             <dd className="font-medium tabular-nums">
               {gold
-                ? `${p.paid_grams}/${p.total_grams} гр (${progress}%)`
+                ? `${p.paid_grams}/${p.total_grams} ${u} (${progress}%)`
                 : `${p.paid_days}/${p.total_days} (${progress}%)`}
             </dd>
           </div>
@@ -177,7 +179,7 @@ function DetailBody({ purchase: p }: { purchase: ProductPurchase }) {
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     {gold && rec.grams != null
-                      ? `${rec.grams} гр · ханш ${formatPriceMNT(rec.rate)}`
+                      ? `${rec.grams} ${u} · 1 ${u} ${formatPriceMNT(rec.price_per_gram ?? rec.rate)}`
                       : `Өдөр ${rec.day_no}`}
                     {rec.payment_method ? ` · ${rec.payment_method}` : ""}
                   </div>

@@ -82,7 +82,9 @@ class AuthRepository {
       if (res != null) {
         return LoginResponse.fromJson(res.data, res.statusCode ?? 500);
       }
-      return LoginResponse('', false, e.message ?? 'Network error', 500);
+      // Хариу огт ирээгүй = серверт хүрээгүй (DNS/интернэт/VPN). Серверийн
+      // 4xx-ээс ялгахын тулд статус 0 ба NETWORK тэмдэг.
+      return LoginResponse('', false, 'NETWORK:${e.type.name}', 0);
     }
   }
 

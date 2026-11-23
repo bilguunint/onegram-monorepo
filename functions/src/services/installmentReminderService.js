@@ -89,12 +89,15 @@ function buildMessage(purchase, now = new Date()) {
   const productName =
     (purchase.product_snapshot && purchase.product_snapshot.name) || "Бараа";
   // Ердийн хуваан төлөлт: хоног ба өдрийн төгрөг. Алтан эдлэл: грамм.
-  const isGold = purchase.purchase_type === "gold_installment";
+  // Жин дээр суурилсан: алтан эдлэл (гр) ба мөнгөн эдлэл (лан).
+  const isGold = purchase.purchase_type === "gold_installment" ||
+    purchase.purchase_type === "silver_installment";
+  const unitLabel = purchase.unit === "lan" ? "лан" : "гр";
   const progress = isGold ?
-    `${Number(purchase.paid_grams || 0)}/${Number(purchase.total_grams || 0)} гр төлөгдсөн` :
+    `${Number(purchase.paid_grams || 0)}/${Number(purchase.total_grams || 0)} ${unitLabel} төлөгдсөн` :
     `${Number(purchase.paid_days || 0)}/${Number(purchase.total_days || 0)} өдөр төлөгдсөн`;
   const todayAmount = isGold ?
-    `${Number(purchase.daily_grams || 0)} гр` :
+    `${Number(purchase.daily_grams || 0)} ${unitLabel}` :
     formatMNT(Number(purchase.daily_payment || 0));
 
   if (gap >= QUIET_DAYS) {
@@ -133,7 +136,7 @@ async function sendInstallmentReminders() {
   const snap = await db
     .collection("product_purchases")
     .where("status", "==", "active")
-    .where("purchase_type", "in", ["installment", "gold_installment"])
+    .where("purchase_type", "in", ["installment", "gold_installment", "silver_installment"])
     .get();
 
   logger.info(`Active installment purchases: ${snap.size}`);

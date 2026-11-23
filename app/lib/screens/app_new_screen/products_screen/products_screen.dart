@@ -119,12 +119,14 @@ class _ProductsGrid extends StatelessWidget {
           if (stack != null) {
             debugPrintStack(stackTrace: stack);
           }
-          FlutterError.reportError(FlutterErrorDetails(
-            exception: err ?? 'Unknown error',
-            stack: stack,
-            library: 'ProductsScreen',
-            context: ErrorDescription('watchActiveProducts stream'),
-          ));
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: err ?? 'Unknown error',
+              stack: stack,
+              library: 'ProductsScreen',
+              context: ErrorDescription('watchActiveProducts stream'),
+            ),
+          );
           return _ErrorState(message: '$err');
         }
 
@@ -136,7 +138,7 @@ class _ProductsGrid extends StatelessWidget {
 
         num? minDaily;
         for (final p in products) {
-          if (p.isGoldJewelry) continue; // үнэгүй — өдрийн дүн тооцохгүй
+          if (p.isWeightBased) continue; // үнэгүй — өдрийн дүн тооцохгүй
           final d = dailyAmount(p.price, p.maxMonths.clamp(1, 12));
           if (minDaily == null || d < minDaily) minDaily = d;
         }
@@ -167,27 +169,24 @@ class _ProductsGrid extends StatelessWidget {
                   // Зураг + 2 мөр нэр + үнэ + өдрийн chip багтах өндөр
                   childAspectRatio: 0.62,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final product = products[index];
-                    return ProductCardWidget(
-                      product: product,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(
-                              product: product,
-                              uid: uid,
-                              userRepository: userRepository,
-                              activeInstallmentCount: activeInstallments.length,
-                            ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final product = products[index];
+                  return ProductCardWidget(
+                    product: product,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailScreen(
+                            product: product,
+                            uid: uid,
+                            userRepository: userRepository,
+                            activeInstallmentCount: activeInstallments.length,
                           ),
-                        );
-                      },
-                    );
-                  },
-                  childCount: products.length,
-                ),
+                        ),
+                      );
+                    },
+                  );
+                }, childCount: products.length),
               ),
             ),
           ],
@@ -219,8 +218,10 @@ class _TitleRow extends StatelessWidget {
               child: SvgPicture.asset(
                 'assets/icons/invoice.svg',
                 height: 18,
-                colorFilter:
-                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
           ),
@@ -235,11 +236,12 @@ class _CatalogHeader extends StatelessWidget {
   final num? minDaily;
   final List<ProductPurchase> activeInstallments;
   final VoidCallback onMyPurchases;
-  const _CatalogHeader(
-      {required this.count,
-      required this.minDaily,
-      required this.activeInstallments,
-      required this.onMyPurchases});
+  const _CatalogHeader({
+    required this.count,
+    required this.minDaily,
+    required this.activeInstallments,
+    required this.onMyPurchases,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -337,8 +339,10 @@ class _ActiveInstallmentsStrip extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(tr('product.active_plans_title'),
-                  style: AppText.sectionTitle),
+              child: Text(
+                tr('product.active_plans_title'),
+                style: AppText.sectionTitle,
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -411,9 +415,12 @@ class _ActivePlanCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 purchase.isGold
-                    ? tr('gold.grams_paid_of', {
-                        'paid': formatGrams(purchase.paidGrams),
-                        'total': formatGrams(purchase.totalGrams),
+                    ? wtr(purchase.unit, 'gold.grams_paid_of', {
+                        'paid': formatGrams(purchase.paidGrams, purchase.unit),
+                        'total': formatGrams(
+                          purchase.totalGrams,
+                          purchase.unit,
+                        ),
                       })
                     : tr('product.days_paid_of', {
                         'paid': purchase.paidDays,
@@ -452,10 +459,14 @@ class _PickupReadyBanner extends StatelessWidget {
       child: AppBanner(
         icon: Icons.celebration_rounded,
         title: tr('purchase.pickup_ready'),
-        text: tr('purchase.view_pickup_code',
-            {'product': purchase.productSnapshot.name}),
-        trailing: Icon(Icons.chevron_right_rounded,
-            size: 20, color: CustomColors.accent),
+        text: tr('purchase.view_pickup_code', {
+          'product': purchase.productSnapshot.name,
+        }),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          size: 20,
+          color: CustomColors.accent,
+        ),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(

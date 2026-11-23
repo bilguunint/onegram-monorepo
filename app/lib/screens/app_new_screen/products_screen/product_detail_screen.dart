@@ -50,10 +50,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.product.isGoldJewelry) {
-      _productRepo.fetchGoldQuote().then((q) {
-        if (mounted) setState(() => _goldQuote = q);
-      }).catchError((_) {});
+    if (widget.product.isWeightBased) {
+      _productRepo
+          .fetchGoldQuote(kind: widget.product.kindParam)
+          .then((q) {
+            if (mounted) setState(() => _goldQuote = q);
+          })
+          .catchError((_) {});
     }
   }
 
@@ -72,11 +75,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _onInstallmentTap() async {
     if (_busy) return;
     if (!_canStartInstallment) {
-      _showSnack(tr('product.active_installment_exists',
-          {'max': ProductPurchase.maxActiveInstallments}));
+      _showSnack(
+        tr('product.active_installment_exists', {
+          'max': ProductPurchase.maxActiveInstallments,
+        }),
+      );
       return;
     }
-    if (widget.product.isGoldJewelry) {
+    if (widget.product.isWeightBased) {
       await _onGoldInstallmentTap();
       return;
     }
@@ -150,7 +156,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             appBarTitleKey: 'gold.first_payment_title',
             successTitleKey: 'gold.started',
             successMessageKey: 'gold.started_message',
-            successMessageParams: {'grams': formatGrams(result.grams)},
+            successMessageParams: {
+              'grams': formatGrams(result.grams, widget.product.unit),
+            },
           ),
         ),
       );
@@ -182,7 +190,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         MaterialPageRoute(
           builder: (_) => DirectPurchasePaymentScreen(
             pendingId: result.pendingId,
-            amount: widget.product.price,
+            // Мөнгөн эдлэл: бүтэн үнэ = нийт лан × өнөөдрийн 1 лангийн үнэ
+            // (сервер ч мөн ингэж тооцно); бусад нь каталогийн үнэ.
+            amount: widget.product.isSilverJewelry && _goldQuote != null
+                ? _goldQuote!.amountFor(widget.product.totalGrams)
+                : widget.product.price,
             invoice: result.invoice,
             productName: widget.product.name,
           ),
@@ -197,9 +209,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -261,7 +272,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   return AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     margin: const EdgeInsets.symmetric(
-                                        horizontal: 3),
+                                      horizontal: 3,
+                                    ),
                                     width: active ? 18 : 6,
                                     height: 6,
                                     decoration: BoxDecoration(
@@ -295,7 +307,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
           const SizedBox(height: 14),
 
-          if (product.isGoldJewelry)
+          if (product.isWeightBased)
             _GoldPriceBlock(product: product, quote: _goldQuote)
           else
             _PriceBlock(
@@ -304,7 +316,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               daily: daily,
             ),
 
-          if (product.isGoldJewelry) ...[
+          if (product.isWeightBased) ...[
             const SizedBox(height: 12),
             _GoldPlanInfoCard(product: product, quote: _goldQuote),
           ],
@@ -319,8 +331,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     product.description,
-                    style: AppText.body
-                        .copyWith(color: Colors.white.withOpacity(0.78)),
+                    style: AppText.body.copyWith(
+                      color: Colors.white.withOpacity(0.78),
+                    ),
                   ),
                 ],
               ),
@@ -332,13 +345,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               children: [
-                if (!product.isGoldJewelry) ...[
+                if (!product.isWeightBased) ...[
                   AppInfoRow(
                     icon: Icons.calendar_month_outlined,
                     label: tr('product.duration'),
                     value: product.minMonths == product.maxMonths
-                        ? tr('product.months_value',
-                            {'months': product.maxMonths})
+                        ? tr('product.months_value', {
+                            'months': product.maxMonths,
+                          })
                         : tr('product.months_range', {
                             'min': product.minMonths,
                             'max': product.maxMonths,
@@ -358,8 +372,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           if (!_canStartInstallment) ...[
             const SizedBox(height: 12),
             AppBanner(
-              text: tr('product.active_installment_banner',
-                  {'max': ProductPurchase.maxActiveInstallments}),
+              text: tr('product.active_installment_banner', {
+                'max': ProductPurchase.maxActiveInstallments,
+              }),
             ),
           ],
         ],
@@ -378,6 +393,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 // зөвхөн граммаар цуглуулна.
                 directAvailable: product.isAvailable && !product.isGoldJewelry,
                 showDirect: !product.isGoldJewelry,
+                unit: product.isWeightBased ? product.unit : null,
                 onInstallment: _onInstallmentTap,
                 onDirect: _onDirectTap,
               ),
@@ -410,11 +426,7 @@ class _ErrorThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Icon(
-        Icons.broken_image_outlined,
-        color: Colors.white24,
-        size: 48,
-      ),
+      child: Icon(Icons.broken_image_outlined, color: Colors.white24, size: 48),
     );
   }
 }
@@ -441,8 +453,12 @@ class _PriceBlock extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             formatMNT(price),
-            style: AppText.display
-                .copyWith(fontSize: 28, color: CustomColors.accent),
+            // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+            textScaler: TextScaler.noScaling,
+            style: AppText.display.copyWith(
+              fontSize: 28,
+              color: CustomColors.accent,
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -453,8 +469,11 @@ class _PriceBlock extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.payments_outlined,
-                    size: 14, color: CustomColors.accent),
+                Icon(
+                  Icons.payments_outlined,
+                  size: 14,
+                  color: CustomColors.accent,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -498,6 +517,9 @@ class _BuyButtons extends StatelessWidget {
   /// Шууд авах товчийг харуулах эсэх (алтан эдлэлд үгүй).
   final bool showDirect;
 
+  /// Жин дээр суурилсан барааны нэгж ('gr' | 'lan'); ердийн бараанд null.
+  final String? unit;
+
   const _BuyButtons({
     required this.busy,
     required this.installmentAvailable,
@@ -505,6 +527,7 @@ class _BuyButtons extends StatelessWidget {
     required this.onInstallment,
     required this.onDirect,
     this.showDirect = true,
+    this.unit,
   });
 
   @override
@@ -513,9 +536,9 @@ class _BuyButtons extends StatelessWidget {
       children: [
         Expanded(
           child: AppPrimaryButton(
-            label: showDirect
+            label: unit == null
                 ? tr('product.buy_installment')
-                : tr('gold.start_title'),
+                : wtr(unit!, 'gold.start_title'),
             onPressed: installmentAvailable && !busy ? onInstallment : null,
             loading: busy,
           ),
@@ -549,19 +572,24 @@ class _GoldPriceBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(tr('gold.total_grams'), style: AppText.caption),
+          Text(wtr(product.unit, 'gold.total_grams'), style: AppText.caption),
           const SizedBox(height: 4),
           Text(
-            formatGrams(product.totalGrams),
-            style: AppText.display
-                .copyWith(fontSize: 28, color: CustomColors.accent),
+            formatGrams(product.totalGrams, product.unit),
+            // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+            textScaler: TextScaler.noScaling,
+            style: AppText.display.copyWith(
+              fontSize: 28,
+              color: CustomColors.accent,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             q == null
-                ? tr('gold.quote_loading')
-                : tr('gold.at_today_rate',
-                    {'amount': formatMNT(q.amountFor(product.totalGrams))}),
+                ? wtr(product.unit, 'gold.quote_loading')
+                : wtr(product.unit, 'gold.at_today_rate', {
+                    'amount': formatMNT(q.amountFor(product.totalGrams)),
+                  }),
             style: AppText.caption,
           ),
           const SizedBox(height: 12),
@@ -573,16 +601,19 @@ class _GoldPriceBlock extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.payments_outlined,
-                    size: 14, color: CustomColors.accent),
+                Icon(
+                  Icons.payments_outlined,
+                  size: 14,
+                  color: CustomColors.accent,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     q == null
-                        ? tr('gold.card_hint', {'grams': formatGrams(0.1)})
-                        : '${tr('gold.card_hint', {
-                                'grams': formatGrams(q.minStepGrams)
-                              })} · ${formatMNT(q.amountFor(q.minStepGrams))}',
+                        ? wtr(product.unit, 'gold.card_hint', {
+                            'grams': formatGrams(0.1, product.unit),
+                          })
+                        : '${wtr(product.unit, 'gold.card_hint', {'grams': formatGrams(q.minStepGrams, product.unit)})} · ${formatMNT(q.amountFor(q.minStepGrams))}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -618,10 +649,13 @@ class _DirectPurchaseDialog extends StatelessWidget {
           Text(product.name, style: AppText.bodyBold),
           const SizedBox(height: 6),
           Text(
-            tr('product.direct_purchase_confirm',
-                {'amount': formatMNT(product.price)}),
-            style: AppText.body
-                .copyWith(color: CustomColors.textSecondary, height: 1.45),
+            tr('product.direct_purchase_confirm', {
+              'amount': formatMNT(product.price),
+            }),
+            style: AppText.body.copyWith(
+              color: CustomColors.textSecondary,
+              height: 1.45,
+            ),
           ),
         ],
       ),
@@ -644,49 +678,64 @@ class _GoldPlanInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final q = quote;
     final totalCg = (product.totalGrams * 100).round();
-    final options = <double>[0.1, 0.2, 0.3, 0.5, 1.0]
-        .where((g) => (g * 100).round() < totalCg)
-        .toList();
+    final options = <double>[
+      0.1,
+      0.2,
+      0.3,
+      0.5,
+      1.0,
+    ].where((g) => (g * 100).round() < totalCg).toList();
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(tr('gold.plan_title'), style: AppText.sectionTitle),
+          Text(
+            wtr(product.unit, 'gold.plan_title'),
+            style: AppText.sectionTitle,
+          ),
           const SizedBox(height: 8),
           if (q == null)
-            Text(tr('gold.quote_loading'), style: AppText.caption)
+            Text(
+              wtr(product.unit, 'gold.quote_loading'),
+              style: AppText.caption,
+            )
           else ...[
-            AppInfoRow(
-              icon: Icons.trending_up_rounded,
-              label: tr('gold.today_rate'),
-              value: formatMNT(q.rate),
-            ),
+            if (!product.isSilverJewelry)
+              AppInfoRow(
+                icon: Icons.trending_up_rounded,
+                label: wtr(product.unit, 'gold.today_rate'),
+                value: formatMNT(q.rate),
+              ),
             AppInfoRow(
               icon: Icons.sell_outlined,
-              label: tr('gold.price_per_gram_short'),
+              label: wtr(product.unit, 'gold.price_per_gram_short'),
               value: formatMNT(q.pricePerGram),
               valueColor: CustomColors.accent,
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                tr('gold.price_formula_hint', {
-                  'rate': formatMNT(q.rate),
-                  'tax': q.taxPercent == q.taxPercent.roundToDouble()
-                      ? q.taxPercent.toInt()
-                      : q.taxPercent,
-                  'labor': formatMNT(q.laborPerGram),
-                }),
-                style: AppText.caption.copyWith(fontSize: 11),
+            if (!product.isSilverJewelry)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  wtr(product.unit, 'gold.price_formula_hint', {
+                    'rate': formatMNT(q.rate),
+                    'tax': q.taxPercent == q.taxPercent.roundToDouble()
+                        ? q.taxPercent.toInt()
+                        : q.taxPercent,
+                    'labor': formatMNT(q.laborPerGram),
+                  }),
+                  style: AppText.caption.copyWith(fontSize: 11),
+                ),
               ),
-            ),
             AppInfoRow(
               icon: Icons.straighten_outlined,
-              label: tr('gold.min_step'),
-              value: formatGrams(q.minStepGrams),
+              label: wtr(product.unit, 'gold.min_step'),
+              value: formatGrams(q.minStepGrams, product.unit),
             ),
             const AppDivider(),
-            Text(tr('gold.options_title'), style: AppText.caption),
+            Text(
+              wtr(product.unit, 'gold.options_title'),
+              style: AppText.caption,
+            ),
             const SizedBox(height: 6),
             for (final g in options)
               Padding(
@@ -697,8 +746,8 @@ class _GoldPlanInfoCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        tr('gold.option_row', {
-                          'grams': formatGrams(g),
+                        wtr(product.unit, 'gold.option_row', {
+                          'grams': formatGrams(g, product.unit),
                           'amount': formatMNT(q.amountFor(g)),
                           'days': (totalCg / (g * 100).round()).ceil(),
                         }),
@@ -709,7 +758,7 @@ class _GoldPlanInfoCard extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            Text(tr('gold.rate_note'), style: AppText.caption),
+            Text(wtr(product.unit, 'gold.rate_note'), style: AppText.caption),
           ],
         ],
       ),

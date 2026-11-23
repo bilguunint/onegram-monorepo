@@ -181,6 +181,8 @@ class _ExchangeScreenState extends State<ExchangeScreen> {
               TextSpan(text: "${_fmt.format(_rate)}₮"),
               TextSpan(text: tr('home.per_gram'), style: AppText.caption),
             ]),
+            // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+            textScaler: TextScaler.noScaling,
             style: AppText.display.copyWith(fontSize: 32),
           ),
           const SizedBox(height: 8),

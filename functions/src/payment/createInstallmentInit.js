@@ -77,12 +77,25 @@ exports.createInstallmentInit = onRequest({
           .json({ error: "months must be an integer between 1 and 12" });
       }
 
+      // Түр зогсолт: system_config/installments.new_plans_paused === true үед
+      // ШИНЭ хуваан төлөлт эхлүүлэхгүй (идэвхтэй төлөвлөгөөний төлбөрт нөлөөгүй —
+      // тэр нь createInstallmentPayment). Мөнгөн эдлэлийг лангаар тооцдог шинэ
+      // логик руу шилжих хооронд хуучин үнээр шинэ гэрээ үүсэхээс сэргийлнэ.
+      const pauseSnap = await db.doc("system_config/installments").get();
+      const pause = pauseSnap.exists ? pauseSnap.data() || {} : {};
+      if (pause.new_plans_paused === true) {
+        return res.status(503).json({
+          error: pause.pause_message ||
+            "Хуваан төлөлт түр засвартай байна. Удахгүй шинэчлэгдэн нээгдэнэ.",
+        });
+      }
+
       // Cap concurrent installments per user at MAX_ACTIVE_INSTALLMENTS.
       const activeSnap = await db
         .collection("product_purchases")
         .where("user_id", "==", uid)
         .where("status", "==", "active")
-        .where("purchase_type", "in", ["installment", "gold_installment"])
+        .where("purchase_type", "in", ["installment", "gold_installment", "silver_installment"])
         .limit(MAX_ACTIVE_INSTALLMENTS)
         .get();
       if (activeSnap.size >= MAX_ACTIVE_INSTALLMENTS) {
@@ -102,10 +115,12 @@ exports.createInstallmentInit = onRequest({
         return res.status(404).json({ error: "Product not found" });
       }
       const product = productSnap.data() || {};
-      if (product.product_kind === "gold_jewelry") {
-        // Хуучин апп (грамм дээр суурилсан эдлэлийг мэдэхгүй) энд ирнэ.
+      if (product.product_kind === "gold_jewelry" ||
+          product.product_kind === "silver_jewelry") {
+        // Хуучин апп (жин дээр суурилсан эдлэлийг мэдэхгүй) энд ирнэ. Эдгээр
+        // барааг төгрөгийн тогтмол үнээр хуваан төлүүлэхгүй.
         return res.status(409).json({
-          error: "Алтан эдлэлийн хуваан төлөлт авахын тулд аппаа шинэчилнэ үү.",
+          error: "Энэ барааг хуваан төлөлтөөр авахын тулд аппаа шинэчилнэ үү.",
         });
       }
       if (product.status !== "active") {

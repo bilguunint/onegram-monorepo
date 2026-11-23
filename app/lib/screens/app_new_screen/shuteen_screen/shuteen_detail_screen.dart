@@ -206,6 +206,8 @@ class _MyOwnership extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(_int(h.units),
+                  // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+                  textScaler: TextScaler.noScaling,
                   style: AppText.display.copyWith(fontSize: 34)),
               const SizedBox(width: 6),
               Padding(
@@ -220,8 +222,7 @@ class _MyOwnership extends StatelessWidget {
           Row(
             children: [
               _MiniStat(
-                  label: tr('shuteen.my_invested'),
-                  value: formatMNT(h.amount)),
+                  label: tr('shuteen.my_invested'), value: formatMNT(h.amount)),
               _MiniStat(
                   label: tr('shuteen.my_buyback'),
                   value: formatMNT(buyback),
@@ -386,14 +387,12 @@ class _GalleryState extends State<_Gallery> {
                       itemBuilder: (_, i) => Image.network(
                         images[i],
                         fit: BoxFit.cover,
-                        loadingBuilder: (_, child, progress) =>
-                            progress == null
-                                ? child
-                                : Center(
-                                    child: CircularProgressIndicator(
-                                        color: CustomColors.accent,
-                                        strokeWidth: 2),
-                                  ),
+                        loadingBuilder: (_, child, progress) => progress == null
+                            ? child
+                            : Center(
+                                child: CircularProgressIndicator(
+                                    color: CustomColors.accent, strokeWidth: 2),
+                              ),
                         errorBuilder: (_, __, ___) => const Center(
                           child: Icon(Icons.broken_image_outlined,
                               color: Colors.white24, size: 40),
@@ -530,8 +529,8 @@ class _StatItem extends StatelessWidget {
           Text(sub,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.caption.copyWith(
-                  fontSize: 10.5, color: CustomColors.textTertiary)),
+              style: AppText.caption
+                  .copyWith(fontSize: 10.5, color: CustomColors.textTertiary)),
         ],
       ),
     );
@@ -567,6 +566,8 @@ class _Principles extends StatelessWidget {
                 children: [
                   Text(
                     i.toString().padLeft(2, '0'),
+                    // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+                    textScaler: TextScaler.noScaling,
                     style: AppText.display.copyWith(
                         fontSize: 22, color: CustomColors.accent, height: 1.0),
                   ),
@@ -579,8 +580,8 @@ class _Principles extends StatelessWidget {
                             style: AppText.bodyBold.copyWith(fontSize: 14)),
                         const SizedBox(height: 4),
                         Text(tr('shuteen.p${i}_body', params),
-                            style: AppText.caption.copyWith(
-                                fontSize: 12.5, height: 1.5)),
+                            style: AppText.caption
+                                .copyWith(fontSize: 12.5, height: 1.5)),
                       ],
                     ),
                   ),
@@ -606,10 +607,10 @@ class _Finance extends StatelessWidget {
     final steps = <MapEntry<String, int>>[
       MapEntry(tr('shuteen.at_purchase'), p.unitPrice),
       if (half > 0 && half < p.holdMonths)
-        MapEntry(tr('shuteen.after_months', {'months': half}),
-            p.priceAfter(half)),
-      MapEntry(tr('shuteen.after_months', {'months': p.holdMonths}),
-          p.buybackPrice),
+        MapEntry(
+            tr('shuteen.after_months', {'months': half}), p.priceAfter(half)),
+      MapEntry(
+          tr('shuteen.after_months', {'months': p.holdMonths}), p.buybackPrice),
     ];
     return AppCard(
       child: Column(
@@ -631,8 +632,8 @@ class _Finance extends StatelessWidget {
                   ),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                     decoration: BoxDecoration(
                       color: i == steps.length - 1
                           ? CustomColors.accent
@@ -688,7 +689,11 @@ class _Examples extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = program;
     const counts = [1, 100, 500, 1000];
-    Widget cell(String text, {int flex = 1, bool head = false, bool accent = false, TextAlign align = TextAlign.right}) {
+    Widget cell(String text,
+        {int flex = 1,
+        bool head = false,
+        bool accent = false,
+        TextAlign align = TextAlign.right}) {
       return Expanded(
         flex: flex,
         child: Text(
@@ -752,12 +757,18 @@ class _Tiers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tiers = [
-      (tr('shuteen.tier_range', {'from': 100, 'to': 499}),
-          tr('shuteen.tier1_benefit')),
-      (tr('shuteen.tier_range', {'from': 500, 'to': 999}),
-          tr('shuteen.tier2_benefit')),
-      (tr('shuteen.tier_range_plus', {'from': _int(1000)}),
-          tr('shuteen.tier3_benefit')),
+      (
+        tr('shuteen.tier_range', {'from': 100, 'to': 499}),
+        tr('shuteen.tier1_benefit')
+      ),
+      (
+        tr('shuteen.tier_range', {'from': 500, 'to': 999}),
+        tr('shuteen.tier2_benefit')
+      ),
+      (
+        tr('shuteen.tier_range_plus', {'from': _int(1000)}),
+        tr('shuteen.tier3_benefit')
+      ),
     ];
     return Column(
       children: [
@@ -840,9 +851,8 @@ class _Steps extends StatelessWidget {
                           '$i',
                           style: AppText.bodyBold.copyWith(
                               fontSize: 12,
-                              color: i == 5
-                                  ? Colors.black
-                                  : CustomColors.accent),
+                              color:
+                                  i == 5 ? Colors.black : CustomColors.accent),
                         ),
                       ),
                       if (i < 5)
@@ -886,9 +896,8 @@ String _num(num n) => n == n.roundToDouble() ? '${n.toInt()}' : '$n';
 
 String _billion(num n) {
   final double b = n / 1000000000;
-  final String s = b == b.roundToDouble()
-      ? '${b.toInt()}'
-      : b.toStringAsFixed(1);
+  final String s =
+      b == b.roundToDouble() ? '${b.toInt()}' : b.toStringAsFixed(1);
   return tr('shuteen.billion', {'n': s});
 }
 

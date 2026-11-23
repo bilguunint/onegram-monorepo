@@ -52,6 +52,8 @@ import {
   purchaseProgress,
   purchaseProgressLabel,
   isGoldPurchase,
+  purchaseKindLabel,
+  purchaseUnitLabel,
   purchaseStatusBadge,
   purchaseStatusText,
   OVERDUE_BEHIND_DAYS,
@@ -553,11 +555,12 @@ export default function ProductPurchasesPage() {
                                 {isGoldPurchase(p) ? (
                                   <>
                                     <span className="font-medium text-foreground/80">
-                                      {p.daily_grams} гр
+                                      {p.daily_grams} {purchaseUnitLabel(p)}
                                     </span>
                                     {" / өдөр"}
                                     <span className="text-foreground/40"> · </span>
-                                    алтан эдлэл {p.total_grams} гр
+                                    {purchaseKindLabel(p)} {p.total_grams}{" "}
+                                    {purchaseUnitLabel(p)}
                                   </>
                                 ) : (
                                   <>
@@ -594,7 +597,7 @@ export default function ProductPurchasesPage() {
                           </div>
                           <div className="text-[11px] text-muted-foreground">
                             {isGoldPurchase(p)
-                              ? `${p.paid_grams}/${p.total_grams} гр`
+                              ? `${p.paid_grams}/${p.total_grams} ${purchaseUnitLabel(p)}`
                               : formatPriceMNT(p.total_price)}
                           </div>
                         </td>

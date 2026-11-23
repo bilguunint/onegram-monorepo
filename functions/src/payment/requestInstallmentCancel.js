@@ -82,7 +82,7 @@ exports.requestInstallmentCancel = onRequest({
         if (p.user_id !== uid) {
           throw new Error("FORBIDDEN");
         }
-        if (p.purchase_type !== "installment" && p.purchase_type !== "gold_installment") {
+        if (!["installment", "gold_installment", "silver_installment"].includes(p.purchase_type)) {
           throw new Error("NOT_INSTALLMENT");
         }
         if (p.status !== "active") {
@@ -110,6 +110,7 @@ exports.requestInstallmentCancel = onRequest({
           purchase_type: p.purchase_type,
           paid_days: Number(p.paid_days || 0),
           total_days: Number(p.total_days || 0),
+          unit: p.unit || null,
           paid_grams: Number(p.paid_grams || 0),
           total_grams: Number(p.total_grams || 0),
           fee_percent: feePercent,

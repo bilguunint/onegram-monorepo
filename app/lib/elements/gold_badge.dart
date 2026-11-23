@@ -7,8 +7,15 @@ import 'package:onegrgold/style/app_text.dart';
 class GoldBadge extends StatefulWidget {
   final String label;
   final IconData? icon;
-  const GoldBadge(
-      {super.key, required this.label, this.icon = Icons.diamond_outlined});
+
+  /// true бол мөнгөн (silver) өнгөний палитр — мөнгөн эдлэлийн tag.
+  final bool silver;
+  const GoldBadge({
+    super.key,
+    required this.label,
+    this.icon = Icons.diamond_outlined,
+    this.silver = false,
+  });
 
   @override
   State<GoldBadge> createState() => _GoldBadgeState();
@@ -27,10 +34,14 @@ class _GoldBadgeState extends State<GoldBadge>
     super.dispose();
   }
 
-  static const _dark = Color(0xFF8A6508);
-  static const _mid = Color(0xFFD9A826);
-  static const _light = Color(0xFFFFE89A);
-  static const _text = Color(0xFF3B2A05);
+  Color get _dark =>
+      widget.silver ? const Color(0xFF6E7681) : const Color(0xFF8A6508);
+  Color get _mid =>
+      widget.silver ? const Color(0xFFB9C0C9) : const Color(0xFFD9A826);
+  Color get _light =>
+      widget.silver ? const Color(0xFFF4F6F8) : const Color(0xFFFFE89A);
+  Color get _text =>
+      widget.silver ? const Color(0xFF22272E) : const Color(0xFF3B2A05);
 
   @override
   Widget build(BuildContext context) {
@@ -53,11 +64,11 @@ class _GoldBadgeState extends State<GoldBadge>
             Container(
               padding: const EdgeInsets.fromLTRB(7, 3, 8, 3),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [_dark, _mid, _light, _mid, _dark],
-                  stops: [0.0, 0.3, 0.5, 0.7, 1.0],
+                  stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
                 ),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: _light.withOpacity(0.7), width: 0.8),
@@ -71,7 +82,7 @@ class _GoldBadgeState extends State<GoldBadge>
                   ],
                   Text(
                     widget.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppText.bold,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

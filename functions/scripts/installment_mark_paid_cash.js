@@ -2,6 +2,9 @@
 // purchase-ийг completed (100%) болгоно. Төлөгдөөгүй pending invoice-уудыг
 // cancelled болгоно (QPay-аар давхар төлөгдөхөөс сэргийлнэ).
 //   node scripts/installment_mark_paid_cash.js <purchaseId> [--write] [--by "Админы нэр"]
+//     [--note "тайлбар"] [--method cash|bank_transfer]
+//   --note: payments[] бичлэг ба completed_note-д орох тайлбар (анхдагч: бэлнээр төлсөн)
+//   --method: төлбөрийн хэлбэр (анхдагч cash)
 const path = require("path");
 const admin = require("firebase-admin");
 admin.initializeApp({ credential: admin.credential.cert(require(path.join(__dirname, "..", "grammgold-firebase.json"))) });
@@ -11,6 +14,10 @@ const ID = process.argv[2];
 const WRITE = process.argv.includes("--write");
 const byIdx = process.argv.indexOf("--by");
 const BY = byIdx >= 0 ? process.argv[byIdx + 1] : "office";
+const noteIdx = process.argv.indexOf("--note");
+const NOTE = noteIdx >= 0 ? process.argv[noteIdx + 1] : "Компани дээр бэлнээр төлсөн";
+const methodIdx = process.argv.indexOf("--method");
+const METHOD = methodIdx >= 0 ? process.argv[methodIdx + 1] : "cash";
 
 (async () => {
   const ref = db.collection("product_purchases").doc(ID);
@@ -27,12 +34,12 @@ const BY = byIdx >= 0 ? process.argv[byIdx + 1] : "office";
   for (let d = paidDays + 1; d <= totalDays; d++) {
     const amt = d >= totalDays ? Math.max(totalPrice - paidAmount - credit, 0) : daily;
     credit += amt;
-    entries.push({ day_no: d, amount: amt, paid_at: admin.firestore.Timestamp.now(), payment_method: "cash", note: "Компани дээр бэлнээр төлсөн", recorded_by: BY });
+    entries.push({ day_no: d, amount: amt, paid_at: admin.firestore.Timestamp.now(), payment_method: METHOD, note: NOTE, recorded_by: BY });
   }
   const inv = await db.collection("pending_invoices").where("purchase_id", "==", ID).where("status", "==", "pending").get();
   console.log(`${p.user_snapshot?.last_name || ""} ${p.user_snapshot?.first_name || ""} ${p.user_snapshot?.phone || ""} | ${p.product_snapshot?.name}`);
   console.log(`paid_days ${paidDays}→${totalDays} | paid_amount ${paidAmount}→${paidAmount + credit} (total_price ${totalPrice}) | нэмэх хоног: ${entries.length}, дүн: ${credit}`);
-  console.log(`cancelled болгох pending invoice: ${inv.size}`);
+  console.log(`cancelled болгох pending invoice: ${inv.size} | хэлбэр: ${METHOD} | тайлбар: ${NOTE}`);
   if (!WRITE) {
  console.log("(dry-run; бичихийн тулд --write)"); process.exit(0);
 }
@@ -45,7 +52,7 @@ const BY = byIdx >= 0 ? process.argv[byIdx + 1] : "office";
       payments: [...(Array.isArray(cur.payments) ? cur.payments : []), ...entries],
       status: "completed", completed_at: admin.firestore.FieldValue.serverTimestamp(),
       pickup_code: generatePickupCode(),
-      completed_note: `Үлдсэн ${entries.length} хоног (${credit}₮) компани дээр бэлнээр төлөгдөв`,
+      completed_note: `Үлдсэн ${entries.length} хоног (${credit}₮): ${NOTE}`,
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
     });
     for (const d of inv.docs) tx.update(d.ref, { status: "cancelled", cancel_reason: "paid_in_cash_at_office", updated_at: admin.firestore.FieldValue.serverTimestamp() });

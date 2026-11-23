@@ -60,32 +60,42 @@ class ProductCardWidget extends StatelessWidget {
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white24),
+                                        strokeWidth: 2,
+                                        color: Colors.white24,
+                                      ),
                                     ),
                                   );
                                 },
                                 errorBuilder: (_, __, ___) => const Center(
                                   child: Icon(
-                                      Icons.image_not_supported_outlined,
-                                      color: Colors.white24,
-                                      size: 30),
+                                    Icons.image_not_supported_outlined,
+                                    color: Colors.white24,
+                                    size: 30,
+                                  ),
                                 ),
                               )
                             : const Center(
-                                child: Icon(Icons.inventory_2_outlined,
-                                    color: Colors.white24, size: 34),
+                                child: Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Colors.white24,
+                                  size: 34,
+                                ),
                               ),
                       ),
                     ),
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: product.isGoldJewelry
-                          ? GoldBadge(label: tr('gold.jewelry_badge'))
+                      child: product.isWeightBased
+                          ? GoldBadge(
+                              label: wtr(product.unit, 'gold.jewelry_badge'),
+                              silver: product.isSilverJewelry,
+                            )
                           : Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 3),
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.55),
                                 borderRadius: BorderRadius.circular(8),
@@ -114,13 +124,15 @@ class ProductCardWidget extends StatelessWidget {
                       product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.bodyBold
-                          .copyWith(fontSize: 12.5, height: 1.25),
+                      style: AppText.bodyBold.copyWith(
+                        fontSize: 12.5,
+                        height: 1.25,
+                      ),
                     ),
                     const SizedBox(height: 6.0),
                     Text(
-                      product.isGoldJewelry
-                          ? formatGrams(product.totalGrams)
+                      product.isWeightBased
+                          ? formatGrams(product.totalGrams, product.unit)
                           : formatMNT(product.price),
                       style: TextStyle(
                         fontFamily: AppText.bold,
@@ -132,16 +144,21 @@ class ProductCardWidget extends StatelessWidget {
                     const SizedBox(height: 6.0),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: CustomColors.accentSoft,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        product.isGoldJewelry
-                            ? tr('gold.card_hint', {'grams': formatGrams(0.1)})
-                            : tr('home.daily_amount',
-                                {'amount': formatMNT(daily)}),
+                        product.isWeightBased
+                            ? wtr(product.unit, 'gold.card_hint', {
+                                'grams': formatGrams(0.1, product.unit),
+                              })
+                            : tr('home.daily_amount', {
+                                'amount': formatMNT(daily),
+                              }),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

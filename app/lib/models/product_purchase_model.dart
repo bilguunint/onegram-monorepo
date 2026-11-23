@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 enum ProductPurchaseStatus { active, completed, delivered, cancelled }
 
 /// goldInstallment — грамм дээр суурилсан алтан эдлэлийн хуваан төлөлт.
-enum PurchaseType { installment, direct, goldInstallment }
+enum PurchaseType { installment, direct, goldInstallment, silverInstallment }
 
 class PaymentRecord extends Equatable {
   /// 1-based day index within the installment plan. For [PurchaseType.direct]
@@ -42,8 +42,15 @@ class PaymentRecord extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [dayNo, amount, paidAt, paymentMethod, transactionId, grams, rate];
+  List<Object?> get props => [
+    dayNo,
+    amount,
+    paidAt,
+    paymentMethod,
+    transactionId,
+    grams,
+    rate,
+  ];
 }
 
 class ProductSnapshot extends Equatable {
@@ -69,11 +76,11 @@ class ProductSnapshot extends Equatable {
   }
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'image': image,
-        'price': price,
-        'cancel_fee_percent': cancelFeePercent,
-      };
+    'name': name,
+    'image': image,
+    'price': price,
+    'cancel_fee_percent': cancelFeePercent,
+  };
 
   static int _toInt(dynamic v) {
     if (v == null) return 0;
@@ -95,18 +102,18 @@ class UserSnapshot extends Equatable {
   const UserSnapshot({this.firstName, this.lastName, this.phone, this.email});
 
   factory UserSnapshot.fromMap(Map<String, dynamic> map) => UserSnapshot(
-        firstName: map['first_name'] as String?,
-        lastName: map['last_name'] as String?,
-        phone: map['phone'] as String?,
-        email: map['email'] as String?,
-      );
+    firstName: map['first_name'] as String?,
+    lastName: map['last_name'] as String?,
+    phone: map['phone'] as String?,
+    email: map['email'] as String?,
+  );
 
   Map<String, dynamic> toMap() => {
-        if (firstName != null) 'first_name': firstName,
-        if (lastName != null) 'last_name': lastName,
-        if (phone != null) 'phone': phone,
-        if (email != null) 'email': email,
-      };
+    if (firstName != null) 'first_name': firstName,
+    if (lastName != null) 'last_name': lastName,
+    if (phone != null) 'phone': phone,
+    if (email != null) 'email': email,
+  };
 
   @override
   List<Object?> get props => [firstName, lastName, phone, email];
@@ -163,9 +170,16 @@ class ProductPurchase extends Equatable {
   final double dailyGrams;
   final int estimatedDays;
 
+  /// Жингийн нэгж: 'gr' (алт) | 'lan' (мөнгө).
+  final String unit;
+
   bool get hasPendingCancelRequest => cancelRequestStatus == 'pending';
 
-  bool get isGold => purchaseType == PurchaseType.goldInstallment;
+  /// Жин дээр суурилсан хуваан төлөлт (алтан эдлэл гр / мөнгөн эдлэл лан).
+  /// Нэр нь түүхэн; хоёуланд нь үнэн. Нэгжийг [unit]-ээс авна.
+  bool get isGold =>
+      purchaseType == PurchaseType.goldInstallment ||
+      purchaseType == PurchaseType.silverInstallment;
 
   /// Ердийн ба алтан эдлэлийн хуваан төлөлт хоёулаа "хуваан төлөлт".
   bool get isAnyInstallment =>
@@ -203,6 +217,7 @@ class ProductPurchase extends Equatable {
     this.paidGrams = 0,
     this.dailyGrams = 0,
     this.estimatedDays = 0,
+    this.unit = 'gr',
   });
 
   factory ProductPurchase.fromMap(String id, Map<String, dynamic> map) {
@@ -212,10 +227,12 @@ class ProductPurchase extends Equatable {
       id: id,
       productId: (map['product_id'] ?? '') as String,
       productSnapshot: ProductSnapshot.fromMap(
-          map['product_snapshot'] as Map<String, dynamic>? ?? const {}),
+        map['product_snapshot'] as Map<String, dynamic>? ?? const {},
+      ),
       userId: (map['user_id'] ?? '') as String,
       userSnapshot: UserSnapshot.fromMap(
-          map['user_snapshot'] as Map<String, dynamic>? ?? const {}),
+        map['user_snapshot'] as Map<String, dynamic>? ?? const {},
+      ),
       totalPrice: _toInt(map['total_price']),
       dailyPayment: _toInt(map['daily_payment']),
       months: months,
@@ -228,8 +245,9 @@ class ProductPurchase extends Equatable {
       completedAt: _toDate(map['completed_at']),
       cancelledAt: _toDate(map['cancelled_at']),
       cancelReason: map['cancel_reason'] as String?,
-      refundAmount:
-          map['refund_amount'] == null ? null : _toInt(map['refund_amount']),
+      refundAmount: map['refund_amount'] == null
+          ? null
+          : _toInt(map['refund_amount']),
       refundFee: map['refund_fee'] == null ? null : _toInt(map['refund_fee']),
       deliveredAt: _toDate(map['delivered_at']),
       purchaseType: _parsePurchaseType(map['purchase_type']),
@@ -240,6 +258,7 @@ class ProductPurchase extends Equatable {
       paidGrams: (map['paid_grams'] as num?)?.toDouble() ?? 0,
       dailyGrams: (map['daily_grams'] as num?)?.toDouble() ?? 0,
       estimatedDays: _toInt(map['estimated_days']),
+      unit: map['unit'] == 'lan' ? 'lan' : 'gr',
     );
   }
 
@@ -254,6 +273,7 @@ class ProductPurchase extends Equatable {
   static PurchaseType _parsePurchaseType(dynamic v) {
     if (v == 'direct') return PurchaseType.direct;
     if (v == 'gold_installment') return PurchaseType.goldInstallment;
+    if (v == 'silver_installment') return PurchaseType.silverInstallment;
     return PurchaseType.installment;
   }
 
@@ -370,18 +390,18 @@ class ProductPurchase extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        productId,
-        productSnapshot,
-        userId,
-        totalPrice,
-        dailyPayment,
-        months,
-        totalDays,
-        paidAmount,
-        paidDays,
-        deadline,
-        status,
-        cancelRequestStatus,
-      ];
+    id,
+    productId,
+    productSnapshot,
+    userId,
+    totalPrice,
+    dailyPayment,
+    months,
+    totalDays,
+    paidAmount,
+    paidDays,
+    deadline,
+    status,
+    cancelRequestStatus,
+  ];
 }

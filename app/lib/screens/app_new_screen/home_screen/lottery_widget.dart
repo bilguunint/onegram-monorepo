@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,11 +24,7 @@ class LotteryWidget extends StatefulWidget {
   final String? uid;
   final UserRepository? userRepository;
 
-  const LotteryWidget({
-    super.key,
-    this.uid,
-    this.userRepository,
-  });
+  const LotteryWidget({super.key, this.uid, this.userRepository});
 
   @override
   State<LotteryWidget> createState() => _LotteryWidgetState();
@@ -59,8 +56,9 @@ class _LotteryWidgetState extends State<LotteryWidget> {
       // Current-schema campaigns render as the full-width home banner; this
       // half-width card only ever served the two legacy ones, so showing a new
       // campaign here as well would put it on screen twice.
-      final legacyDocs =
-          snapshot.docs.where((d) => d.data()['schema_version'] != 2).toList();
+      final legacyDocs = snapshot.docs
+          .where((d) => d.data()['schema_version'] != 2)
+          .toList();
       if (legacyDocs.isNotEmpty) {
         final data = legacyDocs.first.data();
         setState(() {
@@ -147,8 +145,10 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                 decoration: BoxDecoration(
                   color: CustomColors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(width: 1.0, color: CustomColors.surfaceBorder),
+                  border: Border.all(
+                    width: 1.0,
+                    color: CustomColors.surfaceBorder,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: CustomColors.accent.withOpacity(0.08),
@@ -163,8 +163,11 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Lottie.asset('assets/icons/clock.json',
-                            width: 20, height: 20),
+                        Lottie.asset(
+                          'assets/icons/clock.json',
+                          width: 20,
+                          height: 20,
+                        ),
                         const SizedBox(width: 4.0),
                         Flexible(
                           child: Text(
@@ -172,7 +175,7 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                                 ? tr('home.days_left', {
                                     'days': _endDate!
                                         .difference(DateTime.now())
-                                        .inDays
+                                        .inDays,
                                   })
                                 : "COMING SOON...",
                             maxLines: 1,
@@ -189,9 +192,12 @@ class _LotteryWidgetState extends State<LotteryWidget> {
                     const Spacer(),
                     Center(
                       child: SizedBox(
-                          height: 100,
-                          child: Lottie.asset('assets/icons/golden_ticket.json',
-                              repeat: false)),
+                        height: 100,
+                        child: Lottie.asset(
+                          'assets/icons/golden_ticket.json',
+                          repeat: false,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8.0),
                     // Ticket count pill — accent text on the soft accent tint.
@@ -296,7 +302,7 @@ class _ProductsPromo extends StatelessWidget {
         // Хамгийн бага өдрийн төлбөр — "…-өөс" гэж харуулна
         num? minDaily;
         for (final p in products) {
-          if (p.isGoldJewelry) continue;
+          if (p.isWeightBased) continue;
           final d = dailyAmount(p.price, p.maxMonths.clamp(1, 12));
           if (minDaily == null || d < minDaily) minDaily = d;
         }
@@ -313,8 +319,11 @@ class _ProductsPromo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 16.0),
+              padding: const EdgeInsets.only(
+                left: 16.0,
+                top: 16.0,
+                bottom: 16.0,
+              ),
               child: Text(
                 tr('home.installment_title'),
                 style: AppText.sectionTitle.copyWith(fontSize: 14.0),
@@ -332,7 +341,9 @@ class _ProductsPromo extends StatelessWidget {
                     color: CustomColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        width: 1.0, color: CustomColors.surfaceBorder),
+                      width: 1.0,
+                      color: CustomColors.surfaceBorder,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: CustomColors.accent.withOpacity(0.08),
@@ -356,21 +367,29 @@ class _ProductsPromo extends StatelessWidget {
                               child: Column(
                                 children: [
                                   Expanded(
-                                    child: Row(children: [
-                                      Expanded(child: _tile(covers, 0)),
-                                      const SizedBox(width: 6),
-                                      Expanded(child: _tile(covers, 1)),
-                                    ]),
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: _tile(covers, 0)),
+                                        const SizedBox(width: 6),
+                                        Expanded(child: _tile(covers, 1)),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   Expanded(
-                                    child: Row(children: [
-                                      Expanded(child: _tile(covers, 2)),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                          child: _tile(covers, 3,
-                                              extra: extra > 0 ? extra : 0)),
-                                    ]),
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: _tile(covers, 2)),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: _tile(
+                                            covers,
+                                            3,
+                                            extra: extra > 0 ? extra : 0,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -380,14 +399,17 @@ class _ProductsPromo extends StatelessWidget {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: CustomColors.accentSoft,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    tr('home.products_count',
-                                        {'n': products.length}),
+                                    tr('home.products_count', {
+                                      'n': products.length,
+                                    }),
                                     style: TextStyle(
                                       fontFamily: AppText.bold,
                                       fontSize: 11,
@@ -405,21 +427,25 @@ class _ProductsPromo extends StatelessWidget {
                                     color: CustomColors.surfaceAlt,
                                   ),
                                   child: const Icon(
-                                      Ionicons.arrowForwardOutline,
-                                      size: 14,
-                                      color: Colors.white),
+                                    Ionicons.arrowForwardOutline,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             if (minDaily != null)
                               Text(
-                                tr('home.daily_from',
-                                    {'amount': formatMNT(minDaily)}),
+                                tr('home.daily_from', {
+                                  'amount': formatMNT(minDaily),
+                                }),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppText.caption.copyWith(
-                                    fontSize: 11, color: Colors.white70),
+                                  fontSize: 11,
+                                  color: Colors.white70,
+                                ),
                               ),
                           ],
                         ),
@@ -442,13 +468,19 @@ class _ProductsPromo extends StatelessWidget {
               cover,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.image_not_supported_outlined,
-                    color: Colors.white24, size: 18),
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  color: Colors.white24,
+                  size: 18,
+                ),
               ),
             )
           : const Center(
-              child: Icon(Icons.inventory_2_outlined,
-                  color: Colors.white24, size: 18),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: Colors.white24,
+                size: 18,
+              ),
             ),
     );
     if (extra > 0) {
@@ -517,8 +549,10 @@ class _ActiveInstallmentPromo extends StatelessWidget {
               decoration: BoxDecoration(
                 color: CustomColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border:
-                    Border.all(width: 1.0, color: CustomColors.surfaceBorder),
+                border: Border.all(
+                  width: 1.0,
+                  color: CustomColors.surfaceBorder,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: CustomColors.accent.withOpacity(0.08),
@@ -575,8 +609,9 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                         value: purchase.progress,
                         minHeight: 5,
                         backgroundColor: Colors.white.withOpacity(0.08),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(CustomColors.accent),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          CustomColors.accent,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -585,13 +620,19 @@ class _ActiveInstallmentPromo extends StatelessWidget {
                       children: [
                         Text(
                           purchase.isGold
-                              ? tr('gold.grams_paid_of', {
-                                  'paid': formatGrams(purchase.paidGrams),
-                                  'total': formatGrams(purchase.totalGrams),
+                              ? wtr(purchase.unit, 'gold.grams_paid_of', {
+                                  'paid': formatGrams(
+                                    purchase.paidGrams,
+                                    purchase.unit,
+                                  ),
+                                  'total': formatGrams(
+                                    purchase.totalGrams,
+                                    purchase.unit,
+                                  ),
                                 })
                               : tr('home.days_progress', {
                                   'paid': purchase.paidDays,
-                                  'total': purchase.totalDays
+                                  'total': purchase.totalDays,
                                 }),
                           style: AppText.caption.copyWith(fontSize: 9.5),
                         ),

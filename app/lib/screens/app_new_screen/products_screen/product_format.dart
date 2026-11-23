@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:onegrgold/l10n/app_locale.dart';
+import 'package:onegrgold/l10n/translations.dart';
 
 final _mnt0 = NumberFormat.decimalPattern('mn_MN');
 
@@ -20,11 +21,23 @@ int dailyAmount(int price, int months) {
 /// Total days for a given month count (= months * 30).
 int totalDaysFor(int months) => months * kDaysPerMonth;
 
-/// 0.1 → "0.1 гр", 5.25 → "5.25 гр", 2.0 → "2 гр".
-String formatGrams(num grams) {
+/// Жингийн нэгжээр формат: unit 'gr' → "0.1 гр", unit 'lan' → "0.1 лан".
+/// Алтан эдлэл граммаар, мөнгөн эдлэл лангаар (1 лан = 37.5 гр) хэмжигдэнэ.
+String formatGrams(num grams, [String unit = 'gr']) {
   final r = (grams * 100).round() / 100;
   final str = r == r.roundToDouble()
       ? r.toInt().toString()
       : r.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '');
-  return '$str ${tr('gold.gram_unit')}';
+  return '$str ${tr(unit == 'lan' ? 'silver.lan_unit' : 'gold.gram_unit')}';
+}
+
+/// Жин дээр суурилсан дэлгэцүүдийн текст: [unit] 'lan' (мөнгөн эдлэл) бөгөөд
+/// тухайн түлхүүрийн `silver.` хувилбар байвал түүнийг, үгүй бол `gold.`-ыг
+/// ашиглана. Ингэснээр алт/мөнгөний дэлгэц нэг кодоор ажиллана.
+String wtr(String unit, String goldKey, [Map<String, Object?>? params]) {
+  if (unit == 'lan') {
+    final k = goldKey.replaceFirst('gold.', 'silver.');
+    if (kTranslations.containsKey(k)) return tr(k, params);
+  }
+  return tr(goldKey, params);
 }

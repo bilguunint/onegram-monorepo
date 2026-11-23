@@ -30,13 +30,16 @@ async function authUid(req) {
 }
 
 const GRAMS_ERRORS = {
-  INVALID_GRAMS: "Грамм буруу байна.",
-  BELOW_MIN_STEP: "Хамгийн багадаа {step} гр төлнө.",
-  NOT_STEP_MULTIPLE: "Грамм {step}-ийн үржвэр байх ёстой.",
+  INVALID_GRAMS: "Хэмжээ буруу байна.",
+  BELOW_MIN_STEP: "Хамгийн багадаа {step} {unit} төлнө.",
+  NOT_STEP_MULTIPLE: "Хэмжээ {step} {unit}-ийн үржвэр байх ёстой.",
 };
-function gramsError(err, settings) {
+function gramsError(err, settings, K) {
   const t = GRAMS_ERRORS[err.message];
-  return t ? t.replace("{step}", String(settings.min_step_grams)) : null;
+  return t ?
+    t.replace("{step}", String(settings.min_step_grams))
+      .replace("{unit}", (K || G.KINDS.gold_jewelry).unitLabel) :
+    null;
 }
 
 async function createQPayInvoice(senderInvoiceNo, amount, callbackUrl, description) {
@@ -80,9 +83,14 @@ exports.quoteGoldInstallment = onRequest(opts, async (req, res) => {
   return cors(req, res, async () => {
     const db = admin.firestore();
     try {
-      const [settings, rate] = await Promise.all([G.loadSettings(db), G.loadGoldRate(db)]);
+      // ?kind=silver_jewelry бол мөнгөн эдлэлийн (лан) үнэ; анхдагч нь алт.
+      const kindRaw = (req.query && req.query.kind) || (req.body && req.body.kind);
+      const K = G.KINDS[kindRaw] || G.KINDS.gold_jewelry;
+      const { settings, rate } = await G.loadPricing(db, K.kind);
       const grams = Number((req.query && req.query.grams) || (req.body && req.body.grams) || 0);
       const out = {
+        kind: K.kind,
+        unit: K.unit,
         rate,
         price_per_gram: Math.round(G.pricePerGram(rate, settings)),
         labor_per_gram: settings.labor_per_gram,
@@ -110,7 +118,7 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
       const activeSnap = await db.collection("product_purchases")
         .where("user_id", "==", uid)
         .where("status", "==", "active")
-        .where("purchase_type", "in", ["installment", G.PURCHASE_TYPE])
+        .where("purchase_type", "in", ["installment", ...G.WEIGHT_PURCHASE_TYPES])
         .limit(MAX_ACTIVE_INSTALLMENTS)
         .get();
       if (activeSnap.size >= MAX_ACTIVE_INSTALLMENTS) {
@@ -123,17 +131,18 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
       const productSnap = await db.collection("products").doc(productId).get();
       if (!productSnap.exists) return res.status(404).json({ error: "Product not found" });
       const product = productSnap.data() || {};
-      if (product.product_kind !== G.PRODUCT_KIND) {
-        return res.status(409).json({ error: "Энэ бараа алтан эдлэлийн хуваан төлөлт биш." });
+      const K = G.KINDS[product.product_kind];
+      if (!K) {
+        return res.status(409).json({ error: "Энэ бараа жингээр хуваан төлөх төрөл биш." });
       }
       if (product.status !== "active") return res.status(409).json({ error: "Product is not active" });
       if (product.stock != null && Number(product.stock) <= 0) {
         return res.status(409).json({ error: "Product is out of stock" });
       }
-      const totalCg = G.toCg(product.total_grams);
-      if (!(totalCg > 0)) return res.status(409).json({ error: "Барааны грамм тохируулаагүй байна." });
+      const totalCg = G.toCg(product[K.totalField]);
+      if (!(totalCg > 0)) return res.status(409).json({ error: "Барааны жин тохируулаагүй байна." });
 
-      const [settings, rate] = await Promise.all([G.loadSettings(db), G.loadGoldRate(db)]);
+      const { settings, rate } = await G.loadPricing(db, K.kind);
       const dailyGrams = Number(dailyGramsRaw);
       let dailyCg;
       let firstCg;
@@ -141,7 +150,7 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
         dailyCg = G.normalizeGramsCg(dailyGrams, totalCg, settings);
         firstCg = gramsRaw != null ? G.normalizeGramsCg(Number(gramsRaw), totalCg, settings) : dailyCg;
       } catch (e) {
-        const msg = gramsError(e, settings);
+        const msg = gramsError(e, settings, K);
         if (!msg) throw e;
         return res.status(400).json({ error: msg });
       }
@@ -154,14 +163,16 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
       const pendingRef = db.collection("pending_invoices").doc();
       const pendingId = pendingRef.id;
       const qpayInvoice = await createQPayInvoice(
-        `GOLDINST_INIT-${pendingId}`,
+        `${K.invoicePrefix}_INIT-${pendingId}`,
         quote.amount,
         `${CALLBACK_INIT}?pending_id=${pendingId}`,
-        `Алтан эдлэл — ${product.name || "Бараа"} (${quote.grams} гр)`,
+        `${K.title} — ${product.name || "Бараа"} (${quote.grams} ${K.unitLabel})`,
       );
 
       await pendingRef.set({
         type: G.INVOICE_TYPE_INIT,
+        purchase_type: K.purchaseType,
+        unit: K.unit,
         pending_id: pendingId,
         invoice_id: qpayInvoice.invoice_id,
         product_id: productId,
@@ -169,7 +180,8 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
           name: product.name || "",
           image: Array.isArray(product.images) && product.images.length ? product.images[0] : null,
           price: 0,
-          product_kind: G.PRODUCT_KIND,
+          product_kind: K.kind,
+          unit: K.unit,
           total_grams: G.toG(totalCg),
           cancel_fee_percent: Number(product.cancel_fee_percent || 0),
         },
@@ -199,6 +211,7 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
         pending_id: pendingId,
         invoice_id: qpayInvoice.invoice_id,
         ...quote,
+        unit: K.unit,
         total_grams: G.toG(totalCg),
         daily_grams: G.toG(dailyCg),
         estimated_days: Math.ceil(totalCg / dailyCg),
@@ -223,22 +236,23 @@ exports.createGoldInstallmentPayment = onRequest(opts, async (req, res) => {
       if (!snap.exists) return res.status(404).json({ error: "Purchase not found" });
       const p = snap.data() || {};
       if (p.user_id !== uid) return res.status(403).json({ error: "Forbidden" });
-      if (p.purchase_type !== G.PURCHASE_TYPE) {
-        return res.status(409).json({ error: "Энэ худалдан авалт алтан эдлэлийн хуваан төлөлт биш." });
+      const K = G.kindByPurchaseType(p.purchase_type);
+      if (!K) {
+        return res.status(409).json({ error: "Энэ худалдан авалт жингээр хуваан төлөх төрөл биш." });
       }
       if (p.status !== "active") return res.status(409).json({ error: "Purchase is not active", status: p.status });
       if (p.cancel_request_status === "pending") {
         return res.status(409).json({ error: "Цуцлах хүсэлт хүлээгдэж байгаа тул төлбөр хийх боломжгүй." });
       }
       const remainingCg = G.toCg(p.total_grams) - G.toCg(p.paid_grams);
-      if (remainingCg <= 0) return res.status(409).json({ error: "Бүх грамм төлөгдсөн." });
+      if (remainingCg <= 0) return res.status(409).json({ error: "Бүрэн төлөгдсөн." });
 
-      const [settings, rate] = await Promise.all([G.loadSettings(db), G.loadGoldRate(db)]);
+      const { settings, rate } = await G.loadPricing(db, K.kind);
       let cg;
       try {
         cg = G.normalizeGramsCg(Number(gramsRaw != null ? gramsRaw : p.daily_grams), remainingCg, settings);
       } catch (e) {
-        const msg = gramsError(e, settings);
+        const msg = gramsError(e, settings, K);
         if (!msg) throw e;
         return res.status(400).json({ error: msg });
       }
@@ -247,13 +261,14 @@ exports.createGoldInstallmentPayment = onRequest(opts, async (req, res) => {
       const name = (p.product_snapshot && p.product_snapshot.name) || "Бараа";
 
       const qpayInvoice = await createQPayInvoice(
-        `GOLDINST-${purchaseId}-${paidCount + 1}-${quote.grams}`,
+        `${K.invoicePrefix}-${purchaseId}-${paidCount + 1}-${quote.grams}`,
         quote.amount,
         `${CALLBACK_PAY}?purchase_id=${encodeURIComponent(purchaseId)}`,
-        `Алтан эдлэл — ${name} (${quote.grams} гр)`,
+        `${K.title} — ${name} (${quote.grams} ${K.unitLabel})`,
       );
       await db.collection("pending_invoices").doc(qpayInvoice.invoice_id).set({
         type: G.INVOICE_TYPE,
+        unit: K.unit,
         invoice_id: qpayInvoice.invoice_id,
         purchase_id: purchaseId,
         userId: uid,
@@ -273,6 +288,7 @@ exports.createGoldInstallmentPayment = onRequest(opts, async (req, res) => {
         qpay_invoice: qpayInvoice,
         invoice_id: qpayInvoice.invoice_id,
         ...quote,
+        unit: K.unit,
         remaining_grams_after: G.toG(remainingCg - cg),
       });
     } catch (err) {

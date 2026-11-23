@@ -124,6 +124,13 @@ export default function ProductsPage() {
           >
             Алтан эдлэлийн тохиргоо
           </Button>
+          <Button
+            render={<Link href="/products/silver-settings" />}
+            size="sm"
+            variant="outline"
+          >
+            Мөнгөн эдлэл: 1 лангийн үнэ
+          </Button>
           <CatalogPdfButton products={items} />
           <Button
             variant="outline"
@@ -250,9 +257,14 @@ export default function ProductsPage() {
                             алтан эдлэл · өдрийн ханшаар
                           </div>
                         )}
+                        {p.product_kind === "silver_jewelry" && (
+                          <div className="text-[10px] font-normal text-muted-foreground">
+                            мөнгөн эдлэл · {p.total_lan ?? 0} лан
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center text-[12px] tabular-nums">
-                        {p.product_kind === "gold_jewelry"
+                        {p.product_kind !== "standard"
                           ? "—"
                           : p.min_months === p.max_months
                             ? `${p.max_months}`

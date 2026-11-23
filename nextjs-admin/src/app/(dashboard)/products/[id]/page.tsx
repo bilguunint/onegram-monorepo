@@ -35,6 +35,7 @@ import {
   purchaseProgress,
   purchaseProgressLabel,
   isGoldPurchase,
+  purchaseUnitLabel,
   purchaseStatusBadge,
   purchaseStatusText,
 } from "@/lib/products";
@@ -192,7 +193,9 @@ export default function ProductDetailPage() {
               <span className="text-[18px] font-bold text-primary-600">
                 {product.product_kind === "gold_jewelry"
                   ? `${product.total_grams ?? 0} гр · өдрийн ханшаар`
-                  : formatPriceMNT(product.price)}
+                  : product.product_kind === "silver_jewelry"
+                    ? `${product.total_lan ?? 0} лан · ${formatPriceMNT(product.price)}`
+                    : formatPriceMNT(product.price)}
               </span>
             </div>
             {product.description && (
@@ -360,7 +363,7 @@ function PurchasesTable({
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     {isGoldPurchase(p)
-                      ? `${p.paid_grams}/${p.total_grams} гр`
+                      ? `${p.paid_grams}/${p.total_grams} ${purchaseUnitLabel(p)}`
                       : formatPriceMNT(p.total_price)}
                   </div>
                 </td>

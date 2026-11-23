@@ -31,19 +31,22 @@ class _MyPurchasesScreenState extends State<MyPurchasesScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-                child: CupertinoActivityIndicator(color: Colors.white));
+              child: CupertinoActivityIndicator(color: Colors.white),
+            );
           }
           if (snapshot.hasError) {
             final err = snapshot.error;
             final stack = snapshot.stackTrace;
             debugPrint('[MyPurchasesScreen] error: $err');
             if (stack != null) debugPrintStack(stackTrace: stack);
-            FlutterError.reportError(FlutterErrorDetails(
-              exception: err ?? 'Unknown error',
-              stack: stack,
-              library: 'MyPurchasesScreen',
-              context: ErrorDescription('watchMyPurchases stream'),
-            ));
+            FlutterError.reportError(
+              FlutterErrorDetails(
+                exception: err ?? 'Unknown error',
+                stack: stack,
+                library: 'MyPurchasesScreen',
+                context: ErrorDescription('watchMyPurchases stream'),
+              ),
+            );
             return AppEmptyState(
               icon: Icons.error_outline_rounded,
               iconColor: CustomColors.negative,
@@ -137,10 +140,7 @@ class _PurchaseRowCard extends StatelessWidget {
   final ProductPurchase purchase;
   final VoidCallback onTap;
 
-  const _PurchaseRowCard({
-    required this.purchase,
-    required this.onTap,
-  });
+  const _PurchaseRowCard({required this.purchase, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -203,16 +203,22 @@ class _PurchaseRowCard extends StatelessWidget {
                           Flexible(
                             child: Text(
                               purchase.isGold
-                                  ? tr('gold.grams_paid_of', {
-                                      'paid': formatGrams(purchase.paidGrams),
-                                      'total': formatGrams(purchase.totalGrams),
+                                  ? wtr(purchase.unit, 'gold.grams_paid_of', {
+                                      'paid': formatGrams(
+                                        purchase.paidGrams,
+                                        purchase.unit,
+                                      ),
+                                      'total': formatGrams(
+                                        purchase.totalGrams,
+                                        purchase.unit,
+                                      ),
                                     })
                                   : isInstallment
-                                      ? tr('purchase.days_progress', {
-                                          'paid': purchase.paidDays,
-                                          'total': purchase.totalDays,
-                                        })
-                                      : tr('purchase.direct_short'),
+                                  ? tr('purchase.days_progress', {
+                                      'paid': purchase.paidDays,
+                                      'total': purchase.totalDays,
+                                    })
+                                  : tr('purchase.direct_short'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppText.caption,
@@ -229,8 +235,9 @@ class _PurchaseRowCard extends StatelessWidget {
                   children: [
                     Text(
                       formatMNT(purchase.paidAmount),
-                      style:
-                          AppText.bodyBold.copyWith(color: CustomColors.accent),
+                      style: AppText.bodyBold.copyWith(
+                        color: CustomColors.accent,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -265,8 +272,9 @@ class _PurchaseRowCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      tr('purchase.deadline_with_date',
-                          {'date': _fmtDate(purchase.deadline!)}),
+                      tr('purchase.deadline_with_date', {
+                        'date': _fmtDate(purchase.deadline!),
+                      }),
                       style: AppText.caption,
                     ),
                   ],

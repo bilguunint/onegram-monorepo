@@ -6,9 +6,17 @@ class LoginResponse {
 
   LoginResponse(this.token, this.isUserExist, this.error, this.statusCode);
 
-  LoginResponse.fromJson(Map<String, dynamic> json, int code)
-      : token = json["token"],
-        isUserExist = json["isUserExist"] ?? false,
-        error = "",
-        statusCode = code;
+  /// Сервер амжилттай үед JSON ({token}), алдаатай үед энгийн текст
+  /// ("Invalid OTP", "OTP expired" ...) буцаадаг тул хоёуланг нь хүлээн авна.
+  factory LoginResponse.fromJson(dynamic json, int code) {
+    if (json is Map) {
+      return LoginResponse(
+        (json["token"] ?? "").toString(),
+        json["isUserExist"] == true,
+        (json["error"] ?? "").toString(),
+        code,
+      );
+    }
+    return LoginResponse("", false, json?.toString() ?? "", code);
+  }
 }

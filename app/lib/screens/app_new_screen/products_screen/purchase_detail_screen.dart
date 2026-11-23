@@ -99,6 +99,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
       builder: (_) => GoldGramsSelectSheet(
         remainingGrams: purchase.remainingGrams,
         dailyGrams: purchase.dailyGrams,
+        unit: purchase.unit,
       ),
     );
     if (grams == null || !mounted) return;
@@ -121,7 +122,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
             invoice: result.invoice,
             productName: purchase.productSnapshot.name,
             targetPaidGrams: result.targetPaidGrams,
-            gramsLabel: formatGrams(result.grams),
+            gramsLabel: formatGrams(result.grams, purchase.unit),
           ),
         ),
       );
@@ -181,11 +182,13 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         final hasRemaining = isGold
             ? purchase.remainingGrams > 0
             : purchase.paidDays < purchase.totalDays;
-        final showPayButton = isInstallment &&
+        final showPayButton =
+            isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
             hasRemaining &&
             !cancelPending;
-        final showCancelAction = isInstallment &&
+        final showCancelAction =
+            isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
             !cancelPending;
         final nextDay = purchase.paidDays + 1;
@@ -229,13 +232,15 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                     const _CancelPendingBanner(),
                   ],
                   const SizedBox(height: 24),
-                  Text(tr('product.payment_history'),
-                      style: AppText.sectionTitle),
+                  Text(
+                    tr('product.payment_history'),
+                    style: AppText.sectionTitle,
+                  ),
                   if (isInstallment) ...[
                     const SizedBox(height: 4),
                     Text(
                       isGold
-                          ? tr('gold.history_hint')
+                          ? wtr(purchase.unit, 'gold.history_hint')
                           : tr('product.schedule_summary', {
                               'days': purchase.totalDays,
                               'amount': formatMNT(purchase.dailyPayment),
@@ -248,6 +253,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                   _HistoryCard(
                     history: history,
                     upcoming: upcoming,
+                    unit: purchase.unit,
                   ),
                 ],
               ),
@@ -265,11 +271,11 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                           label: _requestingInvoice
                               ? tr('product.creating_invoice')
                               : isGold
-                                  ? tr('gold.pay_next')
-                                  : tr('product.pay_from_day', {
-                                      'day': nextDay,
-                                      'remaining': remainingDays,
-                                    }),
+                              ? wtr(purchase.unit, 'gold.pay_next')
+                              : tr('product.pay_from_day', {
+                                  'day': nextDay,
+                                  'remaining': remainingDays,
+                                }),
                           icon: Icons.qr_code_rounded,
                           loading: _requestingInvoice,
                           onPressed: () => isGold
@@ -319,9 +325,13 @@ class _HistoryCard extends StatelessWidget {
 
   /// Дараагийн өдрийн төлбөр хоцорсон эсэх — улаан icon.
 
+  /// Жингийн нэгж ('gr' | 'lan') — грамм/лантай түүхийн мөрүүдэд.
+  final String unit;
+
   const _HistoryCard({
     required this.history,
     required this.upcoming,
+    this.unit = 'gr',
   });
 
   @override
@@ -335,39 +345,44 @@ class _HistoryCard extends StatelessWidget {
     final List<Widget> rows = [];
     if (upcoming != null) {
       final Color c = CustomColors.textSecondary;
-      rows.add(AppListRow(
-        leading: AppIconTile(
-          size: 40,
-          color: c.withOpacity(0.15),
-          child: Icon(
-            Icons.schedule_rounded,
-            size: 18,
-            color: c,
+      rows.add(
+        AppListRow(
+          leading: AppIconTile(
+            size: 40,
+            color: c.withOpacity(0.15),
+            child: Icon(Icons.schedule_rounded, size: 18, color: c),
+          ),
+          title: tr('product.day_payment', {'day': upcoming!.dayNo}),
+          subtitle: tr('common.pending'),
+          trailing: Text(
+            formatMNT(upcoming!.amount),
+            style: AppText.bodyBold.copyWith(color: c),
           ),
         ),
-        title: tr('product.day_payment', {'day': upcoming!.dayNo}),
-        subtitle: tr('common.pending'),
-        trailing: Text(formatMNT(upcoming!.amount),
-            style: AppText.bodyBold.copyWith(color: c)),
-      ));
+      );
     }
     for (final row in history) {
-      rows.add(AppListRow(
-        leading: AppIconTile(
-          size: 40,
-          color: CustomColors.positive.withOpacity(0.15),
-          child:
-              Icon(Icons.check_rounded, size: 18, color: CustomColors.positive),
+      rows.add(
+        AppListRow(
+          leading: AppIconTile(
+            size: 40,
+            color: CustomColors.positive.withOpacity(0.15),
+            child: Icon(
+              Icons.check_rounded,
+              size: 18,
+              color: CustomColors.positive,
+            ),
+          ),
+          title: row.grams != null
+              ? wtr(unit, 'gold.payment_row', {
+                  'grams': formatGrams(row.grams!, unit),
+                  'rate': formatMNT(row.rate ?? 0),
+                })
+              : tr('product.day_payment', {'day': row.dayNo}),
+          subtitle: _fmtDate(row.paidAt),
+          trailing: Text(formatMNT(row.amount), style: AppText.bodyBold),
         ),
-        title: row.grams != null
-            ? tr('gold.payment_row', {
-                'grams': formatGrams(row.grams!),
-                'rate': formatMNT(row.rate ?? 0),
-              })
-            : tr('product.day_payment', {'day': row.dayNo}),
-        subtitle: _fmtDate(row.paidAt),
-        trailing: Text(formatMNT(row.amount), style: AppText.bodyBold),
-      ));
+      );
     }
 
     return AppCard(
@@ -431,16 +446,22 @@ class _HeaderCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   purchase.isGold
-                      ? tr('gold.summary', {
-                          'total': formatGrams(purchase.totalGrams),
-                          'daily': formatGrams(purchase.dailyGrams),
+                      ? wtr(purchase.unit, 'gold.summary', {
+                          'total': formatGrams(
+                            purchase.totalGrams,
+                            purchase.unit,
+                          ),
+                          'daily': formatGrams(
+                            purchase.dailyGrams,
+                            purchase.unit,
+                          ),
                         })
                       : purchase.purchaseType == PurchaseType.installment
-                          ? tr('product.installment_summary', {
-                              'months': purchase.months,
-                              'days': purchase.totalDays,
-                            })
-                          : tr('product.direct_purchase'),
+                      ? tr('product.installment_summary', {
+                          'months': purchase.months,
+                          'days': purchase.totalDays,
+                        })
+                      : tr('product.direct_purchase'),
                   style: AppText.caption,
                 ),
               ],
@@ -528,11 +549,12 @@ class _ProgressCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-                tr('gold.grams_paid_of', {
-                  'paid': formatGrams(purchase.paidGrams),
-                  'total': formatGrams(purchase.totalGrams),
-                }),
-                style: AppText.caption),
+              wtr(purchase.unit, 'gold.grams_paid_of', {
+                'paid': formatGrams(purchase.paidGrams, purchase.unit),
+                'total': formatGrams(purchase.totalGrams, purchase.unit),
+              }),
+              style: AppText.caption,
+            ),
             const SizedBox(height: 4),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -540,15 +562,19 @@ class _ProgressCard extends StatelessWidget {
               children: [
                 Flexible(
                   child: Text(
-                    formatGrams(purchase.paidGrams),
+                    formatGrams(purchase.paidGrams, purchase.unit),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+                    textScaler: TextScaler.noScaling,
                     style: AppText.display.copyWith(fontSize: 28),
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text('/ ${formatGrams(purchase.totalGrams)}',
-                    style: AppText.caption.copyWith(fontSize: 13)),
+                Text(
+                  '/ ${formatGrams(purchase.totalGrams, purchase.unit)}',
+                  style: AppText.caption.copyWith(fontSize: 13),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -565,14 +591,14 @@ class _ProgressCard extends StatelessWidget {
             const AppDivider(),
             AppInfoRow(
               icon: Icons.account_balance_wallet_outlined,
-              label: tr('gold.paid_total_amount'),
+              label: wtr(purchase.unit, 'gold.paid_total_amount'),
               value: formatMNT(purchase.paidAmount),
               valueColor: CustomColors.accent,
             ),
             AppInfoRow(
               icon: Icons.scale_outlined,
-              label: tr('gold.remaining_label'),
-              value: formatGrams(purchase.remainingGrams),
+              label: wtr(purchase.unit, 'gold.remaining_label'),
+              value: formatGrams(purchase.remainingGrams, purchase.unit),
             ),
           ],
         ),
@@ -593,6 +619,8 @@ class _ProgressCard extends StatelessWidget {
                   formatMNT(purchase.paidAmount),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+                  textScaler: TextScaler.noScaling,
                   style: AppText.display.copyWith(fontSize: 28),
                 ),
               ),
@@ -633,8 +661,9 @@ class _ProgressCard extends StatelessWidget {
               purchase.deadline != null)
             AppInfoRow(
               icon: Icons.event_outlined,
-              label: tr('product.deadline_with',
-                  {'date': _fmtDate(purchase.deadline!)}),
+              label: tr('product.deadline_with', {
+                'date': _fmtDate(purchase.deadline!),
+              }),
               // Хугацаа хэтэрсэн ч "хоцорсон" гэж улаанаар бичихгүй — зөвхөн
               // огноог харуулна. Хуваан төлөлт дарамтгүй байх бодлого (2026-11).
               value: daysLeft == null || daysLeft < 0
@@ -657,10 +686,12 @@ class _CancelledCard extends StatelessWidget {
       if (purchase.cancelReason != null && purchase.cancelReason!.isNotEmpty)
         tr('product.cancel_reason', {'reason': purchase.cancelReason}),
       if (purchase.refundAmount != null) ...[
-        tr('product.fee_amount',
-            {'amount': formatMNT(purchase.refundFee ?? 0)}),
-        tr('product.refunded_amount',
-            {'amount': formatMNT(purchase.refundAmount!)}),
+        tr('product.fee_amount', {
+          'amount': formatMNT(purchase.refundFee ?? 0),
+        }),
+        tr('product.refunded_amount', {
+          'amount': formatMNT(purchase.refundAmount!),
+        }),
       ],
     ];
     if (details.isEmpty) {

@@ -6,7 +6,9 @@ enum ProductStatus { active, inactive }
 /// standard — үнэтэй, хоногоор хуваадаг ердийн бараа.
 /// goldJewelry — үнэгүй, ГРАММ дээр суурилсан алтан эдлэл: хэрэглэгч тухайн
 /// өдрийн ханшаар 0.1 гр-ын үржвэрээр цуглуулна (сервер: goldInstallmentShared).
-enum ProductKind { standard, goldJewelry }
+/// silverJewelry — мөнгөн эдлэл: ЛАН дээр суурилна, админы баталгаажуулсан
+/// 1 лангийн үнээр 0.1 лангийн үржвэрээр хуваан төлнө.
+enum ProductKind { standard, goldJewelry, silverJewelry }
 
 class Product extends Equatable {
   final String id;
@@ -16,7 +18,7 @@ class Product extends Equatable {
   final ProductKind kind;
   final int price; // MNT (goldJewelry бол 0)
 
-  /// goldJewelry: эдлэлийн нийт грамм.
+  /// goldJewelry: эдлэлийн нийт грамм; silverJewelry: нийт ЛАН ([unit]).
   final double totalGrams;
   final int minMonths;
   final int maxMonths;
@@ -44,6 +46,16 @@ class Product extends Equatable {
   String? get coverImage => images.isNotEmpty ? images.first : null;
 
   bool get isGoldJewelry => kind == ProductKind.goldJewelry;
+  bool get isSilverJewelry => kind == ProductKind.silverJewelry;
+
+  /// Жин дээр суурилсан (алт: грамм, мөнгө: лан) — нэгжээр хуваан төлнө.
+  bool get isWeightBased => isGoldJewelry || isSilverJewelry;
+
+  /// Жингийн нэгж: 'gr' | 'lan'.
+  String get unit => isSilverJewelry ? 'lan' : 'gr';
+
+  /// Серверийн product_kind утга (quote/init дуудлагад).
+  String get kindParam => isSilverJewelry ? 'silver_jewelry' : 'gold_jewelry';
 
   bool get isAvailable =>
       status == ProductStatus.active && (stock == null || stock! > 0);
@@ -56,9 +68,17 @@ class Product extends Equatable {
       images: List<String>.from(map['images'] ?? const <String>[]),
       kind: map['product_kind'] == 'gold_jewelry'
           ? ProductKind.goldJewelry
+          : map['product_kind'] == 'silver_jewelry'
+          ? ProductKind.silverJewelry
           : ProductKind.standard,
       price: _toInt(map['price']),
-      totalGrams: (map['total_grams'] as num?)?.toDouble() ?? 0,
+      totalGrams:
+          ((map['product_kind'] == 'silver_jewelry'
+                      ? map['total_lan']
+                      : map['total_grams'])
+                  as num?)
+              ?.toDouble() ??
+          0,
       minMonths: _toInt(map['min_months'], fallback: 1),
       maxMonths: _toInt(map['max_months'], fallback: 12),
       cancelFeePercent: _toInt(map['cancel_fee_percent']),
@@ -81,17 +101,17 @@ class Product extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        description,
-        images,
-        kind,
-        price,
-        totalGrams,
-        minMonths,
-        maxMonths,
-        cancelFeePercent,
-        stock,
-        status,
-      ];
+    id,
+    name,
+    description,
+    images,
+    kind,
+    price,
+    totalGrams,
+    minMonths,
+    maxMonths,
+    cancelFeePercent,
+    stock,
+    status,
+  ];
 }

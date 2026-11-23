@@ -211,6 +211,8 @@ class _RateCardWidgetState extends State<RateCardWidget>
                 text: tr('home.per_gram'),
                 style: AppText.caption.copyWith(fontSize: 11.0)),
           ]),
+          // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+          textScaler: TextScaler.noScaling,
           style: AppText.display.copyWith(fontSize: 21.0),
         ),
         const SizedBox(height: 6.0),
@@ -252,10 +254,13 @@ class _RateCardWidgetState extends State<RateCardWidget>
           ],
         ),
         const SizedBox(height: 8.0),
-        SizedBox(
-          height: 46.0,
-          width: double.infinity,
-          child: CustomPaint(painter: _SparkPainter(s.spark, cc)),
+        // Sparkline үлдсэн зайг авна (хатуу 46 биш): текст томруулсан үед
+        // карт халихгүй, харин график бага зэрэг намхан болно.
+        Expanded(
+          child: SizedBox(
+            width: double.infinity,
+            child: CustomPaint(painter: _SparkPainter(s.spark, cc)),
+          ),
         ),
         const SizedBox(height: 8.0),
         Row(
@@ -266,7 +271,7 @@ class _RateCardWidgetState extends State<RateCardWidget>
                     highlight: true)),
           ],
         ),
-        const Spacer(),
+        const SizedBox(height: 4.0),
         Text(tr('home.rate_source'),
             style: AppText.caption
                 .copyWith(fontSize: 9.5, color: CustomColors.textTertiary)),

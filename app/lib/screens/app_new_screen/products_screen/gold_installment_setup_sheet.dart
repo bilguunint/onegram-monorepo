@@ -38,12 +38,15 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      final q = await _repo.fetchGoldQuote();
+      final q = await _repo.fetchGoldQuote(kind: widget.product.kindParam);
       if (!mounted) return;
       setState(() {
         _quote = q;
         _daily = GoldGramsPicker.clampGrams(
-            q.minStepGrams, widget.product.totalGrams, q.minStepGrams);
+          q.minStepGrams,
+          widget.product.totalGrams,
+          q.minStepGrams,
+        );
       });
     } catch (e) {
       if (mounted) setState(() => _error = e);
@@ -62,9 +65,13 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
     // Агуулга гүйлгэгдэнэ, "Цуцлах/Батлах" товч доор тогтмол харагдана —
     // жижиг дэлгэц дээр ч товч далдлагдахгүй.
     return AppSheet(
-      title: tr('gold.start_title'),
+      title: wtr(widget.product.unit, 'gold.start_title'),
       padding: EdgeInsets.fromLTRB(
-          20, 8, 20, MediaQuery.of(context).viewInsets.bottom + 16),
+        20,
+        8,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxH),
         child: Column(
@@ -77,10 +84,12 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(p.name,
-                        style: AppText.caption,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
+                    Text(
+                      p.name,
+                      style: AppText.caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 10),
                     if (q == null)
                       AppCard(
@@ -90,23 +99,32 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
                           children: [
                             if (_error == null)
                               const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2)),
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 _error == null
-                                    ? tr('gold.quote_loading')
-                                    : tr('gold.quote_error'),
+                                    ? wtr(
+                                        widget.product.unit,
+                                        'gold.quote_loading',
+                                      )
+                                    : wtr(
+                                        widget.product.unit,
+                                        'gold.quote_error',
+                                      ),
                                 style: AppText.caption,
                               ),
                             ),
                             if (_error != null)
                               TextButton(
-                                  onPressed: _load,
-                                  child: Text(tr('common.retry'))),
+                                onPressed: _load,
+                                child: Text(tr('common.retry')),
+                              ),
                           ],
                         ),
                       )
@@ -115,39 +133,55 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
                         color: CustomColors.surfaceAlt,
                         radius: 16,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 4),
+                          horizontal: 14,
+                          vertical: 4,
+                        ),
                         child: Column(
                           children: [
                             AppInfoRow(
-                              label: tr('gold.total_grams'),
-                              value: formatGrams(p.totalGrams),
+                              label: wtr(
+                                widget.product.unit,
+                                'gold.total_grams',
+                              ),
+                              value: formatGrams(
+                                p.totalGrams,
+                                widget.product.unit,
+                              ),
                             ),
                             AppInfoRow(
-                              label: tr('gold.price_per_gram_short'),
+                              label: wtr(
+                                widget.product.unit,
+                                'gold.price_per_gram_short',
+                              ),
                               value: formatMNT(q.pricePerGram),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        tr('gold.price_formula_hint', {
-                          'rate': formatMNT(q.rate),
-                          'tax': q.taxPercent == q.taxPercent.roundToDouble()
-                              ? q.taxPercent.toInt()
-                              : q.taxPercent,
-                          'labor': formatMNT(q.laborPerGram),
-                        }),
-                        style: AppText.caption.copyWith(fontSize: 11),
-                      ),
+                      if (!p.isSilverJewelry)
+                        Text(
+                          wtr(widget.product.unit, 'gold.price_formula_hint', {
+                            'rate': formatMNT(q.rate),
+                            'tax': q.taxPercent == q.taxPercent.roundToDouble()
+                                ? q.taxPercent.toInt()
+                                : q.taxPercent,
+                            'labor': formatMNT(q.laborPerGram),
+                          }),
+                          style: AppText.caption.copyWith(fontSize: 11),
+                        ),
                       const SizedBox(height: 14),
-                      Text(tr('gold.daily_grams'), style: AppText.sectionTitle),
+                      Text(
+                        wtr(widget.product.unit, 'gold.daily_grams'),
+                        style: AppText.sectionTitle,
+                      ),
                       const SizedBox(height: 8),
                       GoldGramsPicker(
                         value: _daily,
                         max: p.totalGrams,
                         step: q.minStepGrams,
                         showStepper: false,
+                        unit: p.unit,
                         onChanged: (g) => setState(() => _daily = g),
                       ),
                       const SizedBox(height: 10),
@@ -155,18 +189,22 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
                         color: CustomColors.surfaceAlt,
                         radius: 16,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 4),
+                          horizontal: 14,
+                          vertical: 4,
+                        ),
                         child: AppInfoRow(
-                          label: tr('gold.today_payment'),
+                          label: wtr(widget.product.unit, 'gold.today_payment'),
                           value:
-                              '${formatMNT(q.amountFor(_daily))} · ~$days ${tr('gold.days_short')}',
+                              '${formatMNT(q.amountFor(_daily))} · ~$days ${wtr(widget.product.unit, 'gold.days_short')}',
                           valueColor: CustomColors.accent,
                         ),
                       ),
                     ],
                     const SizedBox(height: 14),
-                    Text(tr('purchase.terms_title'),
-                        style: AppText.sectionTitle),
+                    Text(
+                      tr('purchase.terms_title'),
+                      style: AppText.sectionTitle,
+                    ),
                     const SizedBox(height: 8),
                     Container(
                       constraints: const BoxConstraints(maxHeight: 110),
@@ -179,7 +217,9 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
                       child: const Scrollbar(
                         child: SingleChildScrollView(
                           child: TermsContent(
-                              termsKey: 'installment', compact: true),
+                            termsKey: 'installment',
+                            compact: true,
+                          ),
                         ),
                       ),
                     ),

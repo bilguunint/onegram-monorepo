@@ -248,6 +248,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Мөнгөн эдлэлийн 1 лангийн үнэ: апп тооцоолуурт уншина, админ баталгаажуулна.
+    match /system_config/silver_jewelry {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // marketing_campaigns (нийтэд нээлттэй унших)
     match /marketing_campaigns/{docId} {
       allow read: if true;

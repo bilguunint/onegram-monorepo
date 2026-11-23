@@ -18,12 +18,18 @@ module.exports = functions.https.onRequest(
       return res.status(400).send("Missing fields");
     }
 
+    // Оношилгоо: хэн, ямар үр дүнтэй болсныг логлоно (дугаарын сүүлийн 4 орон).
+    const who = String(input).replace(/^.*(\d{4})$/, "***$1");
+    const fail = (code, msg) => {
+      console.warn(`verifyOtp ${who}: ${msg}`);
+      return res.status(code).send(msg);
+    };
     const phoneMatch = String(input).match(/^(\+976)?(\d{8})$/);
     const isPhone = !!phoneMatch;
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(input).toLowerCase());
 
     if (!isPhone && !isEmail) {
-      return res.status(400).send("Invalid identifier");
+      return fail(400, "Invalid identifier");
     }
 
     // Build possible doc IDs to lookup in otp_requests
@@ -50,13 +56,13 @@ module.exports = functions.https.onRequest(
     }
 
     if (!docSnap || !docSnap.exists) {
-      return res.status(400).send("No OTP request found");
+      return fail(400, "No OTP request found");
     }
 
     const data = docSnap.data();
 
     if (!data.createdAt || !data.createdAt.seconds) {
-      return res.status(400).send("Invalid OTP timestamp");
+      return fail(400, "Invalid OTP timestamp");
     }
 
     const now = admin.firestore.Timestamp.now();
@@ -64,11 +70,11 @@ module.exports = functions.https.onRequest(
 
     if (diff > 300) {
       await docRef.delete().catch(() => {});
-      return res.status(400).send("OTP expired");
+      return fail(400, "OTP expired");
     }
 
     if (String(data.otp) !== String(otp)) {
-      return res.status(400).send("Invalid OTP");
+      return fail(400, "Invalid OTP");
     }
 
     // OTP verified — get or create user
@@ -101,6 +107,7 @@ module.exports = functions.https.onRequest(
     const token = await admin.auth().createCustomToken(user.uid, {
       auth: isEmail ? "email_otp" : "sms_otp",
     });
+    console.log(`verifyOtp ${who}: OK uid=${user.uid}`);
     return res.status(200).send({ token });
   } catch (err) {
     console.error("Error in verifyOtp:", err);

@@ -22,6 +22,9 @@ class GoldGramsPicker extends StatelessWidget {
 
   /// −/+ алхмын мөр харуулах эсэх (эхлүүлэх sheet дээр зай хэмнэхийн тулд үгүй).
   final bool showStepper;
+
+  /// Нэгж: 'gr' | 'lan'.
+  final String unit;
   final ValueChanged<double> onChanged;
 
   const GoldGramsPicker({
@@ -32,6 +35,7 @@ class GoldGramsPicker extends StatelessWidget {
     required this.onChanged,
     this.showAll = false,
     this.showStepper = true,
+    this.unit = 'gr',
   });
 
   static int _cg(double g) => (g * 100).round();
@@ -54,9 +58,13 @@ class GoldGramsPicker extends StatelessWidget {
     final maxCg = _cg(max);
     final stepCg = _cg(step);
     final curCg = _cg(value);
-    final presets = <int>[10, 20, 30, 50, 100]
-        .where((cg) => cg % stepCg == 0 && cg < maxCg)
-        .toList();
+    final presets = <int>[
+      10,
+      20,
+      30,
+      50,
+      100,
+    ].where((cg) => cg % stepCg == 0 && cg < maxCg).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,13 +75,15 @@ class GoldGramsPicker extends StatelessWidget {
           children: [
             for (final cg in presets)
               _Chip(
-                label: formatGrams(_g(cg)),
+                label: formatGrams(_g(cg), unit),
                 selected: curCg == cg,
                 onTap: () => onChanged(_g(cg)),
               ),
             if (showAll)
               _Chip(
-                label: tr('gold.all_remaining', {'grams': formatGrams(max)}),
+                label: wtr(unit, 'gold.all_remaining', {
+                  'grams': formatGrams(max, unit),
+                }),
                 selected: curCg >= maxCg,
                 onTap: () => onChanged(_g(maxCg)),
               ),
@@ -92,9 +102,13 @@ class GoldGramsPicker extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: Text(
-                    formatGrams(value),
-                    style: AppText.display
-                        .copyWith(fontSize: 26, color: CustomColors.accent),
+                    formatGrams(value, unit),
+                    // Hero тоо: системийн текстийн томруулалтаас хамаарахгүй (эвдрэлээс сэргийлнэ).
+                    textScaler: TextScaler.noScaling,
+                    style: AppText.display.copyWith(
+                      fontSize: 26,
+                      color: CustomColors.accent,
+                    ),
                   ),
                 ),
               ),
@@ -116,8 +130,11 @@ class _Chip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _Chip(
-      {required this.label, required this.selected, required this.onTap});
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,8 +165,11 @@ class _StepButton extends StatelessWidget {
   final IconData icon;
   final bool enabled;
   final VoidCallback onTap;
-  const _StepButton(
-      {required this.icon, required this.enabled, required this.onTap});
+  const _StepButton({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -159,8 +179,10 @@ class _StepButton extends StatelessWidget {
       child: IconButton(
         padding: EdgeInsets.zero,
         onPressed: enabled ? onTap : null,
-        icon: Icon(icon,
-            color: enabled ? CustomColors.accent : CustomColors.textTertiary),
+        icon: Icon(
+          icon,
+          color: enabled ? CustomColors.accent : CustomColors.textTertiary,
+        ),
       ),
     );
   }
