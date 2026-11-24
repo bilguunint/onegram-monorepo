@@ -135,10 +135,19 @@ async function sendInstallmentReminders() {
 
   // Төлбөр түр зогссон үед (system_config/installments.payments_paused)
   // "төлбөрөө хийх үү" гэж сануулах нь зөрчилтэй тул илгээхгүй.
+  // Хамрах хүрээ "silver" бол зөвхөн мөнгөн эдлэл барааны хуваан төлөлтийг
+  // алгасаж, бусдад хэвийн сануулна.
   const pauseSnap = await db.doc("system_config/installments").get();
-  if (pauseSnap.exists && pauseSnap.data().payments_paused === true) {
-    logger.info("Installment payments paused — reminders skipped");
-    return { success: true, skipped: "payments_paused" };
+  const pause = pauseSnap.exists ? pauseSnap.data() || {} : {};
+  let pausedProductIds = null;
+  if (pause.payments_paused === true) {
+    if (pause.payments_paused_scope !== "silver") {
+      logger.info("Installment payments paused — reminders skipped");
+      return { success: true, skipped: "payments_paused" };
+    }
+    const silverSnap = await db.collection("products")
+      .where("product_kind", "==", "silver_jewelry").select().get();
+    pausedProductIds = new Set(silverSnap.docs.map((d) => d.id));
   }
 
   const snap = await db
@@ -171,6 +180,10 @@ async function sendInstallmentReminders() {
       continue;
     }
 
+    if (pausedProductIds && pausedProductIds.has(purchase.product_id)) {
+      stats.skippedPaused = (stats.skippedPaused || 0) + 1;
+      continue;
+    }
     const msg = buildMessage(purchase, now);
     // Саяхан төлсөн, эсвэл энэ завсарлагад аль хэдийн сануулсан — юу ч илгээхгүй.
     if (!msg) {
