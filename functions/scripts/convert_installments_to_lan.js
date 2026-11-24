@@ -28,6 +28,26 @@ const f = (n) => Math.round(n).toLocaleString("en-US");
     console.log(r.converted ? `✅ хөрвүүллээ: ${r.paid_lan}/${r.total_lan} лан, үлдэгдэл ${f(r.old_remaining_amount)} → ${f(r.new_remaining_amount)}₮` : `❌ ${C.REASON_TEXT[r.reason] || r.reason}`);
     process.exit(0);
   }
+  if (process.argv.includes("--all") && WRITE) {
+    // Эзэмшигчийн шийдвэрээр бүгдийг автоматаар хөрвүүлнэ (хэрэглэгчийн зөвшөөрөл БИШ).
+    const all = await db.collection("product_purchases").where("status", "==", "active").get();
+    const out = { converted: 0, oldRem: 0, newRem: 0, skipped: {}, ids: [] };
+    for (const d of all.docs) {
+      if ((d.data().purchase_type || "installment") !== "installment") continue;
+      const r = await C.convertInstallmentToLan(db, d.id, {
+        by: arg("--by") || "admin-script",
+        consent: { accepted: false, channel: "auto_bulk_owner_decision", decided_at: new Date().toISOString() },
+      });
+      if (r.converted) {
+        out.converted++; out.oldRem += r.old_remaining_amount; out.newRem += r.new_remaining_amount; out.ids.push(d.id);
+      } else if (r.reason !== "NOT_SILVER_PRODUCT") {
+        out.skipped[r.reason] = (out.skipped[r.reason] || 0) + 1;
+      }
+    }
+    console.log(`✅ хөрвүүлсэн: ${out.converted} | үлдэгдэл ${f(out.oldRem)} → ${f(out.newRem)}₮ | алгассан: ${JSON.stringify(out.skipped)}`);
+    if (arg("--out")) require("fs").writeFileSync(arg("--out"), JSON.stringify(out.ids));
+    process.exit(0);
+  }
   const snap = one ? { docs: [await db.collection("product_purchases").doc(one).get()] } :
     await db.collection("product_purchases").where("status", "==", "active").get();
   let n = 0; let oldRem = 0; let newRem = 0; const skipped = {};
