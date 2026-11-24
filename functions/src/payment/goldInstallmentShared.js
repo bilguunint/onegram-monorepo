@@ -102,43 +102,88 @@ async function loadGoldRate(db) {
 }
 
 /**
+ * МӨНГӨН ЭДЛЭЛИЙН ҮНИЙН ТОМЬЁО (компанийн үнийн жагсаалттай яг ижил):
+ *
+ *   бүтэн үнэ = (нийт лан × (металл + ажлын хөлс) + тагш + хайрцаг)
+ *               × (1 + нэмэгдэл%) × (1 + НӨАТ%)
+ *
+ *   НИЙТЛЭГ (system_config/silver_jewelry, админ баталгаажуулна):
+ *     price_per_lan  — металлын (мөнгөний) 1 лангийн үнэ
+ *     box_price      — хайрцагны үнэ (бараа бүрт нэг)
+ *     markup_percent — нэмэгдэл % (анхдагч 10)
+ *     vat_percent    — НӨАТ % (анхдагч 10)
+ *   БАРАА БҮРТ (products/{id}):
+ *     total_lan      — нийт лан
+ *     labor_per_lan  — ажлын хөлс, 1 лан тутамд
+ *     tagsh_price    — тагшны үнэ, бараа бүрт нэг удаа
+ *     box_price      — (сонголт) хайрцагны үнийг дарж тавих
+ *
+ * Хуваан төлөлтөд 1 лангийн төлбөр = бүтэн үнэ ÷ нийт лан, тиймээс бүх ланг
+ * төлөхөд нийлбэр нь бүтэн үнэтэй тэнцэнэ (тагш, хайрцаг лан бүрт тэнцүү
+ * хуваарилагдана).
+ * @param {object} cfg - silver тохиргоо (readSilverConfig)
+ * @param {object} item - { total_lan, labor_per_lan, tagsh_price, box_price }
+ * @return {number} бүтэн үнэ, бөөрөнхийлөөгүй (₮)
+ */
+function silverFullPriceExact(cfg, item) {
+  const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const lan = num(item && item.total_lan);
+  const box = item && item.box_price != null ? num(item.box_price) : cfg.box_price;
+  const base = lan * (cfg.price_per_lan + num(item && item.labor_per_lan)) +
+    num(item && item.tagsh_price) + box;
+  return base * (1 + cfg.markup_percent / 100) * (1 + cfg.vat_percent / 100);
+}
+
+async function readSilverConfig(db) {
+  const snap = await db.doc(SILVER_SETTINGS_DOC).get();
+  const d = snap.exists ? snap.data() || {} : {};
+  const perLan = Number(d.price_per_lan);
+  if (!Number.isFinite(perLan) || perLan <= 0) {
+    throw new Error("Мөнгөн эдлэлийн 1 лангийн үнэ тохируулаагүй байна.");
+  }
+  const pos = (v, def) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : def;
+  };
+  const step = Number(d.min_step_lan);
+  return {
+    price_per_lan: perLan,
+    box_price: pos(d.box_price, 0),
+    markup_percent: pos(d.markup_percent, 10),
+    vat_percent: pos(d.vat_percent, 10),
+    min_step_lan: Number.isFinite(step) && step > 0 ? step : 0.1,
+  };
+}
+
+/**
  * Тухайн төрлийн үнийн мэдээлэл: { settings, rate }.
  *   алт:   rate = Монголбанкны 1 гр ханш; settings = татвар, ажлын хөлс, алхам
- *   мөнгө: 1 лангийн үнэ (price_per_lan) + ТАГШНЫ ҮНЭ (tagsh_price). Тагш нь
- *          лан бүрт биш, БАРАА БҮРТ нэг удаа нэмэгдэх тогтмол дүн:
- *              барааны бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагш
- *          Хуваан төлөлтөд тагшийг лан бүрт тэнцүү хуваарилна, өөрөөр хэлбэл
- *          тухайн барааны 1 лангийн төлбөр = 1 лангийн үнэ + тагш ÷ нийт лан.
- *          Ингэснээр бүх ланг төлөхөд нийлбэр нь бүтэн үнэтэй тэнцэнэ.
- *          [totalUnits] (барааны нийт лан) өгөөгүй бол тагшгүй үнийг буцаана.
+ *   мөнгө: rate = тухайн барааны 1 лангийн төлбөр (= бүтэн үнэ ÷ нийт лан,
+ *          silverFullPriceExact). [item] өгөөгүй бол зөвхөн металлын үнэ.
  * Мөнгөний үнэ тохируулаагүй бол алдаа — үнэгүйгээр гэрээ үүсэхгүй.
  * @param {FirebaseFirestore.Firestore} db - Firestore
  * @param {string} kind - "gold_jewelry" | "silver_jewelry"
- * @param {number} [totalUnits] - барааны нийт жин (мөнгөнд: нийт лан)
+ * @param {object} [item] - мөнгөн барааны { total_lan, labor_per_lan, tagsh_price, box_price }
  * @return {Promise<{settings: object, rate: number}>} үнийн мэдээлэл
  */
-async function loadPricing(db, kind, totalUnits) {
+async function loadPricing(db, kind, item) {
   if (kind === "silver_jewelry") {
-    const snap = await db.doc(SILVER_SETTINGS_DOC).get();
-    const d = snap.exists ? snap.data() || {} : {};
-    const perLan = Number(d.price_per_lan);
-    if (!Number.isFinite(perLan) || perLan <= 0) {
-      throw new Error("Мөнгөн эдлэлийн 1 лангийн үнэ тохируулаагүй байна.");
-    }
-    const tagshRaw = Number(d.tagsh_price);
-    const tagsh = Number.isFinite(tagshRaw) && tagshRaw > 0 ? tagshRaw : 0;
-    const total = Number(totalUnits);
-    const tagshPerLan = Number.isFinite(total) && total > 0 ? tagsh / total : 0;
-    const step = Number(d.min_step_lan);
+    const cfg = await readSilverConfig(db);
+    const lan = Number(item && item.total_lan);
+    const rate = Number.isFinite(lan) && lan > 0 ?
+      silverFullPriceExact(cfg, item) / lan :
+      cfg.price_per_lan;
     return {
       settings: {
         labor_per_gram: 0,
         tax_percent: 0,
-        min_step_grams: Number.isFinite(step) && step > 0 ? step : 0.1,
-        price_per_lan: perLan,
-        tagsh_price: tagsh,
+        min_step_grams: cfg.min_step_lan,
+        silver: cfg,
       },
-      rate: perLan + tagshPerLan,
+      rate,
     };
   }
   const [settings, rate] = await Promise.all([loadSettings(db), loadGoldRate(db)]);
@@ -146,14 +191,29 @@ async function loadPricing(db, kind, totalUnits) {
 }
 
 /**
- * Мөнгөн эдлэлийн бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ.
+ * Мөнгөн эдлэлийн бүтэн үнэ (₮, бөөрөнхийлсөн).
  * @param {FirebaseFirestore.Firestore} db - Firestore
- * @param {number} totalLan - барааны нийт лан
+ * @param {object} item - { total_lan, labor_per_lan, tagsh_price, box_price }
  * @return {Promise<number>} төгрөг
  */
-async function silverFullPrice(db, totalLan) {
-  const { settings } = await loadPricing(db, "silver_jewelry");
-  return Math.round(Number(totalLan || 0) * settings.price_per_lan + settings.tagsh_price);
+async function silverFullPrice(db, item) {
+  return Math.round(silverFullPriceExact(await readSilverConfig(db), item));
+}
+
+/**
+ * Мөнгөн барааны үнийн талбаруудыг products баримт эсвэл snapshot-оос авна.
+ * @param {object} src - products/{id} өгөгдөл эсвэл product_snapshot
+ * @param {number} [fallbackTotal] - total_lan байхгүй үед (snapshot: total_grams)
+ * @return {object} { total_lan, labor_per_lan, tagsh_price, box_price }
+ */
+function silverItem(src, fallbackTotal) {
+  const d = src || {};
+  return {
+    total_lan: d.total_lan != null ? d.total_lan : fallbackTotal,
+    labor_per_lan: d.labor_per_lan,
+    tagsh_price: d.tagsh_price,
+    box_price: d.box_price,
+  };
 }
 
 // 1 гр-ын эцсийн үнэ ба өгөгдсөн граммын төлбөр.
@@ -358,6 +418,8 @@ module.exports = {
   SILVER_SETTINGS_DOC,
   loadPricing,
   silverFullPrice,
+  silverFullPriceExact,
+  silverItem,
   SETTINGS_DOC,
   RATE_DOC,
   PRODUCT_KIND,

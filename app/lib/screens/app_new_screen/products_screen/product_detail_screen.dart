@@ -54,7 +54,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _productRepo
           .fetchGoldQuote(
         kind: widget.product.kindParam,
-        total: widget.product.totalGrams,
+        productId: widget.product.id,
       )
           .then((q) {
         if (mounted) setState(() => _goldQuote = q);

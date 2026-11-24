@@ -86,10 +86,15 @@ exports.quoteGoldInstallment = onRequest(opts, async (req, res) => {
       // ?kind=silver_jewelry бол мөнгөн эдлэлийн (лан) үнэ; анхдагч нь алт.
       const kindRaw = (req.query && req.query.kind) || (req.body && req.body.kind);
       const K = G.KINDS[kindRaw] || G.KINDS.gold_jewelry;
-      // ?total=<барааны нийт лан> — мөнгөн эдлэлд тагшны үнийг лан бүрт
-      // хуваарилахад хэрэгтэй (өгөөгүй бол тагшгүй үнэ).
-      const total = Number((req.query && req.query.total) || (req.body && req.body.total) || 0);
-      const { settings, rate } = await G.loadPricing(db, K.kind, total);
+      // ?product_id=<бараа> — мөнгөн эдлэлд 1 лангийн төлбөр бараа бүрт өөр
+      // (ажлын хөлс, тагш) тул барааг уншина. Өгөөгүй бол зөвхөн металлын үнэ.
+      const productId = (req.query && req.query.product_id) || (req.body && req.body.product_id);
+      let item = null;
+      if (K.kind === "silver_jewelry" && productId) {
+        const ps = await db.collection("products").doc(String(productId)).get();
+        if (ps.exists) item = G.silverItem(ps.data());
+      }
+      const { settings, rate } = await G.loadPricing(db, K.kind, item);
       const grams = Number((req.query && req.query.grams) || (req.body && req.body.grams) || 0);
       const out = {
         kind: K.kind,
@@ -99,8 +104,8 @@ exports.quoteGoldInstallment = onRequest(opts, async (req, res) => {
         labor_per_gram: settings.labor_per_gram,
         tax_percent: settings.tax_percent,
         min_step_grams: settings.min_step_grams,
-        ...(K.kind === "silver_jewelry" ?
-          { price_per_lan: settings.price_per_lan, tagsh_price: settings.tagsh_price } :
+        ...(K.kind === "silver_jewelry" && item ?
+          { full_price: Math.round(G.silverFullPriceExact(settings.silver, item)) } :
           {}),
       };
       if (grams > 0) out.quote = G.quoteGrams(grams, rate, settings);
@@ -148,7 +153,7 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
       const totalCg = G.toCg(product[K.totalField]);
       if (!(totalCg > 0)) return res.status(409).json({ error: "Барааны жин тохируулаагүй байна." });
 
-      const { settings, rate } = await G.loadPricing(db, K.kind, G.toG(totalCg));
+      const { settings, rate } = await G.loadPricing(db, K.kind, G.silverItem(product));
       const dailyGrams = Number(dailyGramsRaw);
       let dailyCg;
       let firstCg;
@@ -188,6 +193,12 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
           price: 0,
           product_kind: K.kind,
           unit: K.unit,
+          // Мөнгөн эдлэлийн үнийн бүрдэл (бараа устсан үед нөөц болгон)
+          ...(K.kind === "silver_jewelry" ? {
+            total_lan: G.toG(totalCg),
+            labor_per_lan: Number(product.labor_per_lan || 0),
+            tagsh_price: Number(product.tagsh_price || 0),
+          } : {}),
           total_grams: G.toG(totalCg),
           cancel_fee_percent: Number(product.cancel_fee_percent || 0),
         },
@@ -253,7 +264,18 @@ exports.createGoldInstallmentPayment = onRequest(opts, async (req, res) => {
       const remainingCg = G.toCg(p.total_grams) - G.toCg(p.paid_grams);
       if (remainingCg <= 0) return res.status(409).json({ error: "Бүрэн төлөгдсөн." });
 
-      const { settings, rate } = await G.loadPricing(db, K.kind, Number(p.total_grams));
+      // Мөнгөн эдлэл: барааны одоогийн ажлын хөлс/тагшийг уншина (админ
+      // зассан бол шинэчлэгдэнэ); бараа устсан бол гэрээний snapshot.
+      let item = null;
+      if (K.kind === "silver_jewelry") {
+        const prodSnap = await db.collection("products").doc(String(p.product_id)).get();
+        item = prodSnap.exists && prodSnap.data().product_kind === "silver_jewelry" ?
+          G.silverItem(prodSnap.data()) :
+          G.silverItem(p.product_snapshot, Number(p.total_grams));
+        // Гэрээний нийт лан өөрчлөгдөхгүй.
+        item.total_lan = Number(p.total_grams);
+      }
+      const { settings, rate } = await G.loadPricing(db, K.kind, item);
       let cg;
       try {
         cg = G.normalizeGramsCg(Number(gramsRaw != null ? gramsRaw : p.daily_grams), remainingCg, settings);

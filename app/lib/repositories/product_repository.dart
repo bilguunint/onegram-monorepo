@@ -268,16 +268,16 @@ class ProductRepository {
   /// [kind] 'silver_jewelry' бол мөнгөн эдлэл: rate = pricePerGram = админы
   /// баталгаажуулсан 1 ЛАНГИЙН үнэ (татвар, ажлын хөлс тусдаа байхгүй).
   ///
-  /// [total] — барааны нийт жин (мөнгөнд нийт лан). Мөнгөн эдлэлд тагшны үнэ
-  /// бараа бүрт нэг удаа нэмэгддэг тул сервер түүнийг лан бүрт хуваарилахад
-  /// нийт лан хэрэгтэй; өгсөн үед pricePerGram нь тагшийн хувийг агуулна.
+  /// [productId] — мөнгөн эдлэлд 1 лангийн төлбөр бараа бүрт өөр (ажлын
+  /// хөлс, тагш, хайрцаг орсон бүтэн үнэ ÷ нийт лан) тул сервер барааг уншина;
+  /// өгсөн үед pricePerGram нь тухайн барааны 1 лангийн төлбөр болно.
   Future<GoldQuote> fetchGoldQuote({
     String kind = 'gold_jewelry',
-    double? total,
+    String? productId,
   }) async {
     final res = await http.get(
       Uri.parse(
-        '$_quoteGoldInstallmentUrl?kind=$kind${total != null ? '&total=$total' : ''}',
+        '$_quoteGoldInstallmentUrl?kind=$kind${productId != null ? '&product_id=$productId' : ''}',
       ),
     );
     Map<String, dynamic> body;

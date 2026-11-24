@@ -100,7 +100,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         remainingGrams: purchase.remainingGrams,
         dailyGrams: purchase.dailyGrams,
         unit: purchase.unit,
-        totalGrams: purchase.totalGrams,
+        productId: purchase.productId,
       ),
     );
     if (grams == null || !mounted) return;

@@ -18,6 +18,7 @@ import type { Product, ProductDraft, ProductKind } from "@/lib/firestore/product
 import {
   fetchSilverJewelrySettings,
   silverProductPrice,
+  type SilverJewelrySettings,
 } from "@/lib/firestore/silverJewelrySettings";
 
 type Props = {
@@ -58,19 +59,31 @@ export function ProductForm({
   const [totalLan, setTotalLan] = useState<string>(
     initial?.total_lan != null ? String(initial.total_lan) : ""
   );
-  /** Админы баталгаажуулсан 1 лангийн үнэ; null = ачааллаж байна, 0 = тохируулаагүй */
-  const [pricePerLan, setPricePerLan] = useState<number | null>(null);
-  /** Тагшны үнэ — бараа бүрт нэг удаа нэмэгдэнэ */
-  const [tagshPrice, setTagshPrice] = useState<number>(0);
+  /** Ажлын хөлс (₮/лан) ба тагшны үнэ (₮, бараа бүрт нэг удаа) — бараа бүрт өөр */
+  const [laborPerLan, setLaborPerLan] = useState<string>(
+    initial?.labor_per_lan != null ? String(initial.labor_per_lan) : ""
+  );
+  const [tagshPriceStr, setTagshPriceStr] = useState<string>(
+    initial?.tagsh_price != null ? String(initial.tagsh_price) : ""
+  );
+  /** Нийтлэг тохиргоо (металлын 1 лангийн үнэ, хайрцаг, нэмэгдэл, НӨАТ); null = ачааллаж байна */
+  const [silverCfg, setSilverCfg] = useState<SilverJewelrySettings | null>(null);
+  const pricePerLan = silverCfg ? silverCfg.price_per_lan : null;
   useEffect(() => {
     let alive = true;
     fetchSilverJewelrySettings()
-      .then((st) => {
-        if (!alive) return;
-        setPricePerLan(st.price_per_lan);
-        setTagshPrice(st.tagsh_price);
-      })
-      .catch(() => alive && setPricePerLan(0));
+      .then((st) => alive && setSilverCfg(st))
+      .catch(
+        () =>
+          alive &&
+          setSilverCfg({
+            price_per_lan: 0,
+            box_price: 0,
+            markup_percent: 10,
+            vat_percent: 10,
+            min_step_lan: 0.1,
+          })
+      );
     return () => {
       alive = false;
     };
@@ -102,9 +115,14 @@ export function ProductForm({
   const priceNum = Number(price);
   const totalGramsNum = Math.round(Number(totalGrams) * 100) / 100;
   const totalLanNum = Math.round(Number(totalLan) * 100) / 100;
+  const laborNum = Math.max(0, Math.round(Number(laborPerLan) || 0));
+  const tagshNum = Math.max(0, Math.round(Number(tagshPriceStr) || 0));
   const silverPrice =
-    isSilver && pricePerLan && totalLanNum > 0
-      ? silverProductPrice(totalLanNum, pricePerLan, tagshPrice)
+    isSilver && silverCfg && silverCfg.price_per_lan > 0 && totalLanNum > 0
+      ? silverProductPrice(
+          { total_lan: totalLanNum, labor_per_lan: laborNum, tagsh_price: tagshNum },
+          silverCfg
+        )
       : 0;
   const minMonthsNum = Math.max(1, Math.floor(Number(minMonths) || 0));
   const maxMonthsNum = Math.max(1, Math.floor(Number(maxMonths) || 0));
@@ -182,6 +200,8 @@ export function ProductForm({
         price: isGold ? 0 : isSilver ? silverPrice : Math.round(priceNum),
         total_grams: isGold ? totalGramsNum : null,
         total_lan: isSilver ? totalLanNum : null,
+        labor_per_lan: isSilver ? laborNum : null,
+        tagsh_price: isSilver ? tagshNum : null,
         min_months: minMonthsNum,
         max_months: maxMonthsNum,
         cancel_fee_percent: Math.round(feeNum),
@@ -277,17 +297,18 @@ export function ProductForm({
                 <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Үнэ оруулахгүй, зөвхөн нийт лан. Хэрэглэгч 0.1 лангийн үржвэрээр,{" "}
+                    Үнэ гараар оруулахгүй. Бүтэн үнэ = (нийт лан × (металл + ажлын хөлс) +
+                    тагш + хайрцаг) × нэмэгдэл × НӨАТ.{" "}
                     <Link href="/products/silver-settings" className="underline">
-                      баталгаажуулсан 1 лангийн үнээр
+                      Металлын үнэ, хайрцаг, нэмэгдэл
                     </Link>{" "}
-                    хуваан төлнө; бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ (үнэ
-                    өөрчлөгдөхөд автоматаар шинэчлэгдэнэ).{" "}
-                    {pricePerLan == null
-                      ? "Үнэ ачааллаж байна..."
-                      : pricePerLan > 0
-                        ? `Одоо 1 лан = ${formatPriceMNT(pricePerLan)}, тагш = ${formatPriceMNT(tagshPrice)}.`
-                        : "1 лангийн үнэ тохируулаагүй байна!"}
+                    нийтлэг; ажлын хөлс, тагшийг энд бараа бүрт оруулна. Хэрэглэгч 0.1 лангийн
+                    үржвэрээр хуваан төлнө (1 лангийн төлбөр = бүтэн үнэ ÷ нийт лан).{" "}
+                    {silverCfg == null
+                      ? "Тохиргоо ачааллаж байна..."
+                      : silverCfg.price_per_lan > 0
+                        ? `Одоо металл 1 лан = ${formatPriceMNT(silverCfg.price_per_lan)}, хайрцаг ${formatPriceMNT(silverCfg.box_price)}, нэмэгдэл ${silverCfg.markup_percent}%, НӨАТ ${silverCfg.vat_percent}%.`
+                        : "Металлын 1 лангийн үнэ тохируулаагүй байна!"}
                   </span>
                 </p>
               )}
@@ -341,16 +362,50 @@ export function ProductForm({
                     onChange={(e) => setTotalLan(e.target.value)}
                     disabled={submitting}
                   />
+                </div>
+              ) : null}
+              {isSilver ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="labor-per-lan">Ажлын хөлс (₮ / лан)</Label>
+                  <Input
+                    id="labor-per-lan"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step="any"
+                    placeholder="75000"
+                    value={laborPerLan}
+                    onChange={(e) => setLaborPerLan(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+              ) : null}
+              {isSilver ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="tagsh-price">Тагшны үнэ (₮, бараа бүрт)</Label>
+                  <Input
+                    id="tagsh-price"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step="any"
+                    placeholder="45000"
+                    value={tagshPriceStr}
+                    onChange={(e) => setTagshPriceStr(e.target.value)}
+                    disabled={submitting}
+                  />
                   {silverPrice > 0 && (
                     <p className="text-[11px] text-muted-foreground">
                       Бүтэн үнэ одоо:{" "}
                       <strong className="text-foreground">
                         {formatPriceMNT(silverPrice)}
-                      </strong>
+                      </strong>{" "}
+                      · 1 лангийн төлбөр{" "}
+                      {formatPriceMNT(Math.round(silverPrice / totalLanNum))}
                     </p>
                   )}
                 </div>
-              ) : (
+              ) : isGold ? null : (
                 <div className="space-y-1.5">
                   <Label htmlFor="price">Үнэ (₮)</Label>
                   <Input

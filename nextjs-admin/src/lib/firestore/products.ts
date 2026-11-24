@@ -43,6 +43,10 @@ export type Product = {
   total_grams: number | null;
   /** silver_jewelry: эдлэлийн нийт лан */
   total_lan: number | null;
+  /** silver_jewelry: ажлын хөлс, 1 лан тутамд (₮) */
+  labor_per_lan: number | null;
+  /** silver_jewelry: тагшны үнэ, бараа бүрт нэг удаа (₮) */
+  tagsh_price: number | null;
   min_months: number;
   max_months: number;
   cancel_fee_percent: number; // 0-100
@@ -62,6 +66,8 @@ export type ProductDraft = {
   price: number;
   total_grams: number | null;
   total_lan: number | null;
+  labor_per_lan: number | null;
+  tagsh_price: number | null;
   min_months: number;
   max_months: number;
   cancel_fee_percent: number;
@@ -82,6 +88,8 @@ function mapProduct(id: string, raw: DocumentData): Product {
     price: Number(raw.price ?? 0),
     total_grams: raw.total_grams == null ? null : Number(raw.total_grams),
     total_lan: raw.total_lan == null ? null : Number(raw.total_lan),
+    labor_per_lan: raw.labor_per_lan == null ? null : Number(raw.labor_per_lan),
+    tagsh_price: raw.tagsh_price == null ? null : Number(raw.tagsh_price),
     min_months: Number(raw.min_months ?? 1),
     max_months: Number(raw.max_months ?? 12),
     cancel_fee_percent: Number(raw.cancel_fee_percent ?? 0),
@@ -135,6 +143,8 @@ export async function createProduct(
     price: draft.price,
     total_grams: draft.total_grams,
     total_lan: draft.total_lan,
+    labor_per_lan: draft.labor_per_lan,
+    tagsh_price: draft.tagsh_price,
     min_months: draft.min_months,
     max_months: draft.max_months,
     cancel_fee_percent: draft.cancel_fee_percent,
@@ -160,6 +170,8 @@ export async function updateProduct(
     price: draft.price,
     total_grams: draft.total_grams,
     total_lan: draft.total_lan,
+    labor_per_lan: draft.labor_per_lan,
+    tagsh_price: draft.tagsh_price,
     min_months: draft.min_months,
     max_months: draft.max_months,
     cancel_fee_percent: draft.cancel_fee_percent,

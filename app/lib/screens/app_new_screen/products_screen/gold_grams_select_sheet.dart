@@ -16,14 +16,14 @@ class GoldGramsSelectSheet extends StatefulWidget {
   /// Нэгж: 'gr' (алт) | 'lan' (мөнгө).
   final String unit;
 
-  /// Барааны нийт жин — мөнгөн эдлэлд тагшийн хувийг тооцоход.
-  final double? totalGrams;
+  /// Барааны ID — мөнгөн эдлэлд тухайн барааны 1 лангийн төлбөрийг авахад.
+  final String? productId;
   const GoldGramsSelectSheet({
     super.key,
     required this.remainingGrams,
     required this.dailyGrams,
     this.unit = 'gr',
-    this.totalGrams,
+    this.productId,
   });
 
   @override
@@ -47,7 +47,7 @@ class _GoldGramsSelectSheetState extends State<GoldGramsSelectSheet> {
     try {
       final q = await _repo.fetchGoldQuote(
         kind: widget.unit == 'lan' ? 'silver_jewelry' : 'gold_jewelry',
-        total: widget.totalGrams,
+        productId: widget.productId,
       );
       if (!mounted) return;
       setState(() {

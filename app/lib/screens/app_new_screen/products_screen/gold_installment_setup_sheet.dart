@@ -40,7 +40,7 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
     try {
       final q = await _repo.fetchGoldQuote(
         kind: widget.product.kindParam,
-        total: widget.product.totalGrams,
+        productId: widget.product.id,
       );
       if (!mounted) return;
       setState(() {
