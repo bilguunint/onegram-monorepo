@@ -54,6 +54,20 @@ exports.createInstallmentPayment = onRequest({
       if (!purchase_id) {
         return res.status(400).json({ error: "Missing purchase_id" });
       }
+      // Түр зогсолт: system_config/installments.payments_paused === true үед
+      // ИДЭВХТЭЙ хуваан төлөлтийн төлбөр (шинэ QR) үүсгэхгүй. Аль хэдийн
+      // үүссэн QR-ыг төлбөл хэвийн бүртгэгдэнэ. payments_paused_scope:
+      //   "all" (анхдагч) — бүх хуваан төлөлт
+      //   "silver"        — зөвхөн мөнгөн эдлэл барааны хуваан төлөлт
+      const pauseSnap = await db.doc("system_config/installments").get();
+      const pause = pauseSnap.exists ? pauseSnap.data() || {} : {};
+      const paymentsPaused = pause.payments_paused === true;
+      const pauseMessage = pause.payments_pause_message ||
+        "Түр шинэчлэл хийж байгаа тул түр хүлээнэ үү.";
+      if (paymentsPaused && pause.payments_paused_scope !== "silver") {
+        return res.status(503).json({ error: pauseMessage });
+      }
+
       // How many upcoming days to bundle into a single invoice (default 1).
       const requestedDays = Math.max(1, Math.floor(Number(days) || 1));
 
@@ -75,6 +89,13 @@ exports.createInstallmentPayment = onRequest({
       }
       if (purchase.purchase_type !== "installment") {
         return res.status(409).json({ error: "Purchase is not an installment plan" });
+      }
+      if (paymentsPaused) {
+        // scope "silver": барааны одоогийн төрлөөр шалгана.
+        const prodSnap = await db.collection("products").doc(String(purchase.product_id)).get();
+        if (prodSnap.exists && prodSnap.data().product_kind === "silver_jewelry") {
+          return res.status(503).json({ error: pauseMessage });
+        }
       }
       if (purchase.cancel_request_status === "pending") {
         return res.status(409).json({

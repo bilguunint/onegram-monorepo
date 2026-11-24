@@ -133,6 +133,14 @@ async function sendInstallmentReminders() {
   const now = new Date();
   logger.info("▶️  Installment reminder run start");
 
+  // Төлбөр түр зогссон үед (system_config/installments.payments_paused)
+  // "төлбөрөө хийх үү" гэж сануулах нь зөрчилтэй тул илгээхгүй.
+  const pauseSnap = await db.doc("system_config/installments").get();
+  if (pauseSnap.exists && pauseSnap.data().payments_paused === true) {
+    logger.info("Installment payments paused — reminders skipped");
+    return { success: true, skipped: "payments_paused" };
+  }
+
   const snap = await db
     .collection("product_purchases")
     .where("status", "==", "active")
