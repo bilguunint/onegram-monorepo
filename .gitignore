@@ -68,3 +68,6 @@ app/android/app/release/
 # Symbolication / obfuscation
 app.*.symbols
 app.*.map.json
+
+# Хуваан төлөлтийн нөөц хуулбар (хувийн мэдээлэлтэй) — commit хийхгүй
+backups/

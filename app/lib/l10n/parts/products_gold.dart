@@ -274,10 +274,10 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'ru': 'Ланов в день',
   },
   'silver.start_title': {
-    'mn': 'Лангаар хуваан төлөх',
-    'en': 'Pay by lan',
-    'zh': '按两分期付款',
-    'ru': 'Рассрочка по ланам',
+    'mn': 'Хуваан авах',
+    'en': 'Buy in installments',
+    'zh': '分期购买',
+    'ru': 'Купить в рассрочку',
   },
   'silver.started': {
     'mn': 'Хуваан төлөлт эхэллээ',
