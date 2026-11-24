@@ -50,16 +50,13 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'ru': '{grams}/день · {amount} · ~{days} дн.',
   },
   'gold.rate_note': {
-    'mn':
-        'Төлбөр бүр тухайн өдрийн ханшаар бодогдох тул нийт дүн ханшийн '
+    'mn': 'Төлбөр бүр тухайн өдрийн ханшаар бодогдох тул нийт дүн ханшийн '
         'өөрчлөлтөөр өөрчлөгдөнө. Хугацааны хатуу хязгаар байхгүй, та өөрийн '
         'хурдаар цуглуулна.',
-    'en':
-        'Each payment uses that day\'s rate, so the total moves with the '
+    'en': 'Each payment uses that day\'s rate, so the total moves with the '
         'rate. There is no hard deadline; collect at your own pace.',
     'zh': '每笔付款按当日金价计算，总额随金价变动。没有硬性期限，可按自己的节奏积攒。',
-    'ru':
-        'Каждый платёж по курсу дня, итог меняется вместе с курсом. '
+    'ru': 'Каждый платёж по курсу дня, итог меняется вместе с курсом. '
         'Жёсткого срока нет — копите в своём темпе.',
   },
   'gold.price_per_gram': {
@@ -88,17 +85,14 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'ru': 'Курс золота сегодня',
   },
   'gold.how_it_works': {
-    'mn':
-        'Та өдөр бүр хэдэн грамм цуглуулахаа сонгоно. Төлбөр бүр тухайн '
+    'mn': 'Та өдөр бүр хэдэн грамм цуглуулахаа сонгоно. Төлбөр бүр тухайн '
         'өдрийн ханшаар бодогдоно; нийт {grams}-д хүрмэгц эдлэлээ авна. '
         'Хамгийн бага {step}.',
-    'en':
-        'Choose how many grams to collect per day. Each payment is priced '
+    'en': 'Choose how many grams to collect per day. Each payment is priced '
         "at that day's rate; once you reach {grams} the item is yours. "
         'Minimum {step}.',
     'zh': '选择每天积攒的克数。每笔付款按当日金价计算；累计达到 {grams} 即可领取。最低 {step}。',
-    'ru':
-        'Выберите, сколько граммов копить в день. Каждый платёж по курсу '
+    'ru': 'Выберите, сколько граммов копить в день. Каждый платёж по курсу '
         'дня; набрав {grams}, вы получаете изделие. Минимум {step}.',
   },
   'gold.daily_grams': {
@@ -138,8 +132,7 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'ru': 'Накопление начато',
   },
   'gold.started_message': {
-    'mn':
-        '{grams} бүртгэгдлээ. Та өөрт тохирох үедээ дараагийн граммаа '
+    'mn': '{grams} бүртгэгдлээ. Та өөрт тохирох үедээ дараагийн граммаа '
         'нэмээрэй.',
     'en': '{grams} recorded. Add more grams whenever it suits you.',
     'zh': '已记录 {grams}。随时可以继续积攒。',
@@ -253,17 +246,14 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'ru': 'По ланам в день',
   },
   'silver.rate_note': {
-    'mn':
-        'Төлбөр бүр тухайн үеийн 1 лангийн үнээр бодогдоно. Үнэ өөрчлөгдвөл '
+    'mn': 'Төлбөр бүр тухайн үеийн 1 лангийн үнээр бодогдоно. Үнэ өөрчлөгдвөл '
         'үлдсэн лангийн төлбөр шинэ үнээр тооцогдоно; аль хэдийн төлсөн лан '
         'хэвээр үлдэнэ. Хатуу хугацаа байхгүй, та өөрийн хурдаар төлнө.',
-    'en':
-        'Each payment uses the price per lan at that time. If the price '
+    'en': 'Each payment uses the price per lan at that time. If the price '
         'changes, the remaining lan are charged at the new price; lan already '
         'paid stay yours. No hard deadline — pay at your own pace.',
     'zh': '每笔付款按当时的每两价格计算。价格变动时，剩余两数按新价格计算；已付的两数不变。没有硬性期限。',
-    'ru':
-        'Каждый платёж — по цене за лан на тот момент. При изменении цены '
+    'ru': 'Каждый платёж — по цене за лан на тот момент. При изменении цены '
         'оставшиеся ланы считаются по новой цене; оплаченные остаются за вами. '
         'Жёсткого срока нет.',
   },
@@ -286,8 +276,7 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'ru': 'Рассрочка начата',
   },
   'silver.started_message': {
-    'mn':
-        '{grams} бүртгэгдлээ. Та өөрт тохирох үедээ дараагийн лангаа '
+    'mn': '{grams} бүртгэгдлээ. Та өөрт тохирох үедээ дараагийн лангаа '
         'төлөөрэй.',
     'en': '{grams} recorded. Pay more lan whenever it suits you.',
     'zh': '已记录 {grams}。随时可以继续支付。',
@@ -340,5 +329,114 @@ const Map<String, Map<String, String>> kProductsGoldTranslations = {
     'en': "Couldn't load the price. Try again.",
     'zh': '无法获取价格，请重试。',
     'ru': 'Не удалось получить цену. Попробуйте снова.',
+  },
+
+  // ---------------- Төгрөгийн хуваан төлөлтийг лан руу шилжүүлэх ----------------
+  'silver.convert_title': {
+    'mn': 'Үнэ буурлаа — шинэ үнээр үргэлжлүүлэх',
+    'en': 'Price dropped — continue at the new price',
+    'zh': '价格已下调 — 按新价格继续',
+    'ru': 'Цена снижена — продолжить по новой цене',
+  },
+  'silver.convert_intro': {
+    'mn': 'Мөнгөн эдлэлийн үнэ буурсан тул та үлдсэн төлбөрөө шинэ үнээр, '
+        'лангаар төлөх боломжтой. Таны төлсөн хувь хэвээр хадгалагдана.',
+    'en': 'Silver prices dropped, so you can pay the rest at the new price, '
+        'by lan. The share you already paid is kept.',
+    'zh': '银价已下调，您可以按新价格以"两"为单位支付剩余部分。已付比例保持不变。',
+    'ru': 'Цена серебра снизилась — остаток можно оплатить по новой цене, '
+        'в ланах. Оплаченная доля сохраняется.',
+  },
+  'silver.convert_old_remaining': {
+    'mn': 'Одоогийн үлдэгдэл',
+    'en': 'Current remaining',
+    'zh': '当前剩余',
+    'ru': 'Текущий остаток',
+  },
+  'silver.convert_new_remaining': {
+    'mn': 'Шинэ үлдэгдэл ({lan})',
+    'en': 'New remaining ({lan})',
+    'zh': '新剩余（{lan}）',
+    'ru': 'Новый остаток ({lan})',
+  },
+  'silver.convert_saving': {
+    'mn': 'Таны хэмнэлт',
+    'en': 'You save',
+    'zh': '您节省',
+    'ru': 'Ваша экономия',
+  },
+  'silver.convert_button': {
+    'mn': 'Шинэ үнээр шилжих',
+    'en': 'Switch to new price',
+    'zh': '切换到新价格',
+    'ru': 'Перейти на новую цену',
+  },
+  'silver.convert_confirm_title': {
+    'mn': 'Шинэ нөхцөлд шилжих',
+    'en': 'Switch to the new terms',
+    'zh': '切换到新条款',
+    'ru': 'Переход на новые условия',
+  },
+  'silver.convert_point_percent': {
+    'mn': 'Таны төлсөн {percent}% хэвээр хадгалагдаж, {total}-аас {paid} '
+        'төлсөн гэж бүртгэгдэнэ.',
+    'en': 'The {percent}% you paid is kept and recorded as {paid} of {total}.',
+    'zh': '您已支付的 {percent}% 保持不变，记录为 {total} 中的 {paid}。',
+    'ru':
+        'Оплаченные {percent}% сохраняются и учитываются как {paid} из {total}.',
+  },
+  'silver.convert_point_remaining': {
+    'mn': 'Үлдсэн {remaining}-г лангаар төлнө. Өнөөдрийн үнээр 1 лан {price}, '
+        'нийт {amount}.',
+    'en': 'You pay the remaining {remaining} by lan. Today 1 lan is {price}, '
+        'total {amount}.',
+    'zh': '剩余的 {remaining} 按"两"支付。今日每两 {price}，合计 {amount}。',
+    'ru': 'Остаток {remaining} оплачивается в ланах. Сегодня 1 лан — {price}, '
+        'всего {amount}.',
+  },
+  'silver.convert_point_floating': {
+    'mn': 'Төлбөр бүр тухайн үеийн 1 лангийн үнээр бодогдоно. Үнэ цаашид '
+        'өсөж эсвэл буурч болно; аль хэдийн төлсөн лан хэвээр үлдэнэ.',
+    'en': 'Each payment uses the price per lan at that time. The price may '
+        'rise or fall later; lan already paid stay yours.',
+    'zh': '每笔付款按当时的每两价格计算。价格今后可能上涨或下跌；已付的两数不变。',
+    'ru': 'Каждый платёж — по цене за лан на тот момент. Цена может вырасти '
+        'или снизиться; оплаченные ланы остаются за вами.',
+  },
+  'silver.convert_point_cancel': {
+    'mn': 'Цуцлах эрх хэвээр: хүссэн үедээ цуцалж, төлсөн {paid}-өөс '
+        '{percent}% шимтгэл суутгуулан буцаан авч болно.',
+    'en': 'Your right to cancel stays: cancel any time and get back the '
+        '{paid} you paid minus a {percent}% fee.',
+    'zh': '取消权保持不变：可随时取消，退还已付的 {paid}（扣除 {percent}% 手续费）。',
+    'ru': 'Право отмены сохраняется: можно отменить в любой момент и вернуть '
+        'оплаченные {paid} за вычетом {percent}% комиссии.',
+  },
+  'silver.convert_point_final': {
+    'mn': 'Шилжсэний дараа хуучин төгрөгийн нөхцөл рүү буцах боломжгүй.',
+    'en': 'After switching you cannot return to the old fixed-price terms.',
+    'zh': '切换后无法恢复原来的固定价格条款。',
+    'ru': 'После перехода вернуться к прежним условиям нельзя.',
+  },
+  'silver.convert_agree': {
+    'mn': 'Дээрх нөхцөлийг уншиж танилцлаа, зөвшөөрч байна.',
+    'en': 'I have read and agree to the terms above.',
+    'zh': '我已阅读并同意以上条款。',
+    'ru': 'Я прочитал(а) условия выше и согласен(на).',
+  },
+  'silver.convert_done_title': {
+    'mn': 'Шинэ үнэд шилжлээ',
+    'en': 'Switched to the new price',
+    'zh': '已切换到新价格',
+    'ru': 'Переход выполнен',
+  },
+  'silver.convert_done_body': {
+    'mn': '{paid} төлсөн гэж бүртгэгдлээ. Үлдсэн {remaining}-г өөрт тохирох '
+        'үедээ лангаар төлөөрэй.',
+    'en': '{paid} recorded as paid. Pay the remaining {remaining} by lan '
+        'whenever it suits you.',
+    'zh': '已记录支付 {paid}。剩余 {remaining} 可随时按"两"支付。',
+    'ru':
+        'Учтено {paid}. Остаток {remaining} оплачивайте в ланах, когда удобно.',
   },
 };

@@ -87,6 +87,14 @@ exports.createInstallmentPayment = onRequest({
           status: purchase.status,
         });
       }
+      if (purchase.purchase_type === "silver_installment" ||
+          purchase.purchase_type === "gold_installment") {
+        // Жин дээр суурилсан (эсвэл лан руу хөрвүүлсэн) хуваан төлөлтийг энэ
+        // хуучин зам (өдрөөр, төгрөгөөр) төлүүлэхгүй — шинэ апп лангаар төлнө.
+        return res.status(409).json({
+          error: "Энэ хуваан төлөлт шинэчлэгдсэн нөхцөлд шилжсэн. Төлбөрөө хийхийн тулд аппаа шинэчилнэ үү.",
+        });
+      }
       if (purchase.purchase_type !== "installment") {
         return res.status(409).json({ error: "Purchase is not an installment plan" });
       }

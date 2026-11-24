@@ -8,6 +8,7 @@ import 'package:onegrgold/screens/app_new_screen/products_screen/installment_day
 import 'package:onegrgold/screens/app_new_screen/products_screen/cancel_installment_screen.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/gold_grams_select_sheet.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/installment_payment_screen.dart';
+import 'package:onegrgold/screens/app_new_screen/products_screen/lan_conversion_offer.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/pickup_ready_view.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/product_format.dart';
 import 'package:onegrgold/screens/app_new_screen/products_screen/purchase_schedule.dart';
@@ -216,6 +217,15 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                     _ProgressCard(purchase: purchase)
                   else
                     _AmountsCard(purchase: purchase),
+                  // Мөнгөн эдлэлийн ТӨГРӨГИЙН хуваан төлөлт: шинэ үнээр лан руу
+                  // шилжих санал (шилжих боломжгүй бол юу ч харагдахгүй).
+                  if (purchase.purchaseType == PurchaseType.installment &&
+                      purchase.status == ProductPurchaseStatus.active &&
+                      !cancelPending)
+                    LanConversionOffer(
+                      key: ValueKey('lan-offer-${purchase.id}'),
+                      purchase: purchase,
+                    ),
                   if (purchase.status == ProductPurchaseStatus.cancelled) ...[
                     const SizedBox(height: 12),
                     _CancelledCard(purchase: purchase),

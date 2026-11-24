@@ -195,6 +195,71 @@ async function applyPaidInvoice(db, pendingRef, opts = {}) {
       throw new Error(`Purchase ${purchaseId} not found`);
     }
     const data = snap.data() || {};
+
+    // ЛАН РУУ ХӨРВҮҮЛСЭН хуваан төлөлт: хөрвүүлэхээс өмнө үүссэн ТӨГРӨГИЙН
+    // QR-ыг хэрэглэгч хожим төлсөн тохиолдол. Хоног нэмэхгүй — орсон мөнгийг
+    // тухайн үеийн 1 лангийн төлбөрөөр лан болгож бүртгэнэ (мөнгө алдагдахгүй).
+    if (data.purchase_type === "silver_installment") {
+      // Мөчлөгт импортоос зайлсхийж энд дуудна.
+      const G = require("./goldInstallmentShared");
+      const cfgSnap = await tx.get(db.doc(G.SILVER_SETTINGS_DOC));
+      const prodSnap = await tx.get(db.collection("products").doc(String(data.product_id)));
+      const cfg = G.parseSilverConfig(cfgSnap.exists ? cfgSnap.data() : {});
+      const item = prodSnap.exists && prodSnap.data().product_kind === "silver_jewelry" ?
+        G.silverItem(prodSnap.data()) :
+        G.silverItem(data.product_snapshot, Number(data.total_grams));
+      item.total_lan = Number(data.total_grams);
+      const perLan = G.silverFullPriceExact(cfg, item) / Number(data.total_grams);
+      const amount = Number(inv.amount || 0);
+      const totalCg = G.toCg(data.total_grams);
+      const paidCg = G.toCg(data.paid_grams);
+      const creditCg = Math.max(0, Math.min(Math.floor((amount / perLan) * 100), totalCg - paidCg));
+      const newPaidCg = paidCg + creditCg;
+      const done = newPaidCg >= totalCg;
+      const nowTs = admin.firestore.Timestamp.now();
+      const pays = Array.isArray(data.payments) ? data.payments : [];
+      const upd = {
+        paid_grams: G.toG(newPaidCg),
+        paid_amount: Number(data.paid_amount || 0) + amount,
+        payments: [...pays, {
+          day_no: pays.length + 1,
+          grams: G.toG(creditCg),
+          rate: Math.round(perLan),
+          price_per_gram: Math.round(perLan),
+          amount,
+          paid_at: nowTs,
+          payment_method: "qpay",
+          invoice_id: inv.invoice_id || null,
+          note: "Хөрвүүлэхээс өмнөх төгрөгийн нэхэмжлэх — лан болгон бүртгэв",
+        }],
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (done && data.status !== "completed") {
+        upd.status = "completed";
+        upd.completed_at = admin.firestore.FieldValue.serverTimestamp();
+        upd.pickup_code = generatePickupCode();
+      }
+      tx.update(purchaseRef, upd);
+      tx.update(pendingRef, {
+        status: "processed",
+        paid_at: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        credited_days: 0,
+        credited_grams: G.toG(creditCg),
+        credited_amount: amount,
+        credited_as: "lan_after_conversion",
+        ...extraInvoiceFields,
+      });
+      return {
+        changed: creditCg > 0,
+        convertedPlan: true,
+        creditedGrams: G.toG(creditCg),
+        creditAmount: amount,
+        newPaidGrams: G.toG(newPaidCg),
+        completed: done,
+      };
+    }
+
     const paidDays = Number(data.paid_days || 0);
     const totalDays = Number(data.total_days || 0);
     const daily = Number(data.daily_payment || 0);

@@ -376,6 +376,28 @@ class ProductRepository {
     );
   }
 
+  static const String _convertInstallmentToLanUrl =
+      'https://asia-northeast1-grammgold.cloudfunctions.net/convertInstallmentToLan';
+
+  /// Төгрөгийн хуваан төлөлтийг ЛАН руу шилжүүлэх урьдчилсан тооцоо
+  /// ([accept] false) эсвэл хэрэглэгчийн зөвшөөрлөөр шилжүүлэх ([accept] true).
+  /// Шилжих боломжгүй бол `eligible == false`.
+  Future<LanConversion> lanConversion({
+    required String purchaseId,
+    bool accept = false,
+    String platform = '',
+  }) async {
+    final body = await _postJson(
+        _convertInstallmentToLanUrl,
+        {
+          'purchase_id': purchaseId,
+          'accept': accept,
+          'platform': platform,
+        },
+        errorKey: 'purchase.err_create_invoice');
+    return LanConversion.fromJson(body);
+  }
+
   Future<Map<String, dynamic>> _postJson(
     String url,
     Map<String, Object?> payload, {
@@ -550,4 +572,54 @@ class GoldQuote {
 
   /// Серверийн quoteGrams-тэй ижил: round(1 гр үнэ × грамм).
   int amountFor(double grams) => (pricePerGram * grams).round();
+}
+
+/// Төгрөгийн хуваан төлөлтийг лан руу шилжүүлэх тооцоо (серверээс).
+class LanConversion {
+  final bool eligible;
+  final bool converted;
+  final double progressPercent;
+  final double totalLan;
+  final double paidLan;
+  final double remainingLan;
+  final int pricePerLan;
+  final int paidAmount;
+  final int oldRemainingAmount;
+  final int newRemainingAmount;
+  final int savingAmount;
+  final int cancelFeePercent;
+
+  const LanConversion({
+    required this.eligible,
+    required this.converted,
+    required this.progressPercent,
+    required this.totalLan,
+    required this.paidLan,
+    required this.remainingLan,
+    required this.pricePerLan,
+    required this.paidAmount,
+    required this.oldRemainingAmount,
+    required this.newRemainingAmount,
+    required this.savingAmount,
+    required this.cancelFeePercent,
+  });
+
+  factory LanConversion.fromJson(Map<String, dynamic> j) {
+    double d(String k) => (j[k] as num?)?.toDouble() ?? 0;
+    int i(String k) => (j[k] as num?)?.toInt() ?? 0;
+    return LanConversion(
+      eligible: j['eligible'] == true,
+      converted: j['converted'] == true,
+      progressPercent: d('progress_percent'),
+      totalLan: d('total_lan'),
+      paidLan: d('paid_lan'),
+      remainingLan: d('remaining_lan'),
+      pricePerLan: i('price_per_lan'),
+      paidAmount: i('paid_amount'),
+      oldRemainingAmount: i('old_remaining_amount'),
+      newRemainingAmount: i('new_remaining_amount'),
+      savingAmount: i('saving_amount'),
+      cancelFeePercent: i('cancel_fee_percent'),
+    );
+  }
 }

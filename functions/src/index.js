@@ -41,6 +41,7 @@ const {
   goldInstallmentInitCallback,
   goldInstallmentCallback,
 } = require("./payment/goldInstallmentCallbacks");
+const { convertInstallmentToLanHttp } = require("./payment/installmentConversion");
 const { verifyOrder } = require("./payment/verifyOrder");
 const { crawlGoldRates } = require("./crawler/crawlGoldRate");
 const { fetchGoldNews, fetchGoldNewsManual } = require("./crawler/fetchGoldNews");
@@ -161,6 +162,8 @@ exports.createGoldInstallmentInit = createGoldInstallmentInit;
 exports.createGoldInstallmentPayment = createGoldInstallmentPayment;
 exports.goldInstallmentInitCallback = goldInstallmentInitCallback;
 exports.goldInstallmentCallback = goldInstallmentCallback;
+// Төгрөгийн хуваан төлөлтийг лан руу хөрвүүлэх (урьдчилсан тооцоо + зөвшөөрөл)
+exports.convertInstallmentToLan = convertInstallmentToLanHttp;
 exports.verifyOrder = verifyOrder;
 exports.crawlGoldRates = crawlGoldRates;
 exports.fetchGoldNews = fetchGoldNews;

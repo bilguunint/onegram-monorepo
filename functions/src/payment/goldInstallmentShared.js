@@ -137,10 +137,11 @@ function silverFullPriceExact(cfg, item) {
   return base * (1 + cfg.markup_percent / 100) * (1 + cfg.vat_percent / 100);
 }
 
-async function readSilverConfig(db) {
-  const snap = await db.doc(SILVER_SETTINGS_DOC).get();
-  const d = snap.exists ? snap.data() || {} : {};
-  const perLan = Number(d.price_per_lan);
+// Тохиргооны баримтын өгөгдлөөс үнийн тохиргоог гаргана (транзакц дотроос ч
+// ашиглах боломжтой цэвэр функц). Металлын үнэ байхгүй бол алдаа.
+function parseSilverConfig(d) {
+  const data = d || {};
+  const perLan = Number(data.price_per_lan);
   if (!Number.isFinite(perLan) || perLan <= 0) {
     throw new Error("Мөнгөн эдлэлийн 1 лангийн үнэ тохируулаагүй байна.");
   }
@@ -148,14 +149,19 @@ async function readSilverConfig(db) {
     const n = Number(v);
     return Number.isFinite(n) && n >= 0 ? n : def;
   };
-  const step = Number(d.min_step_lan);
+  const step = Number(data.min_step_lan);
   return {
     price_per_lan: perLan,
-    box_price: pos(d.box_price, 0),
-    markup_percent: pos(d.markup_percent, 10),
-    vat_percent: pos(d.vat_percent, 10),
+    box_price: pos(data.box_price, 0),
+    markup_percent: pos(data.markup_percent, 10),
+    vat_percent: pos(data.vat_percent, 10),
     min_step_lan: Number.isFinite(step) && step > 0 ? step : 0.1,
   };
+}
+
+async function readSilverConfig(db) {
+  const snap = await db.doc(SILVER_SETTINGS_DOC).get();
+  return parseSilverConfig(snap.exists ? snap.data() : {});
 }
 
 /**
@@ -420,6 +426,8 @@ module.exports = {
   silverFullPrice,
   silverFullPriceExact,
   silverItem,
+  parseSilverConfig,
+  readSilverConfig,
   SETTINGS_DOC,
   RATE_DOC,
   PRODUCT_KIND,
