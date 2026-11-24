@@ -51,12 +51,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     if (widget.product.isWeightBased) {
-      _productRepo
-          .fetchGoldQuote(kind: widget.product.kindParam)
-          .then((q) {
-            if (mounted) setState(() => _goldQuote = q);
-          })
-          .catchError((_) {});
+      _productRepo.fetchGoldQuote(kind: widget.product.kindParam).then((q) {
+        if (mounted) setState(() => _goldQuote = q);
+      }).catchError((_) {});
     }
   }
 
@@ -583,15 +580,8 @@ class _GoldPriceBlock extends StatelessWidget {
               color: CustomColors.accent,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            q == null
-                ? wtr(product.unit, 'gold.quote_loading')
-                : wtr(product.unit, 'gold.at_today_rate', {
-                    'amount': formatMNT(q.amountFor(product.totalGrams)),
-                  }),
-            style: AppText.caption,
-          ),
+          // Эдлэлийн нийт үнийг (төгрөгөөр) харуулахгүй — зөвхөн жин (гр / лан).
+          // Төлбөрийн дүн тооцоолуур болон QR дэлгэц дээр л гарна.
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
@@ -609,11 +599,10 @@ class _GoldPriceBlock extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    q == null
-                        ? wtr(product.unit, 'gold.card_hint', {
-                            'grams': formatGrams(0.1, product.unit),
-                          })
-                        : '${wtr(product.unit, 'gold.card_hint', {'grams': formatGrams(q.minStepGrams, product.unit)})} · ${formatMNT(q.amountFor(q.minStepGrams))}',
+                    wtr(product.unit, 'gold.card_hint', {
+                      'grams':
+                          formatGrams(q?.minStepGrams ?? 0.1, product.unit),
+                    }),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

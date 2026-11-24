@@ -22,6 +22,7 @@ import { formatPriceMNT } from "@/lib/products";
  */
 export default function SilverJewelrySettingsPage() {
   const [price, setPrice] = useState("");
+  const [tagsh, setTagsh] = useState("0");
   const [step, setStep] = useState("0.1");
   const [current, setCurrent] = useState<number>(0);
   const [updatedInfo, setUpdatedInfo] = useState<string>("");
@@ -35,7 +36,8 @@ export default function SilverJewelrySettingsPage() {
       .then((s) => {
         if (!alive) return;
         setCurrent(s.price_per_lan);
-        setPrice(s.price_per_lan > 0 ? String(s.price_per_lan) : "");
+        setPrice(s.base_price_per_lan > 0 ? String(s.base_price_per_lan) : "");
+        setTagsh(String(s.tagsh_per_lan));
         setStep(String(s.min_step_lan));
         const at = s.updated_at ? s.updated_at.toDate().toLocaleString("mn-MN") : "";
         setUpdatedInfo(
@@ -49,11 +51,16 @@ export default function SilverJewelrySettingsPage() {
     };
   }, []);
 
-  const priceNum = Number(price);
+  const baseNum = Number(price);
+  const tagshNum = Number(tagsh || 0);
+  /** 1 лангийн үндсэн үнэ = лангийн үнэ + тагшны үнэ */
+  const priceNum = Math.round(baseNum) + Math.round(tagshNum);
   const stepNum = Number(step);
   const valid =
-    Number.isFinite(priceNum) &&
-    priceNum >= 1000 &&
+    Number.isFinite(baseNum) &&
+    baseNum >= 1000 &&
+    Number.isFinite(tagshNum) &&
+    tagshNum >= 0 &&
     Number.isFinite(stepNum) &&
     stepNum > 0 &&
     stepNum <= 10;
@@ -72,7 +79,7 @@ export default function SilverJewelrySettingsPage() {
     }
     setSaving(true);
     try {
-      const n = await saveSilverJewelrySettings(priceNum, stepNum);
+      const n = await saveSilverJewelrySettings(baseNum, tagshNum, stepNum);
       setCurrent(Math.round(priceNum));
       setConfirmed(false);
       setUpdatedInfo(`Сүүлд: ${new Date().toLocaleString("mn-MN")}`);
@@ -100,7 +107,8 @@ export default function SilverJewelrySettingsPage() {
           Мөнгөн эдлэл: 1 лангийн үнэ
         </h1>
         <p className="text-[12px] text-muted-foreground">
-          Бүх мөнгөн эдлэлд нийтлэг. Төлбөр = лан × 1 лангийн үнэ (1 лан = 37.5 гр).
+          Бүх мөнгөн эдлэлд нийтлэг. 1 лангийн үндсэн үнэ = лангийн үнэ + тагшны үнэ.
+          Төлбөр = лан × үндсэн үнэ (1 лан = 37.5 гр).
         </p>
       </div>
 
@@ -118,9 +126,9 @@ export default function SilverJewelrySettingsPage() {
               </strong>
               {updatedInfo && <span className="ml-2">{updatedInfo}</span>}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label htmlFor="price">1 лангийн шинэ үнэ (₮)</Label>
+                <Label htmlFor="price">Лангийн үнэ (₮ / лан)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -131,6 +139,23 @@ export default function SilverJewelrySettingsPage() {
                   value={price}
                   onChange={(e) => {
                     setPrice(e.target.value);
+                    setConfirmed(false);
+                  }}
+                  disabled={saving}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tagsh">Тагшны үнэ (₮ / лан)</Label>
+                <Input
+                  id="tagsh"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step="any"
+                  placeholder="0"
+                  value={tagsh}
+                  onChange={(e) => {
+                    setTagsh(e.target.value);
                     setConfirmed(false);
                   }}
                   disabled={saving}
@@ -157,6 +182,18 @@ export default function SilverJewelrySettingsPage() {
             <section className="rounded-xl border border-border-light bg-card p-4 text-[12px]">
               <div className="mb-2 font-semibold text-foreground">Шинэ үнээр</div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <dt className="text-muted-foreground">Лангийн үнэ</dt>
+                <dd className="text-right tabular-nums">
+                  {formatPriceMNT(Math.round(baseNum))}
+                </dd>
+                <dt className="text-muted-foreground">+ Тагшны үнэ</dt>
+                <dd className="text-right tabular-nums">
+                  {formatPriceMNT(Math.round(tagshNum))}
+                </dd>
+                <dt className="font-semibold text-foreground">= 1 лангийн үндсэн үнэ</dt>
+                <dd className="text-right font-semibold tabular-nums text-primary-600">
+                  {formatPriceMNT(priceNum)}
+                </dd>
                 <dt className="text-muted-foreground">{stepNum} лангийн төлбөр</dt>
                 <dd className="text-right tabular-nums">
                   {formatPriceMNT(Math.round(priceNum * stepNum))}
@@ -187,7 +224,10 @@ export default function SilverJewelrySettingsPage() {
               className="mt-0.5 size-4 accent-primary"
             />
             <span>
-              1 лан = <strong>{valid ? formatPriceMNT(Math.round(priceNum)) : "—"}</strong> гэдгийг
+              1 лангийн үндсэн үнэ ={" "}
+              <strong>{valid ? formatPriceMNT(priceNum) : "—"}</strong> (лан{" "}
+              {valid ? formatPriceMNT(Math.round(baseNum)) : "—"} + тагш{" "}
+              {valid ? formatPriceMNT(Math.round(tagshNum)) : "—"}) гэдгийг
               баталгаажуулж байна. Хадгалмагц шинэ худалдан авалт болон лангаар явж буй хуваан
               төлөлтийн дараагийн төлбөрүүд энэ үнээр бодогдож, бүх мөнгөн эдлэлийн бүтэн үнэ
               шинэчлэгдэнэ. Төгрөгөөр эхэлсэн хуучин хуваан төлөлтүүд өөрчлөгдөхгүй.
