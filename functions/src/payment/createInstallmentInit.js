@@ -83,11 +83,13 @@ exports.createInstallmentInit = onRequest({
       // логик руу шилжих хооронд хуучин үнээр шинэ гэрээ үүсэхээс сэргийлнэ.
       const pauseSnap = await db.doc("system_config/installments").get();
       const pause = pauseSnap.exists ? pauseSnap.data() || {} : {};
-      if (pause.new_plans_paused === true) {
-        return res.status(503).json({
-          error: pause.pause_message ||
-            "Хуваан төлөлт түр засвартай байна. Удахгүй шинэчлэгдэн нээгдэнэ.",
-        });
+      // new_plans_paused_scope: "all" (анхдагч) — бүх бараа; "silver" — зөвхөн
+      // мөнгөн эдлэл (бусад бараа хэвийн эхэлнэ; доор барааг уншсаны дараа шалгана).
+      const newPlansPaused = pause.new_plans_paused === true;
+      const pauseMessage = pause.pause_message ||
+        "Хуваан төлөлт түр засвартай байна. Удахгүй шинэчлэгдэн нээгдэнэ.";
+      if (newPlansPaused && pause.new_plans_paused_scope !== "silver") {
+        return res.status(503).json({ error: pauseMessage });
       }
 
       // Cap concurrent installments per user at MAX_ACTIVE_INSTALLMENTS.
@@ -115,6 +117,9 @@ exports.createInstallmentInit = onRequest({
         return res.status(404).json({ error: "Product not found" });
       }
       const product = productSnap.data() || {};
+      if (newPlansPaused && product.product_kind === "silver_jewelry") {
+        return res.status(503).json({ error: pauseMessage });
+      }
       if (product.product_kind === "gold_jewelry" ||
           product.product_kind === "silver_jewelry") {
         // Хуучин апп (жин дээр суурилсан эдлэлийг мэдэхгүй) энд ирнэ. Эдгээр
