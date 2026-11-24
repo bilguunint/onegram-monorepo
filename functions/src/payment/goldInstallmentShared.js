@@ -104,33 +104,56 @@ async function loadGoldRate(db) {
 /**
  * Тухайн төрлийн үнийн мэдээлэл: { settings, rate }.
  *   алт:   rate = Монголбанкны 1 гр ханш; settings = татвар, ажлын хөлс, алхам
- *   мөнгө: rate = админы баталгаажуулсан 1 ЛАНГИЙН ҮНЭ (эцсийн, нэмэгдэлгүй);
- *          settings = { tax 0, labor 0, алхам (анхдагч 0.1 лан) }
+ *   мөнгө: 1 лангийн үнэ (price_per_lan) + ТАГШНЫ ҮНЭ (tagsh_price). Тагш нь
+ *          лан бүрт биш, БАРАА БҮРТ нэг удаа нэмэгдэх тогтмол дүн:
+ *              барааны бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагш
+ *          Хуваан төлөлтөд тагшийг лан бүрт тэнцүү хуваарилна, өөрөөр хэлбэл
+ *          тухайн барааны 1 лангийн төлбөр = 1 лангийн үнэ + тагш ÷ нийт лан.
+ *          Ингэснээр бүх ланг төлөхөд нийлбэр нь бүтэн үнэтэй тэнцэнэ.
+ *          [totalUnits] (барааны нийт лан) өгөөгүй бол тагшгүй үнийг буцаана.
  * Мөнгөний үнэ тохируулаагүй бол алдаа — үнэгүйгээр гэрээ үүсэхгүй.
  * @param {FirebaseFirestore.Firestore} db - Firestore
  * @param {string} kind - "gold_jewelry" | "silver_jewelry"
+ * @param {number} [totalUnits] - барааны нийт жин (мөнгөнд: нийт лан)
  * @return {Promise<{settings: object, rate: number}>} үнийн мэдээлэл
  */
-async function loadPricing(db, kind) {
+async function loadPricing(db, kind, totalUnits) {
   if (kind === "silver_jewelry") {
     const snap = await db.doc(SILVER_SETTINGS_DOC).get();
     const d = snap.exists ? snap.data() || {} : {};
-    const rate = Number(d.price_per_lan);
-    if (!Number.isFinite(rate) || rate <= 0) {
+    const perLan = Number(d.price_per_lan);
+    if (!Number.isFinite(perLan) || perLan <= 0) {
       throw new Error("Мөнгөн эдлэлийн 1 лангийн үнэ тохируулаагүй байна.");
     }
+    const tagshRaw = Number(d.tagsh_price);
+    const tagsh = Number.isFinite(tagshRaw) && tagshRaw > 0 ? tagshRaw : 0;
+    const total = Number(totalUnits);
+    const tagshPerLan = Number.isFinite(total) && total > 0 ? tagsh / total : 0;
     const step = Number(d.min_step_lan);
     return {
       settings: {
         labor_per_gram: 0,
         tax_percent: 0,
         min_step_grams: Number.isFinite(step) && step > 0 ? step : 0.1,
+        price_per_lan: perLan,
+        tagsh_price: tagsh,
       },
-      rate,
+      rate: perLan + tagshPerLan,
     };
   }
   const [settings, rate] = await Promise.all([loadSettings(db), loadGoldRate(db)]);
   return { settings, rate };
+}
+
+/**
+ * Мөнгөн эдлэлийн бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ.
+ * @param {FirebaseFirestore.Firestore} db - Firestore
+ * @param {number} totalLan - барааны нийт лан
+ * @return {Promise<number>} төгрөг
+ */
+async function silverFullPrice(db, totalLan) {
+  const { settings } = await loadPricing(db, "silver_jewelry");
+  return Math.round(Number(totalLan || 0) * settings.price_per_lan + settings.tagsh_price);
 }
 
 // 1 гр-ын эцсийн үнэ ба өгөгдсөн граммын төлбөр.
@@ -334,6 +357,7 @@ module.exports = {
   kindByPurchaseType,
   SILVER_SETTINGS_DOC,
   loadPricing,
+  silverFullPrice,
   SETTINGS_DOC,
   RATE_DOC,
   PRODUCT_KIND,

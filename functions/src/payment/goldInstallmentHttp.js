@@ -86,7 +86,10 @@ exports.quoteGoldInstallment = onRequest(opts, async (req, res) => {
       // ?kind=silver_jewelry бол мөнгөн эдлэлийн (лан) үнэ; анхдагч нь алт.
       const kindRaw = (req.query && req.query.kind) || (req.body && req.body.kind);
       const K = G.KINDS[kindRaw] || G.KINDS.gold_jewelry;
-      const { settings, rate } = await G.loadPricing(db, K.kind);
+      // ?total=<барааны нийт лан> — мөнгөн эдлэлд тагшны үнийг лан бүрт
+      // хуваарилахад хэрэгтэй (өгөөгүй бол тагшгүй үнэ).
+      const total = Number((req.query && req.query.total) || (req.body && req.body.total) || 0);
+      const { settings, rate } = await G.loadPricing(db, K.kind, total);
       const grams = Number((req.query && req.query.grams) || (req.body && req.body.grams) || 0);
       const out = {
         kind: K.kind,
@@ -96,6 +99,9 @@ exports.quoteGoldInstallment = onRequest(opts, async (req, res) => {
         labor_per_gram: settings.labor_per_gram,
         tax_percent: settings.tax_percent,
         min_step_grams: settings.min_step_grams,
+        ...(K.kind === "silver_jewelry" ?
+          { price_per_lan: settings.price_per_lan, tagsh_price: settings.tagsh_price } :
+          {}),
       };
       if (grams > 0) out.quote = G.quoteGrams(grams, rate, settings);
       return res.status(200).json(out);
@@ -142,7 +148,7 @@ exports.createGoldInstallmentInit = onRequest(opts, async (req, res) => {
       const totalCg = G.toCg(product[K.totalField]);
       if (!(totalCg > 0)) return res.status(409).json({ error: "Барааны жин тохируулаагүй байна." });
 
-      const { settings, rate } = await G.loadPricing(db, K.kind);
+      const { settings, rate } = await G.loadPricing(db, K.kind, G.toG(totalCg));
       const dailyGrams = Number(dailyGramsRaw);
       let dailyCg;
       let firstCg;
@@ -247,7 +253,7 @@ exports.createGoldInstallmentPayment = onRequest(opts, async (req, res) => {
       const remainingCg = G.toCg(p.total_grams) - G.toCg(p.paid_grams);
       if (remainingCg <= 0) return res.status(409).json({ error: "Бүрэн төлөгдсөн." });
 
-      const { settings, rate } = await G.loadPricing(db, K.kind);
+      const { settings, rate } = await G.loadPricing(db, K.kind, Number(p.total_grams));
       let cg;
       try {
         cg = G.normalizeGramsCg(Number(gramsRaw != null ? gramsRaw : p.daily_grams), remainingCg, settings);

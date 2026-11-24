@@ -38,7 +38,10 @@ class _GoldInstallmentSetupSheetState extends State<GoldInstallmentSetupSheet> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      final q = await _repo.fetchGoldQuote(kind: widget.product.kindParam);
+      final q = await _repo.fetchGoldQuote(
+        kind: widget.product.kindParam,
+        total: widget.product.totalGrams,
+      );
       if (!mounted) return;
       setState(() {
         _quote = q;

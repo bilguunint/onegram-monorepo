@@ -60,10 +60,16 @@ export function ProductForm({
   );
   /** Админы баталгаажуулсан 1 лангийн үнэ; null = ачааллаж байна, 0 = тохируулаагүй */
   const [pricePerLan, setPricePerLan] = useState<number | null>(null);
+  /** Тагшны үнэ — бараа бүрт нэг удаа нэмэгдэнэ */
+  const [tagshPrice, setTagshPrice] = useState<number>(0);
   useEffect(() => {
     let alive = true;
     fetchSilverJewelrySettings()
-      .then((st) => alive && setPricePerLan(st.price_per_lan))
+      .then((st) => {
+        if (!alive) return;
+        setPricePerLan(st.price_per_lan);
+        setTagshPrice(st.tagsh_price);
+      })
       .catch(() => alive && setPricePerLan(0));
     return () => {
       alive = false;
@@ -98,7 +104,7 @@ export function ProductForm({
   const totalLanNum = Math.round(Number(totalLan) * 100) / 100;
   const silverPrice =
     isSilver && pricePerLan && totalLanNum > 0
-      ? silverProductPrice(totalLanNum, pricePerLan)
+      ? silverProductPrice(totalLanNum, pricePerLan, tagshPrice)
       : 0;
   const minMonthsNum = Math.max(1, Math.floor(Number(minMonths) || 0));
   const maxMonthsNum = Math.max(1, Math.floor(Number(maxMonths) || 0));
@@ -275,12 +281,12 @@ export function ProductForm({
                     <Link href="/products/silver-settings" className="underline">
                       баталгаажуулсан 1 лангийн үнээр
                     </Link>{" "}
-                    хуваан төлнө; бүтэн үнэ = нийт лан × 1 лангийн үнэ (үнэ өөрчлөгдөхөд
-                    автоматаар шинэчлэгдэнэ).{" "}
+                    хуваан төлнө; бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ (үнэ
+                    өөрчлөгдөхөд автоматаар шинэчлэгдэнэ).{" "}
                     {pricePerLan == null
                       ? "Үнэ ачааллаж байна..."
                       : pricePerLan > 0
-                        ? `Одоо 1 лан = ${formatPriceMNT(pricePerLan)}.`
+                        ? `Одоо 1 лан = ${formatPriceMNT(pricePerLan)}, тагш = ${formatPriceMNT(tagshPrice)}.`
                         : "1 лангийн үнэ тохируулаагүй байна!"}
                   </span>
                 </p>

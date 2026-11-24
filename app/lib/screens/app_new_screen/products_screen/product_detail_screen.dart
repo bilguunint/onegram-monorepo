@@ -51,7 +51,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     if (widget.product.isWeightBased) {
-      _productRepo.fetchGoldQuote(kind: widget.product.kindParam).then((q) {
+      _productRepo
+          .fetchGoldQuote(
+        kind: widget.product.kindParam,
+        total: widget.product.totalGrams,
+      )
+          .then((q) {
         if (mounted) setState(() => _goldQuote = q);
       }).catchError((_) {});
     }

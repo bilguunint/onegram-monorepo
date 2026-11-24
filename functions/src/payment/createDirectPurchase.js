@@ -3,7 +3,7 @@ const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
 const cors = require("cors")({ origin: true });
-const { loadPricing } = require("./goldInstallmentShared");
+const { silverFullPrice } = require("./goldInstallmentShared");
 
 const QPAY_USERNAME = "ONE_GRAM_GOLD";
 const QPAY_PASSWORD = "zElO7j40";
@@ -77,10 +77,9 @@ exports.createDirectPurchase = onRequest({
       }
       let price = Number(product.price || 0);
       if (product.product_kind === "silver_jewelry") {
-        // Мөнгөн эдлэл: бүтэн үнэ = нийт лан × админы баталгаажуулсан 1 лангийн
-        // үнэ. products.price дээрх тоо хуучирсан байж болох тул серверт тооцно.
-        const { rate } = await loadPricing(db, "silver_jewelry");
-        price = Math.round(Number(product.total_lan || 0) * rate);
+        // Мөнгөн эдлэл: бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ.
+        // products.price дээрх тоо хуучирсан байж болох тул серверт тооцно.
+        price = await silverFullPrice(db, product.total_lan);
       }
       if (price <= 0) {
         return res.status(409).json({ error: "Invalid product price" });

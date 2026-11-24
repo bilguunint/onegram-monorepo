@@ -14,24 +14,22 @@ import { getDb, getFirebaseAuth } from "@/lib/firebase/client";
 /**
  * Мөнгөн эдлэлийн НИЙТЛЭГ тохиргоо (system_config/silver_jewelry).
  *
- * 1 лангийн ҮНДСЭН үнэ = мөнгөний лангийн үнэ (base_price_per_lan) + тагшны
- * үнэ (tagsh_per_lan, 1 лан тутамд). Нийлбэр нь `price_per_lan` талбарт
- * хадгалагдах бөгөөд сервер зөвхөн энэ эцсийн үнийг уншина; задаргаа нь
- * админд харуулах, түүх хадгалах зорилготой.
+ *   price_per_lan — мөнгөний 1 лангийн үнэ
+ *   tagsh_price   — тагшны үнэ: лан бүрт БИШ, бараа бүрт нэг удаа нэмэгдэнэ
  *
- * 1 лангийн үнийг админ оруулж баталгаажуулна. Мөнгөн
- * эдлэлийн хуваан төлөлтийн төлбөр бүр = лан × тухайн үеийн энэ үнэ; бүтэн
- * төлбөрийн үнэ = нийт лан × энэ үнэ. Сервер
+ *   барааны бүтэн үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ
+ *
+ * Хуваан төлөлтөд сервер тагшийг лан бүрт тэнцүү хуваарилдаг (тухайн барааны
+ * 1 лангийн төлбөр = 1 лангийн үнэ + тагш ÷ нийт лан), тиймээс бүх ланг
+ * төлөхөд нийлбэр нь бүтэн үнэтэй тэнцэнэ. Сервер
  * (functions/src/payment/goldInstallmentShared.js → loadPricing) яг энэ
  * баримтыг уншина; үнэ тохируулаагүй бол мөнгөн эдлэл зарагдахгүй.
  */
 export type SilverJewelrySettings = {
-  /** Эцсийн үндсэн үнэ = base_price_per_lan + tagsh_per_lan (сервер үүнийг уншина) */
+  /** Мөнгөний 1 лангийн үнэ (₮) */
   price_per_lan: number;
-  /** Мөнгөний 1 лангийн үнэ (тагшгүй) */
-  base_price_per_lan: number;
-  /** Тагшны үнэ, 1 лан тутамд */
-  tagsh_per_lan: number;
+  /** Тагшны үнэ (₮), бараа бүрт нэг удаа */
+  tagsh_price: number;
   min_step_lan: number;
   updated_at?: { toDate: () => Date } | null;
   updated_by_name?: string;
@@ -43,26 +41,24 @@ export async function fetchSilverJewelrySettings(): Promise<SilverJewelrySetting
   const snap = await getDoc(REF());
   const d = snap.exists() ? snap.data() : {};
   const p = Number(d.price_per_lan);
+  const t = Number(d.tagsh_price);
   const s = Number(d.min_step_lan);
-  const total = Number.isFinite(p) && p > 0 ? p : 0;
-  const tagshRaw = Number(d.tagsh_per_lan);
-  const tagsh = Number.isFinite(tagshRaw) && tagshRaw > 0 ? tagshRaw : 0;
-  const baseRaw = Number(d.base_price_per_lan);
   return {
-    price_per_lan: total,
-    // Хуучин баримтад задаргаа байхгүй бол бүх үнийг лангийн үнэ гэж үзнэ.
-    base_price_per_lan:
-      Number.isFinite(baseRaw) && baseRaw > 0 ? baseRaw : Math.max(0, total - tagsh),
-    tagsh_per_lan: tagsh,
+    price_per_lan: Number.isFinite(p) && p > 0 ? p : 0,
+    tagsh_price: Number.isFinite(t) && t > 0 ? t : 0,
     min_step_lan: Number.isFinite(s) && s > 0 ? s : 0.1,
     updated_at: d.updated_at ?? null,
     updated_by_name: d.updated_by_name,
   };
 }
 
-/** Мөнгөн эдлэлийн бүтэн үнэ (₮) = нийт лан × 1 лангийн үнэ. */
-export function silverProductPrice(totalLan: number, pricePerLan: number): number {
-  return Math.round(totalLan * pricePerLan);
+/** Мөнгөн эдлэлийн бүтэн үнэ (₮) = нийт лан × 1 лангийн үнэ + тагшны үнэ. */
+export function silverProductPrice(
+  totalLan: number,
+  pricePerLan: number,
+  tagshPrice: number
+): number {
+  return Math.round(totalLan * pricePerLan + tagshPrice);
 }
 
 /**
@@ -72,11 +68,12 @@ export function silverProductPrice(totalLan: number, pricePerLan: number): numbe
  * түгжигдсэн); лангаар явж буй хуваан төлөлтийн ДАРААГИЙН төлбөрүүд шинэ үнээр.
  */
 export async function saveSilverJewelrySettings(
-  basePricePerLan: number,
-  tagshPerLan: number,
+  pricePerLanRaw: number,
+  tagshPriceRaw: number,
   minStepLan: number
 ): Promise<number> {
-  const pricePerLan = Math.round(basePricePerLan) + Math.round(tagshPerLan);
+  const pricePerLan = Math.round(pricePerLanRaw);
+  const tagshPrice = Math.round(tagshPriceRaw);
   const u = getFirebaseAuth().currentUser;
   if (!u) throw new Error("Нэвтрээгүй байна.");
   const db = getDb();
@@ -84,8 +81,7 @@ export async function saveSilverJewelrySettings(
     REF(),
     {
       price_per_lan: pricePerLan,
-      base_price_per_lan: Math.round(basePricePerLan),
-      tagsh_per_lan: Math.round(tagshPerLan),
+      tagsh_price: tagshPrice,
       min_step_lan: minStepLan,
       updated_at: serverTimestamp(),
       updated_by: u.uid,
@@ -103,7 +99,7 @@ export async function saveSilverJewelrySettings(
     const lan = Number(d.data().total_lan ?? 0);
     if (!(lan > 0)) continue;
     batch.update(d.ref, {
-      price: silverProductPrice(lan, pricePerLan),
+      price: silverProductPrice(lan, pricePerLan, tagshPrice),
       updated_at: serverTimestamp(),
       updated_by: u.uid,
     });

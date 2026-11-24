@@ -36,8 +36,8 @@ export default function SilverJewelrySettingsPage() {
       .then((s) => {
         if (!alive) return;
         setCurrent(s.price_per_lan);
-        setPrice(s.base_price_per_lan > 0 ? String(s.base_price_per_lan) : "");
-        setTagsh(String(s.tagsh_per_lan));
+        setPrice(s.price_per_lan > 0 ? String(s.price_per_lan) : "");
+        setTagsh(String(s.tagsh_price));
         setStep(String(s.min_step_lan));
         const at = s.updated_at ? s.updated_at.toDate().toLocaleString("mn-MN") : "";
         setUpdatedInfo(
@@ -53,8 +53,10 @@ export default function SilverJewelrySettingsPage() {
 
   const baseNum = Number(price);
   const tagshNum = Number(tagsh || 0);
-  /** 1 лангийн үндсэн үнэ = лангийн үнэ + тагшны үнэ */
-  const priceNum = Math.round(baseNum) + Math.round(tagshNum);
+  /** Мөнгөний 1 лангийн үнэ. Тагш нь лан бүрт биш, бараа бүрт нэг удаа нэмэгдэнэ. */
+  const priceNum = Math.round(baseNum);
+  /** Жишээ барааны бүтэн үнэ = лан × 1 лангийн үнэ + тагш */
+  const fullPrice = (lan: number) => Math.round(lan * priceNum + Math.round(tagshNum));
   const stepNum = Number(step);
   const valid =
     Number.isFinite(baseNum) &&
@@ -84,7 +86,7 @@ export default function SilverJewelrySettingsPage() {
       setConfirmed(false);
       setUpdatedInfo(`Сүүлд: ${new Date().toLocaleString("mn-MN")}`);
       toast.success(
-        `1 лан = ${formatPriceMNT(Math.round(priceNum))} баталгаажлаа. ${n} барааны үнэ шинэчлэгдлээ.`
+        `1 лан = ${formatPriceMNT(priceNum)}, тагш = ${formatPriceMNT(Math.round(tagshNum))} баталгаажлаа. ${n} барааны үнэ шинэчлэгдлээ.`
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Хадгалахад алдаа гарлаа.");
@@ -107,8 +109,8 @@ export default function SilverJewelrySettingsPage() {
           Мөнгөн эдлэл: 1 лангийн үнэ
         </h1>
         <p className="text-[12px] text-muted-foreground">
-          Бүх мөнгөн эдлэлд нийтлэг. 1 лангийн үндсэн үнэ = лангийн үнэ + тагшны үнэ.
-          Төлбөр = лан × үндсэн үнэ (1 лан = 37.5 гр).
+          Бүх мөнгөн эдлэлд нийтлэг. Барааны үнэ = нийт лан × 1 лангийн үнэ + тагшны үнэ
+          (тагш бараа бүрт нэг удаа нэмэгдэнэ; 1 лан = 37.5 гр).
         </p>
       </div>
 
@@ -128,7 +130,7 @@ export default function SilverJewelrySettingsPage() {
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label htmlFor="price">Лангийн үнэ (₮ / лан)</Label>
+                <Label htmlFor="price">1 лангийн үнэ (₮)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -145,7 +147,7 @@ export default function SilverJewelrySettingsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="tagsh">Тагшны үнэ (₮ / лан)</Label>
+                <Label htmlFor="tagsh">Тагшны үнэ (₮, бараа бүрт)</Label>
                 <Input
                   id="tagsh"
                   type="number"
@@ -182,29 +184,27 @@ export default function SilverJewelrySettingsPage() {
             <section className="rounded-xl border border-border-light bg-card p-4 text-[12px]">
               <div className="mb-2 font-semibold text-foreground">Шинэ үнээр</div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <dt className="text-muted-foreground">Лангийн үнэ</dt>
-                <dd className="text-right tabular-nums">
-                  {formatPriceMNT(Math.round(baseNum))}
-                </dd>
-                <dt className="text-muted-foreground">+ Тагшны үнэ</dt>
+                <dt className="text-muted-foreground">1 лангийн үнэ</dt>
+                <dd className="text-right tabular-nums">{formatPriceMNT(priceNum)}</dd>
+                <dt className="text-muted-foreground">Тагшны үнэ (бараа бүрт)</dt>
                 <dd className="text-right tabular-nums">
                   {formatPriceMNT(Math.round(tagshNum))}
                 </dd>
-                <dt className="font-semibold text-foreground">= 1 лангийн үндсэн үнэ</dt>
+                <dt className="font-semibold text-foreground">
+                  5 лангийн аяга = 5 × {formatPriceMNT(priceNum)} + тагш
+                </dt>
                 <dd className="text-right font-semibold tabular-nums text-primary-600">
-                  {formatPriceMNT(priceNum)}
+                  {formatPriceMNT(fullPrice(5))}
                 </dd>
-                <dt className="text-muted-foreground">{stepNum} лангийн төлбөр</dt>
+                <dt className="text-muted-foreground">
+                  Тэр аяганы {stepNum} лангийн хуваан төлөлтийн төлбөр
+                </dt>
                 <dd className="text-right tabular-nums">
-                  {formatPriceMNT(Math.round(priceNum * stepNum))}
-                </dd>
-                <dt className="text-muted-foreground">5 лангийн аяга (жишээ)</dt>
-                <dd className="text-right tabular-nums">
-                  {formatPriceMNT(Math.round(priceNum * 5))}
+                  {formatPriceMNT(Math.round((fullPrice(5) / 5) * stepNum))}
                 </dd>
                 {changePct != null && (
                   <>
-                    <dt className="text-muted-foreground">Өмнөх үнээс</dt>
+                    <dt className="text-muted-foreground">1 лангийн үнэ өмнөхөөс</dt>
                     <dd className="text-right font-semibold tabular-nums">
                       {changePct >= 0 ? "+" : ""}
                       {changePct.toFixed(1)}%
@@ -224,13 +224,12 @@ export default function SilverJewelrySettingsPage() {
               className="mt-0.5 size-4 accent-primary"
             />
             <span>
-              1 лангийн үндсэн үнэ ={" "}
-              <strong>{valid ? formatPriceMNT(priceNum) : "—"}</strong> (лан{" "}
-              {valid ? formatPriceMNT(Math.round(baseNum)) : "—"} + тагш{" "}
-              {valid ? formatPriceMNT(Math.round(tagshNum)) : "—"}) гэдгийг
-              баталгаажуулж байна. Хадгалмагц шинэ худалдан авалт болон лангаар явж буй хуваан
-              төлөлтийн дараагийн төлбөрүүд энэ үнээр бодогдож, бүх мөнгөн эдлэлийн бүтэн үнэ
-              шинэчлэгдэнэ. Төгрөгөөр эхэлсэн хуучин хуваан төлөлтүүд өөрчлөгдөхгүй.
+              1 лан = <strong>{valid ? formatPriceMNT(priceNum) : "—"}</strong>, тагшны үнэ ={" "}
+              <strong>{valid ? formatPriceMNT(Math.round(tagshNum)) : "—"}</strong> (бараа бүрт
+              нэг удаа) гэдгийг баталгаажуулж байна. Хадгалмагц шинэ худалдан авалт болон лангаар
+              явж буй хуваан төлөлтийн дараагийн төлбөрүүд энэ үнээр бодогдож, бүх мөнгөн
+              эдлэлийн бүтэн үнэ (лан × үнэ + тагш) шинэчлэгдэнэ. Хуваан төлөлтөд тагш лан бүрт
+              тэнцүү хуваарилагдана. Төгрөгөөр эхэлсэн хуучин хуваан төлөлтүүд өөрчлөгдөхгүй.
             </span>
           </label>
 

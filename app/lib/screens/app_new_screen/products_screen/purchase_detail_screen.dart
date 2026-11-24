@@ -100,6 +100,7 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         remainingGrams: purchase.remainingGrams,
         dailyGrams: purchase.dailyGrams,
         unit: purchase.unit,
+        totalGrams: purchase.totalGrams,
       ),
     );
     if (grams == null || !mounted) return;
@@ -182,13 +183,11 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
         final hasRemaining = isGold
             ? purchase.remainingGrams > 0
             : purchase.paidDays < purchase.totalDays;
-        final showPayButton =
-            isInstallment &&
+        final showPayButton = isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
             hasRemaining &&
             !cancelPending;
-        final showCancelAction =
-            isInstallment &&
+        final showCancelAction = isInstallment &&
             purchase.status == ProductPurchaseStatus.active &&
             !cancelPending;
         final nextDay = purchase.paidDays + 1;
@@ -271,11 +270,11 @@ class _PurchaseDetailViewState extends State<PurchaseDetailView> {
                           label: _requestingInvoice
                               ? tr('product.creating_invoice')
                               : isGold
-                              ? wtr(purchase.unit, 'gold.pay_next')
-                              : tr('product.pay_from_day', {
-                                  'day': nextDay,
-                                  'remaining': remainingDays,
-                                }),
+                                  ? wtr(purchase.unit, 'gold.pay_next')
+                                  : tr('product.pay_from_day', {
+                                      'day': nextDay,
+                                      'remaining': remainingDays,
+                                    }),
                           icon: Icons.qr_code_rounded,
                           loading: _requestingInvoice,
                           onPressed: () => isGold
@@ -457,11 +456,11 @@ class _HeaderCard extends StatelessWidget {
                           ),
                         })
                       : purchase.purchaseType == PurchaseType.installment
-                      ? tr('product.installment_summary', {
-                          'months': purchase.months,
-                          'days': purchase.totalDays,
-                        })
-                      : tr('product.direct_purchase'),
+                          ? tr('product.installment_summary', {
+                              'months': purchase.months,
+                              'days': purchase.totalDays,
+                            })
+                          : tr('product.direct_purchase'),
                   style: AppText.caption,
                 ),
               ],
